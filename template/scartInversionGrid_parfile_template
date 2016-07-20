@@ -1,0 +1,116 @@
+#------------------------------------------------------------------------------
+#  PARAMETER FILE FOR SIMPLE LAYERED CARTESIAN INVERSION GRID
+#------------------------------------------------------------------------------
+#
+#  HOWTO USE THE PARAMETER FILE:
+#
+# comment lines, STARTING with "#" are ignored
+# empty lines and lines containing blanks only are ignored
+# lines not containing "=" are ignored
+#
+# specify one parameter per line, valid lines having the form "keyword = value"
+# (blanks leading or following the keyword, the "=", or the value are ignored)
+#
+# in a non comment line, all characters in front of "=" (without leading and appending blanks)
+# are interpreted as the keyword, allowing for blank characters within the keyword (e.g. for lines  "   key word = value   ",
+# the string "key word" is used as the keyword)
+# all characters behind "=" (without leading and appending blanks) are interpreted as the value string from 
+# which the value is read, which in particular means that "#" comments at the end of a line (such as 
+# " keyword = value  # comment ") are NOT allowed (in the latter case, the string "value  # comment" would be used
+# to read a value from)
+#
+# by ASKI convention, specify PATHS (i.e. directory names, which will be 
+# concatenated with a filename of a file in that directory) always ending on '/'
+# specify FILENAMES always WITHOUT leading '/'
+#------------------------------------------------------------------------------
+#
+#  WHAT IS A SIMPLE LAYERED CARTESIAN INVERSION GRID?
+#
+# cuboid centered in x=y=0 and with width WX,WY, zmax=0 and z-extension over layers as defined by SCART_INVGRID_NREF_BLOCKS,SCART_INVGRID_NLAY,SCART_INVGRID_THICKNESS
+# rotation by angle SCART_INVGRID_ROT about z-axis, then shift by vector (SCART_INVGRID_CX,SCART_INVGRID_CY,SCART_INVGRID_ZMAX)
+# layers (in z-direction), layers of same thickness are grouped in "refinement block"
+# for every refinement block, you can define the lateral (x,y) resolution of cells (equally distributed)
+#------------------------------------------------------------------------------
+
+
+#---------------------------------------------------------------------------
+#  GEOMETRY OF INVERSION GRID DOMAIN (CUBOID SHAPE)
+#---------------------------------------------------------------------------
+
+#  x-coordinate of center of cuboid
+#
+  SCART_INVGRID_CX = 
+
+#  y-coordinate of center of cuboid
+#
+  SCART_INVGRID_CY = 
+
+#  maximum z-coordinate of cuboid
+#
+  SCART_INVGRID_ZMAX = 
+
+#  width of cuboid in x-direction
+#
+  SCART_INVGRID_WX = 
+
+#  width of cuboid in y-direction
+#
+  SCART_INVGRID_WY = 
+
+#  angle in deg of anti-clockwise rotation about the local z-axis through the center of the cuboid
+#
+  SCART_INVGRID_ROT = 
+
+
+#---------------------------------------------------------------------------
+#  SUBDIVISION OF CUBOID IN INVERSION GRID CELLS (SCATTERERS)
+#---------------------------------------------------------------------------
+
+#  For an arbitrary number of SCART_INVGRID_NREF_BLOCKS blocks of layers,
+#  the vectors SCART_INVGRID_NLAY and SCART_INVGRID_THICKNESS (both of length SCART_INVGRID_NREF_BLOCKS)
+#  define the z-direction refinement of each block by its number of layers SCART_INVGRID_NLAY(i) contained 
+#  in such a block, each having constant thickness SCART_INVGRID_THICKNESS(i) in m
+#
+#  Example: 
+#      SCART_INVGRID_NREF_BLOCKS =  3
+#      SCART_INVGRID_NLAY =  4   5   2
+#      SCART_INVGRID_THICKNESS =  5. 10. 20.
+#  this means, if the unit of coordinates is meters:
+#  3 blocks of layers (one below the other starting with the first one at SCART_INVGRID_ZMAX) with different z-direction refinement (resolution) :
+#     4 layers with thickness of 5 m between SCART_INVGRID_ZMAX and 20 m below SCART_INVGRID_ZMAX
+#     5 layers with thickness of 10 m between 20 m and 70 m below SCART_INVGRID_ZMAX
+#     2 layers with thickness of 20 m between 70 m and 110 m below SCART_INVGRID_ZMAX
+#
+  SCART_INVGRID_NREF_BLOCKS = 
+
+  SCART_INVGRID_NLAY = 
+  SCART_INVGRID_THICKNESS = 
+
+#  number of inversion grid cells in x-direction, one value for each refinement block
+#  e.g. for above example (SCART_INVGRID_NREF_BLOCKS = 3)
+#     SCART_INVGRID_NX = 20 10 5
+#  this means: 
+#  in the first refinement block, the cuboid of x-width SCART_INVGRID_WX is subdivided into are 20 cells in x-direction, 
+#  in the second block there are 10 and in the third there are 5 cells in x-direction (e.g. for SCART_INVGRID_WX = 100 (m))
+#
+  SCART_INVGRID_NX = 
+
+#  number of inversion grid cells in y-direction, one value for each refinement block
+#
+  SCART_INVGRID_NY = 
+
+
+#---------------------------------------------------------------------------
+#  COORDINATE SPECIFICATIONS FOR VTK FILE OUTPUT
+#---------------------------------------------------------------------------
+
+#  use local inversion grid coordinates for vtk geometry, i.e. no rotation by SCART_INVGRID_ROT
+#  and no shift by SCART_INVGRID_CX,SCART_INVGRID_CY,SCART_INVGRID_ZMAX (cuboid centered in x=y=0 and zmax=0)
+#
+  USE_LOCAL_INVGRID_COORDS_FOR_VTK = .False.
+
+#  Scale vtk geometry coordinates by factor VTK_COORDS_SCALING_FACTOR, if SCALE_VTK_COORDS = .True.
+#  this may be helpful if coordinate values (e.g. in m) get so large that they cause problems in paraview
+#
+  SCALE_VTK_COORDS = .False.
+  VTK_COORDS_SCALING_FACTOR = 1.

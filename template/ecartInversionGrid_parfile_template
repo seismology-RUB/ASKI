@@ -1,0 +1,120 @@
+#------------------------------------------------------------------------------
+#  PARAMETER FILE FOR EXTERNAL CARTESIAN INVERSION GRID
+#------------------------------------------------------------------------------
+#
+#  HOWTO USE THE PARAMETER FILE:
+#
+# comment lines, STARTING with "#" are ignored
+# empty lines and lines containing blanks only are ignored
+# lines not containing "=" are ignored
+#
+# specify one parameter per line, valid lines having the form "keyword = value"
+# (blanks leading or following the keyword, the "=", or the value are ignored)
+#
+# in a non comment line, all characters in front of "=" (without leading and appending blanks)
+# are interpreted as the keyword, allowing for blank characters within the keyword (e.g. for lines  "   key word = value   ",
+# the string "key word" is used as the keyword)
+# all characters behind "=" (without leading and appending blanks) are interpreted as the value string from 
+# which the value is read, which in particular means that "#" comments at the end of a line (such as 
+# " keyword = value  # comment ") are NOT allowed (in the latter case, the string "value  # comment" would be used
+# to read a value from)
+#
+# by ASKI convention, specify PATHS (i.e. directory names, which will be 
+# concatenated with a filename of a file in that directory) always ending on '/'
+# specify FILENAMES always WITHOUT leading '/'
+#------------------------------------------------------------------------------
+#
+#  WHAT IS AN EXTERNAL CARTESIAN INVERSION GRID?
+#
+# an inverison grid of type ecartInversionGrid consists of a collection of an arbitrary number of
+# tetrahedral (tet4) and hexahedral (hex8) cells of arbitrarily distorted shapes. 
+# The cells are defined via textfiles containing gridpoints in Cartesian x,y,z coordinates, and files defining
+# the cells by refering to a collection of point indices. These files may be produced by any external meshing software
+# (such as Cubit, confer module cubit2ASKIecartInversionGrid.py) as long as they meet the required format.
+#------------------------------------------------------------------------------
+
+
+#---------------------------------------------------------------------------
+#  NODES COORDINATES IN CARTESIAN X,Y,Z
+#  the nodes coordinates text file(s) must be of following format:
+#     + the first line contains a single integer value, indicating the number of lines to 
+#       come (i.e. the number of points)
+#     + each following line contains 3 floating point numbers (separated by white space) 
+#       defining Cartesian X Y Z coordinates of a point
+#---------------------------------------------------------------------------
+
+#  ECART_INVGRID_USE_NODES_COMMON indicates (logically), whether to use one common grid points file for 
+#  all cell types (only use ECART_INVGRID_FILE_NODES below), or to use an individual grid points file for 
+#  each cell type (use files ECART_INVGRID_FILE_NODES_TET4, ECART_INVGRID_FILE_NODES_HEX8, ... below). 
+#  All the FILE_NODES - keys must be present in this parameter file (!), but their values are ignored when not in use
+#
+  ECART_INVGRID_USE_NODES_COMMON = .True.
+
+#  file name relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/ of nodes coordinates file to be commonly used
+#  for definition of cells of all types in case of ECART_INVGRID_USE_NODES_COMMON = .True.
+#
+  ECART_INVGRID_FILE_NODES_COMMON = node_coordinates
+
+#  file name relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/ of nodes coordinates file to be used
+#  for definition of tet4-type cells in case of ECART_INVGRID_USE_NODES_COMMON = .False.
+#
+  ECART_INVGRID_FILE_NODES_TET4 = node_coordinates_tet4
+
+#  file name relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/ of nodes coordinates file to be used
+#  for definition of hex8-type cells in case of ECART_INVGRID_USE_NODES_COMMON = .False.
+#
+  ECART_INVGRID_FILE_NODES_HEX8 = node_coordinates_hex8
+
+
+#---------------------------------------------------------------------------
+#  CELL DEFINITION BY CONNECTIVITY
+#  the cell connectivity text files must be of following format:
+#    + the first line contains a single integer value, indicating the number of lines to 
+#      come (i.e. the number of cells)
+#    + each following line contains n integer numbers (separated by white space, n = 4 in case of 
+#      tet4 cells, n = 8 in case of hex8 cells), which define the corners (or higher order mid-edge 
+#      points etc.) of the cell and correspond to the point indices in the respective nodes coordinates 
+#      file, whereby the lowest point index is 1, corresponding to the second line (first point) in 
+#      the nodes coordinates file.
+#  THE ORDER OF THE POINTS IS ASSUMED TO CORRESPOND TO THE VTK CELL CONVENTIONS!
+#  in case one of the cell connectivity files does not exist, or their first line containing value 0, no cells
+#  of the respective type will be created
+#  All the FILE_CELLS - keys must be present in this parameter file (!), but their values are ignored when not in use
+#---------------------------------------------------------------------------
+
+#  file name relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/ of cell connectivity file for
+#  definition of tet4-type cells
+#
+  ECART_INVGRID_FILE_CELLS_TET4  = cell_connectivity_tet4
+
+#  file name relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/ of cell connectivity file for
+#  definition of hex8-type cells
+#
+  ECART_INVGRID_FILE_CELLS_HEX8  = cell_connectivity_hex8
+
+
+#---------------------------------------------------------------------------
+#  FILES CONTAINING COMPLETE INVERSION GRID INFROMATION, PRODUCED BY ASKI
+#  when creating the inversion grid, these files will be read in if existent and
+#  the inversion grid is not to be recreated. otherwise the inversion grid
+#  is created from files above and the files below are written anew
+#---------------------------------------------------------------------------
+
+#  file name relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/ of cell neighbours file
+#  
+  ECART_INVGRID_FILE_NEIGHBOURS = cell_neighbours
+
+#  indicate logically, whether ECART_INVGRID_FILE_NEIGHBOURS is binary or not
+#  
+  ECART_INVGRID_FILE_NEIGHBOURS_IS_BINARY = .False.
+
+
+#---------------------------------------------------------------------------
+#  COORDINATE SPECIFICATIONS FOR VTK FILE OUTPUT
+#---------------------------------------------------------------------------
+
+#  Scale vtk geometry coordinates by factor VTK_COORDS_SCALING_FACTOR, if SCALE_VTK_COORDS = .True.
+#  this may be helpful if coordinate values (e.g. in m) get so large that they cause problems in paraview
+#
+  SCALE_VTK_COORDS = .False.
+  VTK_COORDS_SCALING_FACTOR = 1.

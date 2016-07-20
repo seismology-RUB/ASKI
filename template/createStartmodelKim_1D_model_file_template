@@ -1,0 +1,25 @@
+3 2
+3 vp
+4.5   500.
+0.    400.
+-4.5  -500.
+
+
+the 1D model file expected by program createStartmodelKim must have the following format:
+  line 1:   nval  ncol
+     nval = number of model values /interpolation coordinates to come
+     ncol = number of columns to read from file, ncol=1+N, where N is number of parameters
+  line 2:   icoord  param1 ... paramN
+     icoord = index of inversion grid / wavefield point coordinate for which the interpolation
+              should be applied (either 1,2 or 3)
+     param1 ... paramN   N parameter names associated with the values in the columns below
+  lines 3...nval+2 :   coord val1 ... valN
+     these following nval lines contain the interpolation coordinate and N model values for the
+     respective parameters, as defined by line 2
+     The values 'coord' are assumed to be be strictly monotonical(!) and can be either increasing
+     or decreasing. You may choose this monotonicity at your will dependent on the coordinate for
+     which the interpolation should be done (which, dependent on your inversion grid type may be
+     depth or positive z-value...)
+
+as in total 2+nval lines are read from this file, everything below (such as this comment block)
+is ignored

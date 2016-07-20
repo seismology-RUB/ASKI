@@ -1,0 +1,148 @@
+#------------------------------------------------------------------------------
+#  PARAMETER FILE FOR INVERSION "your_name_of_inversion"
+#------------------------------------------------------------------------------
+#
+#  HOWTO USE THE PARAMETER FILE:
+#
+# comment lines, STARTING with "#" are ignored
+# empty lines and lines containing blanks only are ignored
+# lines not containing "=" are ignored
+#
+# specify one parameter per line, valid lines having the form "keyword = value"
+# (blanks leading or following the keyword, the "=", or the value are ignored)
+#
+# in a non comment line, all characters in front of "=" (without leading and appending blanks)
+# are interpreted as the keyword, allowing for blank characters within the keyword (e.g. for lines  "   key word = value   ",
+# the string "key word" is used as the keyword)
+# all characters behind "=" (without leading and appending blanks) are interpreted as the value string from 
+# which the value is read, which in particular means that "#" comments at the end of a line (such as 
+# " keyword = value  # comment ") are NOT allowed (in the latter case, the string "value  # comment" would be used
+# to read a value from)
+#
+# by ASKI convention, specify PATHS (i.e. directory names, which will be 
+# concatenated with a filename of a file in that directory) always ending on '/'
+# specify FILENAMES always WITHOUT leading '/'
+#------------------------------------------------------------------------------
+
+
+
+#---------------------------------------------------------------------------
+#  GENERAL SPECIFICATIONS
+#---------------------------------------------------------------------------
+
+#  Forward method. Supported methods: GEMINI, SPECFEM3D
+#
+  FORWARD_METHOD = SPECFEM3D
+
+
+#  (an)elastic model parametrization (as accepted by module modelParametrization)
+#  currently accepted model parametrizations (parameters) :
+#     isoLame (rho,lambda,mu)
+#     isoVelocity (rho,vp,vs)
+#
+  MODEL_PARAMETRIZATION = isoVelocity
+
+
+#---------------------------------------------------------------------------
+#  HOW TO FIND ITERATION STEP PATH
+#---------------------------------------------------------------------------
+
+# main path of this inversion
+#
+  MAIN_PATH_INVERSION = /large_disc/inversions/your_name_of_inversion/
+
+
+# current iteration step
+#
+  CURRENT_ITERATION_STEP = 1
+
+
+# ITERATION_STEP_PATH
+# relative to main path, defining name of subdirectory of MAIN_PATH_INVERSION which contains all relevant (meta)data 
+# for i-th inversion step
+# a three-digit integer (= CURRENT_ITERATION_STEP) and '/' will be appended to ITERATION_STEP_PATH
+# (i.e. '001/', '002/', ...) defining the first, second ... iteration step directory
+#
+  ITERATION_STEP_PATH = iteration_step_
+
+
+#  file name of iteration step specific parameter file, relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH
+#
+  PARFILE_ITERATION_STEP = iter_parfile
+
+
+#---------------------------------------------------------------------------
+#  DATA SPECIFICATIONS
+#---------------------------------------------------------------------------
+
+#  paths where ASKI finds files related to the measured data as expected (text files containing complex numbers
+#  in assumed frequency discretization as defined below)
+#  this path can be everywhere, e.g. close to where you have stored/processed your (time domain) data, 
+#  or in directory MAIN_PATH_INVERSION, etc. ...
+#  NAMING CONVENTION OF FILES IN THESE DIRECTORIES, AS EXPECTED BY PROGRAMS:
+#  FILE_MEASURED_DATA: will by convention be: data_EVENTID_STATIONNAME_COMP
+#  FILE_EVENT_FILTER: will by convention be: filter_EVENTID
+#  FILE_STATION_FILTER: will by convention be: filter_STATIONNAME_COMP , filters are dependet on component
+#  where STATIONNAME and EVENTID are defined in FILE_STATION_LIST and FILE_EVENT_LIST file, and COMP is a
+#  valid component supported by module componentTransformation
+#
+  PATH_MEASURED_DATA = /mydata/your_name_of_inversion/ASKI_data/
+  PATH_EVENT_FILTER = /mydata/your_name_of_inversion/ASKI_event_filter/
+  PATH_STATION_FILTER = /mydata/your_name_of_inversion/ASKI_station_filter/
+
+
+#  DEFINITION OF EVENTS AND STATIONS
+#  FILE_EVENT_LIST is an absolute filename where ASKI finds a text file of the following format:
+#    - first line contains single character 'C' or 'S', defining the coordinate system ('C'artesian or 'S'pherical)
+#      with respect to which the given event coordinates lat,lon are interpreted
+#    - each following non-empty line of the file is interpreted as a definition of one event and must 
+#      contain the following space-separated values:
+#       + eventid     13 character name, (e.g. 2006.10.2977 or 061113_141238) should NOT contain whitespace!
+#       + origintime  characters of form yyyymmdd_hhmmss_nnnnnnnnn or yyyymmdd_hhmmss 
+#                     (i.e. with or without nano-seconds), e.g. 20130320_170012 or 20130320_170002_718000000
+#       + lat         latitude in degrees, -90 <= lat <= 90 ('S') or first coordinate in 
+#                     wavefield points / inversion grid - frame ('C') ->  read the manual on inversion grid definitions
+#       + lon         longitude in degrees, 0 <= lon <= 360 ('S') or second  coordinate in 
+#                     wavefield points / inversion grid -frame ('C') (read manual)
+#       + depth       source depth in km ('S'), or third coordinate in wavefield points / inversion grid -frame ('C') (read manual)
+#       + typ         source type:  0 = force, 1 = moment tensor, -1: not specified
+#       + mag         factor on source mechanism
+#       + mom/frce    either 3 values (force vector) or 6 values (moment tensor)
+#  FILE_STATION_LIST is of analogous format, where a station is defined by a line containing the values:
+#   + station_name    5 character name, which should NEITHER contain whitespace NOR underscors '_' !
+#   + network_code    6 character network code
+#   + lat             latitude in degrees, -90 <= lat <= 90 ('S') or first coordinate in 
+#                     wavefield points / inversion grid - frame ('C') ->  read the manual on inversion grid definitions
+#   + lon             longitude in degrees, 0 <= lon <= 360 ('S') or second  coordinate in 
+#                     wavefield points / inversion grid -frame ('C') (read manual)
+#   + elevation       altitude of station ('S'), or third coordinate in wavefield points / inversion grid -frame ('C') (read manual)
+#
+  FILE_EVENT_LIST = /mydata/your_name_of_inversion/ASKI_events
+  FILE_STATION_LIST = /mydata/your_name_of_inversion/ASKI_stations
+
+
+#  discretized frequency window of measured data (and event_filter / station_filter !) given by a frequency 
+#  step FREQUENCY_STEP [Hz] and a vector of frequency indices INDEX_OF_FREQ (of length NUMBER_OF_FREQ), where 
+#  for specific frequency index i the corresponding frequency f_i [Hz] computes to 
+#
+#    f_i = i * FREQUENCY_STEP
+#
+#  EXAMPLE:
+#      FREQUENCY_STEP = 10.
+#      NUMBER_OF_FREQ = 5
+#      INDEX_OF_FREQ = 2 3 5 7 10
+#
+#  this defines a set of the 5 discrete frequencies:  20.[Hz], 30.[Hz], 50.[Hz], 70.[Hz], 100.[Hz]
+#
+  MEASURED_DATA_FREQUENCY_STEP = 
+  MEASURED_DATA_NUMBER_OF_FREQ = 
+  MEASURED_DATA_INDEX_OF_FREQ = 
+
+
+#---------------------------------------------------------------------------
+#  VTK FILE OPTIONS SPECIFICATIONS
+#---------------------------------------------------------------------------
+
+#  Default vtk file format [BINARY / ASCII]
+#
+  DEFAULT_VTK_FILE_FORMAT = ASCII

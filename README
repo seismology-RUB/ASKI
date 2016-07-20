@@ -1,0 +1,61 @@
+####################################################
+THIS IS A VERY SHORT DOCUMENTATION ON HOW TO GET
+STARTED WITH
+
+    A S K I  - version 0.3
+
+####################################################
+
+ASKI and some of its components, as well as documentation and some examples
+are available via http://www.rub.de/ASKI
+Please also refer to this address in case you want to get in touch with the
+authors, who are very eager on any feedback, especially about problems you may 
+encounter installing or using the software.
+
+The authors are Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+and Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany), 2013.
+
+ASKI version 0.3 is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or
+any later version.
+ASKI version 0.3 is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+A copy of the GNU General Public License is provided in file GNU_GPL_v2.0.txt,
+you may also see <http://www.gnu.org/licenses/>.
+
+
+##########
+REQUIREMENTS
+##########
+Unix-like operating system (?!), so far only run on GNU Linux Debian 4.7.2-5
+GNU Make
+Fortran compiler (sufficient standard) (so far only tested: GNU Fortran (Debian 4.7.2-5) 4.7.2)
+BLAS, LAPACK, BLACKS, SCALAPACK libraries (available via <http://www.netlib.org/>)
+
+
+##########
+INSTALLATION
+##########
+0) Extract the directory ASKI_0.3 containing all files/subdirectories of the ASKI code to some directory,
+   if not done yet
+
+1) Adjust the software to your system and personal requirements by:
+   + setting the variables SHELL and FFLAGS in file ASKI_0.3/Makefile to desired values
+   + setting the variables BLAS, LAPACK, BLACS and SCALAPACK in file ASKI_0.3/Makefile in order to correctly bind the libraries
+   + setting environment variable 'F95' to the name of your compiler
+
+2) Run command "make clean" in ASKI_0.3/
+
+3) Compile all binaries by running "make all" in ASKI_0.3/
+
+Now ASKI_0.3/bin should contain all binaries and no error should have occurred (at best...).
+
+
+##########
+USAGE
+##########
+Refer to the manual ASKI_manual.pdf for any details on using ASKI, available via
+http://www.rub.de/ASKI
