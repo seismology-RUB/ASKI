@@ -1,0 +1,242 @@
+%-----------------------------------------------------------------------------
+%   Copyright 2013 Florian Schumacher
+%
+%   This file is part of the ASKI manual as a LaTeX document with main file
+%   manual.tex
+%
+%   Permission is granted to copy, distribute and/or modify this document
+%   under the terms of the GNU Free Documentation License, Version 1.3
+%   or any later version published by the Free Software Foundation;
+%   with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+%   A copy of the license is included in the section entitled ``GNU
+%   Free Documentation License''. 
+%-----------------------------------------------------------------------------
+%
+This chapter collects some scripts, binary programs or modular program components contained 
+in the \ASKI package, for which some more detail on arguments and basic functionality is 
+required by expert users.\\ 
+It is not refered to any code, here.
+%
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\section{Integration Weights} \label{programs_scripts,sec:fmod_intw}
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+%
+The \ASKI module \lcode{integrationWeights} computes integration weights for the set of wavefield points 
+in order to integrate the kernels over the inversion grid. As we need to calculate the integrals of the 
+kernels over each inversion grid cell separately, the integration weights are computed for each cell in 
+such a way that weighting the summation of the kernel values yields the desired integral value:
+
+For each inversion grid cell $\Omega_c \subset \RRR$ which contains wavefield points \wpG the weights 
+\weights are computed such that
+\begin{equation} \label{programs_scripts,sec:fmod_intw,eq:integration_global}
+\int_{\Omega_c} K(\mathbf{x})\,d\mathbf{x} \simeq \sum_{i=1}^{n_c} w_iK(\mathbf{x}_i)
+\end{equation}
+
+There are several types of integration weights supported (indicated by dummy variable \lcode{intw_type} of 
+subroutine \lcode{createIntegrationWeights}):
+%
+%----------------------------------------------------------
+\setcounter{subsection}{-1}
+\subsection{Compute Average (no integration)} \label{programs_scripts,sec:fmod_intw,sub:average}
+%----------------------------------------------------------
+%
+In case of \lcode{intw_type = 0}, function \lcode{createIntegrationWeights} sets 
+\[w_i = \frac{1}{n_c} \quad ,\, i=1,\dots,n_c\]
+in each inversion grid cell $\Omega_c$.\\
+This way, the summation $\sum_{i=1}^{n_c} w_iK\brackr{\mathbf{x}_i^G} = \frac{1}{n_c} \sum_{i=1}^{n_c} 
+K\brackr{\mathbf{x}_i^G}$ yields the average kernel value in $\Omega_c$.
+
+This type of integration weights (which are actually no integration weights) may be used to perform some 
+sort of interpolation of kernel values onto the inversion grid (e.g.~in order to compare kernel values 
+from different methods which use different sets of wavefield points).
+%
+%----------------------------------------------------------
+\subsection{Scattered Data Integration} \label{programs_scripts,sec:fmod_intw,sub:SDI}
+%----------------------------------------------------------
+%
+In case of \lcode{intw_type = 1...4}, a method by David Levin \cite{Levin99} is apllied to a
+standardized inversion grid cell $\Omega^S$. For different shapes of inversion grid cells, different 
+types of standard cells are used, which are referred to below.
+
+For each inversion grid cell $\Omega_c \subset \RRR$ containing wavefield points \wpG, a transformation 
+$T : \Omega_c \rightarrow \Omega^S$ is used to transform cell $\Omega_c$ into the standard cell $\Omega^S$ 
+and to compute the respective transformed wavefield points $\mathbf{x}_i^S = T\left(\mathbf{x}_i\right)$ 
+contained in $\Omega^S$.
+
+Then \cite{Levin99} is applied to points \wpS and volume $\Omega^S$ to compute integration weights \weightsS
+such that
+\begin{align}
+\int_{\Omega_c} K(\mathbf{x})\,d\mathbf{x} &= 
+           \int_{\Omega^S} K\left(T^{-1}\left(\mathbf{x}^S\right)\right) 
+           \mathcal{J}_{T^{-1}}\left(\mathbf{x}^S\right)\,d\mathbf{x}^S \nonumber \\
+  &\simeq \sum_{i=1}^{n_c} w^S_i\,\mathcal{J}_i\,K(\mathbf{x}_i) 
+   \label{programs_scripts,sec:fmod_intw,eq:integration_standard} \\
+  & = \sum_{i=1}^{n_c} w_iK(\mathbf{x}_i) \nonumber
+\end{align}
+whereby $\mathcal{J}_{T^{-1}}$ denotes the Jacobian of the inverse transformation $T^{-1}$, $\mathcal{J}_i = 
+\mathcal{J}_{T^{-1}}\left(\mathbf{x}^S_i\right)$ and the desired weights compute as $w_i = w^S_i \, \mathcal{J}_i$. 
+The method of computing such integration weights \weightsS, as presented in \cite{Levin99}, is explained in 
+the following.
+%
+%----------------------------------------------------------
+\subsubsection{The Method of Scattered Data Integration}
+%----------------------------------------------------------
+%
+\cite{Levin99}{} follows a composite rule strategy for building the integration weights. For subsets of the 
+volume of interest it constructs integration formulae which are as local and as stable as possible and are 
+exact for polyinomials $p$ of a certain fixed degree $m$. It is assumed that the integrals of these polynomials 
+$p\in\Pi_m$ over the subsets are easily computable.
+
+In notation of \cite{Levin99}{}, the integration weights $A_i$ for a function $f$ on domain $\Omega\subset\Rd$ 
+which is given on a set $\brackg{x_i}_{i=1}^N\subset\Omega$ are constructed as
+\[
+A_i = \sum_{k=1}^K A_i^{(k)} \,,\quad 1 \le i \le N \, , 
+\]
+where $\Omega$ is subdivided into $K$ disjoint subsets $E_k$. For each $E_k$, the $N$ weights $A_i^{(k)}$ are 
+calculated as follows.
+
+We choose a basis $\brackg{p_i}_{i=1}^J$ of the space $\Pi_m$ of all polynomials in $\Rd$ with maximum total 
+degree $m$, where $J = \left(\begin{array}{c} d+m \\ m \end{array}\right)$ is the dimension of space $\Pi_m$. 
+$A_i^{(k)}$ are then defined as the components $a_i = A_i^{(k)}$ of vector $\bar{a} = 
+D^{-1}E\brackr{E^tD^{-1}E}^{-1}\bar{c}$, where
+\begin{align*}
+  D &= 2\text{Diag}\brackg{\eta\brackr{\|x^\ast-x_1\|},\dots,\eta\brackr{\|x^\ast-x_N\|}}\\
+  E_{i,j} &= p_j\brackr{x_i}\,,\quad 1\le i\le N,\; 1\le j\le J
+\end{align*}
+and $\bar{c}$ contains the integrals of the $p_i$ over $E_k$, i.e.~$c_i = \int_{E_k} p_i$. $\eta(r) = 
+\exp\brackr{r^2/h^2}$ is a fast increasing weight function which gives the localizing properties of the weights. 
+$h$ is approximately the diameter of subsets $E_k$ and $x^\ast$ is some center of $E_k$.
+
+This composite local approach of calculating global integration weights involves $K$ solutions of a full 
+linear system of order $J$. 
+%
+%----------------------------------------------------------
+\subsubsection{Application to Hexahedral Inversion Grid Cells}
+%----------------------------------------------------------
+%
+For inversion grid cells of general hexahedral shape, the 3-dimensional cube 
+\[\Omega^S = [-1,1]^3 = \brackg{\left. \vecthree x y z \right| -1 \le x,y,z \le 1}\]
+is used as the standard cell. For every such inversion grid cell $\Omega_c$, module \lcode{inversionGrid} 
+is expected to provide its transformed wavefield points \wpS and their corresponding values of Jacobian 
+$\mathcal{J}_i$.
+
+In the context of Scattered Data Integration, the inversion domain $\Omega=\Omega^S=[-1,1]^3$ is subdivided into
+$K = n_h^3$ subcubes $E_k$ of edge length $h=2/n_h$. $n_h=\max\brackg{\left\lfloor\sqrt[3]{\frac{n_c}{J}}\right\rfloor,1}$ 
+is chosen in such a way that there should be at least $J$ (or all, otherwise) integration points within $E_k$, as 
+otherwise the damping by matrix $D^{-1}$ might cause numerical instabilities by making matrix $E^tD^{-1}E$ close 
+to singular. 
+
+As $x^\ast$, the center of the respective subcube is chosen.
+
+The desired weights \weightsS are then given by $w^S_i = A_i,\,1\le i\le n_c$
+%
+%----------------------------------------------------------
+\subsubsection{Application to Tetrahedral Inversion Grid Cells}
+%----------------------------------------------------------
+%
+For inversion grid cells of general tetrahedral shape, the 3-dimensional simplex with corners
+\[
+\vecthree 0 0 0 ,\, \vecthree 1 0 0 ,\, \vecthree 0 1 0 ,\, \vecthree 0 0 1
+\]
+is used as the standard cell $\Omega^S$. For every such inversion grid cell $\Omega_c$, module 
+\lcode{inversionGrid} is expected to provide its transformed wavefield points \wpS and their 
+corresponding values of Jacobian $\mathcal{J}_i$.
+
+In the context of Scattered Data Integration, here the inversion domain $\Omega = \Omega^S$ is \emph{not} 
+subdivided into any true subsets $E_k$. It is always $K=1$ and $E_1 = \Omega$, mainly because a subdivision 
+of the standard tetrahedron is not trivial (compared with e.g.\ the cube $[-1,1]^3$), considering that the integrals 
+of the base polynomials must be computed over all subsets $E_k$. 
+
+As $x^\ast$, the barycenter \[ \vecthree{0.25}{0.25}{0.25} \] of the standard simplex is chosen and $h = 1$.
+
+The desired weights \weightsS are then given by $w^S_i = A_i,\,1\le i\le n_c$
+%
+%----------------------------------------------------------
+\subsubsection{Scattered Data Integration, Order 1}
+%----------------------------------------------------------
+%
+\lcode{intw_type = 1}\\
+In the context of this subsection \ref{programs_scripts,sec:fmod_intw,sub:SDI}, $m=1$ is used as the 
+degree of polynomials which are integrated in an exact way and of course $d=3$. The space $\Pi_1$ of all polynomials in 
+$\RRR$ of maximum total degree $m=1$ has dimension $J = \left(\begin{array}{c} 3+m \\ m \end{array}\right) 
+= \left(\begin{array}{c} 4 \\ 1 \end{array}\right) = 4$. As a basis of $\Pi_1$ we choose 
+$\big\{1,\allowbreak x,\allowbreak y,\allowbreak z\big\}$.
+%
+%----------------------------------------------------------
+\subsubsection{Scattered Data Integration, Order 2}
+%----------------------------------------------------------
+%
+\lcode{intw_type = 2}\\
+In the context of this subsection \ref{programs_scripts,sec:fmod_intw,sub:SDI}, $m=2$ is used as the 
+degree of polynomials which are integrated in an exact way and of course $d=3$. The space $\Pi_2$ of all polynomials in 
+$\RRR$ of maximum total degree $m=2$ has dimension $J = \left(\begin{array}{c} 3+m \\ m \end{array}\right) 
+= \left(\begin{array}{c} 5 \\ 2 \end{array}\right) = 10$. As a basis of $\Pi_2$ we choose $\big\{1,
+\allowbreak x,\allowbreak y,\allowbreak z,\allowbreak x^2,\allowbreak xy,\allowbreak xz,\allowbreak y^2,
+\allowbreak yz,\allowbreak  z^2\big\}$.
+%
+%----------------------------------------------------------
+\subsubsection{Scattered Data Integration, Order 3}
+%----------------------------------------------------------
+%
+\lcode{intw_type = 3}\\
+In the context of this subsection \ref{programs_scripts,sec:fmod_intw,sub:SDI}, $m=3$ is used as the 
+degree of polynomials which are integrated in an exact way and of course $d=3$. The space $\Pi_3$ of all polynomials in 
+$\RRR$ of maximum total degree $m=3$ has dimension $J = \left(\begin{array}{c} 3+m \\ m \end{array}\right) 
+= \left(\begin{array}{c} 6 \\ 3 \end{array}\right) = 20$. As a basis of $\Pi_3$ we choose $\big\{1,
+\allowbreak x,\allowbreak y,\allowbreak z,\allowbreak x^2,\allowbreak xy,\allowbreak xz,\allowbreak y^2,
+\allowbreak yz,\allowbreak  z^2,\allowbreak x^3,\allowbreak  x^2y,\allowbreak  x^2z,\allowbreak  xy^2,
+\allowbreak  xyz,\allowbreak  xz^2,\allowbreak  y^3,\allowbreak  y^2z,\allowbreak  yz^2,\allowbreak  
+z^3\big\}$.
+%
+%----------------------------------------------------------
+\subsubsection{Scattered Data Integration, Optimal Order}
+%----------------------------------------------------------
+%
+In case of \lcode{intw_type = 4}, function \lcode{createIntegrationWeights} tries to seperately 
+find for each inversion grid cell the highest possible order of Scattered Data Integration. 
+Starting with highest order $m=3$, it continues to recompute Scattered Data Integration weights of 
+order $m = 2$ and $m = 1$ until the computation was successful. If the computation for order $m=1$ 
+fails, the integration weights of that cell will be marked erroneous, the computation of the weights
+is not successfull in that case.
+
+As the success of the Scattered Data Integration method is strongly dependent on the specific set of 
+points \wpS, since matrix $E_{i,j} = p_j\brackr{x_i}$ must have full rank, the strategy of choosing 
+the highest possible degree of integration for each cell tries to take all locally availabe information 
+of inversion grid and wavefield points into account.
+%
+%----------------------------------------------------------
+\subsection{Linear (first order) Integration} \label{programs_scripts,sec:fmod_intw,sec:linear}
+%----------------------------------------------------------
+%
+In case of \lcode{intw_type = 5}, function \lcode{createIntegrationWeights} sets 
+\[w_i = \frac{1}{n_c}\mathrm{vol}\left(\Omega_c\right) \quad ,\, i=1,\dots,n_c\]
+in each inversion grid cell $\Omega_c$, where $\mathrm{vol}\left(\Omega_c\right)$ denotes the 
+volume of inversion grid cell $\Omega_c$, which is expected to be provided by module \lcode{inversionGrid}
+for every cell.\\
+This way, the summation $\sum_{i=1}^{n_c} w_iK\brackr{\mathbf{x}_i^G} = 
+\mathrm{vol}\left(\Omega_c\right)\frac{1}{n_c} \sum_{i=1}^{n_c} K\brackr{\mathbf{x}_i^G}$ yields 
+the average kernel value in $\Omega_c$ multiplied with the volume of $\Omega_c$.
+
+This somehow approximates the generalization of the trapezoidal rule to 3 dimensions, in which the 
+integral of a function $f$ over some tetrahedron $\mathcal{T}$, which is defined by 4 incoplanar points 
+$\mathbf{t}_1,\dots,\mathbf{t}_4$, is computed by $\mathrm{vol}\left(\mathcal{T}\right)\frac{1}{4} 
+\sum_{i=1}^4 f(\mathbf{t}_i)$. 
+%
+%----------------------------------------------------------
+\subsection{External Integration Weights} \label{programs_scripts,sec:fmod_intw,sec:external}
+%----------------------------------------------------------
+%
+In case of \lcode{intw_type = 6}, function \lcode{createIntegrationWeights} does not actually compute
+any integration weights. Instead, it calls function \lcode{transformToStandardCellInversionGrid} of module 
+\lcode{inversionGrid} with dummy variable \lcode{type_standard_cell} set to value \lcode{-1}, which 
+requests the routine to return the total integration weights in variable \lcode{jacobian} instead the 
+jacobian values. These returned values are then stored as the integration weights.
+
+This functionality must be supported by the type of inversion grid. At the moment only inversion grids 
+of type \lcode{specfem3dInversionGrid} support external type integration weights.
+%----------------------------------------------------------
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "manual"
+%%% End:

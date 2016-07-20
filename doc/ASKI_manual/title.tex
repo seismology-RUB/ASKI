@@ -1,0 +1,84 @@
+%-----------------------------------------------------------------------------
+%   Copyright 2013 Florian Schumacher
+%
+%   This file is part of the ASKI manual as a LaTeX document with main file
+%   manual.tex
+%
+%   Permission is granted to copy, distribute and/or modify this document
+%   under the terms of the GNU Free Documentation License, Version 1.3
+%   or any later version published by the Free Software Foundation;
+%   with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+%   A copy of the license is included in the section entitled ``GNU
+%   Free Documentation License''. 
+%-----------------------------------------------------------------------------
+%
+
+
+%#########
+% classical titlepage using \maketitle
+
+%\title{\thispagestyle{empty} \tt {\Huge ASKI} {\rm --} {\Huge A}{\large nalysis of} {\Huge S}{\large ensitivity \\ and } {\Huge\tt K}{\large ernel} {\Huge\tt I}{\large nversion} \\ \vspace*{1cm} Version 0.3 \\ User Manual}
+%\title{\thispagestyle{empty} \tt {\Huge ASKI} {\rm --} version 0.3 \\ User Manual}
+
+% without \usepackage[affil-it]{authblk} e.g.:
+%\author{Florian Schumacher \thanks{\texttt{florian.schumacher@rub.de}; corresponding author} \and Wolfgang Friederich \thanks{\texttt{wolfgang.friederich@rub.de}}}
+% WITH authblk:
+%\author[1]{Florian Schumacher, Wolfgang Friederich}
+%\author[1]{Florian Schumacher \thanks{\texttt{florian.schumacher@rub.de}; corresponding author}}
+%\author[1]{Wolfgang Friederich \thanks{\texttt{wolfgang.friederich@rub.de}}}
+%\affil[1]{Ruhr-Universit\"at Bochum} % for this you need \usepackage[affil-it]{authblk}
+
+%\date{\today}
+%\date{6.12.2004}
+%\date{} % no date
+
+%\maketitle
+% END classical titlepage using \maketitle
+%#########
+
+
+
+
+%#########
+% individual titlepage using \begin{titlepage},\end{titlepage}
+\begin{titlepage}
+\thispagestyle{empty}
+
+  \begin{center}
+    \tt \Huge ASKI
+  \end{center}
+  \vspace*{2cm}
+
+  \begin{minipage}{0.5\textwidth}
+    \begin{flushleft}
+      \fontsize{20}{40} \selectfont
+      {\tt {\Huge A}{\large nalysis of} \\ {\Huge S}{\large ensitivity and } \\ {\Huge\tt K}{\large ernel} \\ {\Huge\tt I}{\large nversion} }
+    \end{flushleft}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.5\textwidth}
+    \begin{flushright}
+      {\fontsize{20}{40} \selectfont \tt {\Huge User Manual} \\  ASKI {\rm --} {\large version 0.3} \\ {\large 2013} \\}
+      {\tt {\large Florian Schumacher \\Wolfgang Friederich} \\ {\small Ruhr-Universit\"at Bochum, Germany} }
+    \end{flushright}
+  \end{minipage}
+
+\vspace*{3cm}
+%\vfill
+
+\begin{center}
+  \setlength{\fboxsep}{0pt}%
+  \setlength{\fboxrule}{2pt}%
+  \fbox{\includegraphics[width=\textwidth]{images/title_time_kernel_analysis.jpg}}
+\end{center}
+
+\end{titlepage}
+% END individual titlepage
+%#########
+
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "manual"
+%%% End:

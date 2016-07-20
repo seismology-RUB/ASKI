@@ -1,0 +1,206 @@
+%-----------------------------------------------------------------------------
+%   Copyright 2013 Florian Schumacher
+%
+%   This file is part of the ASKI manual as a LaTeX document with main file
+%   manual.tex
+%
+%   Permission is granted to copy, distribute and/or modify this document
+%   under the terms of the GNU Free Documentation License, Version 1.3
+%   or any later version published by the Free Software Foundation;
+%   with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+%   A copy of the license is included in the section entitled ``GNU
+%   Free Documentation License''. 
+%-----------------------------------------------------------------------------
+%
+\documentclass[12pt,a4paper]{book}
+
+\usepackage[english]{babel} %language selection
+\selectlanguage{english}
+
+\pagenumbering{arabic}
+
+\usepackage[affil-it]{authblk}
+\usepackage{times} % 'times new roman' script style
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[pdftex]{graphicx}
+
+% use package url with [obeyspaces] in order to correctly display \nolinkurl WITH spaces 
+%(used in \newcommand{\lcode} below). As hyperref internally loads package url, you can pass
+% option obeyspaces of package url to package hyperref as follows
+\PassOptionsToPackage{obeyspaces}{url}\usepackage{hyperref}
+%\hypersetup{colorlinks, 
+%           citecolor=black,
+%           filecolor=black,
+%           linkcolor=black,
+%           urlcolor=black,
+%           bookmarksopen=true,
+%           pdftex}
+%\hfuzz = .6pt % avoid black boxes
+
+% the following is an ugly solution of allowing line breaks in urls additionally after every normal 
+% alphabetic character which (if \nolinkurl is used in \newcommand{\lcode} below) at all allows line 
+% breaks of long routine names like 'transformToStandardCellInversionGrid', BUT of course also breaks
+% any other term formatted by \lcode at any character, which is maybe not very nice.
+%\let\origUrlBreaks\UrlBreaks
+%\renewcommand*{\UrlBreaks}{\origUrlBreaks\do\a\do\b\do\c\do\d\do\e\do\f\do\g\do\h\do\i\do\j\do\k\do\l\do\m\do\n\do\o\do\p\do\q\do\r\do\s\do\t\do\u\do\v\do\w\do\x\do\y\do\z\do\A\do\B\do\C\do\D\do\E\do\F\do\G\do\H\do\I\do\J\do\K\do\L\do\M\do\N\do\O\do\P\do\Q\do\R\do\S\do\T\do\U\do\V\do\W\do\X\do\Y\do\Z}
+
+
+%% POSSIBLE PACKAGES TO DISPLAY CODE
+%%
+%% package alltt: verbatim environment within which math is displayed correctly
+%% usage: \begin{alltt}\end{alltt}
+%\usepackage{alltt}
+%%
+%% package listings: provides environments to display code fragments (with a lot of special characters) in a more evolved fashion than verbatim (alltt)
+%% only uncomment (both next lines), if used in \newcommand{\lcode} below
+\usepackage{listings}
+\lstset{basicstyle =\ttfamily}%\small}
+
+\usepackage[paperwidth=21.0cm,paperheight=29.7cm, left=2.5cm,right=2.5cm,top=2.0cm,
+            bottom=2.0cm,headheight=0in,footskip=1.0cm]{geometry}
+%-------------------------------
+%
+% COMMANDS FOR IN-LINE PHRASES IN CODE-STYLE
+%
+%%% ttfamily does not properly support any special characters
+%\newcommand{\lcode}[1]{ {\ttfamily #1 }}
+%
+%%% lstinline is a good solution, in general, but it makes problems in line breaks!
+%\newcommand{\lcode}[1]{\lstinline[breaklines=true]$#1$}
+%
+%%% although there are no actual links, it uses the same font as lstinline (when \lstset{basicstyle =\ttfamily}), 
+%%% but produces better line breaks!
+\newcommand{\lcode}[1]{\nolinkurl{#1}}
+%
+%%% need \lcodetitle, since \nolinkurl in a title of a numerated (sub)section (not *) causes problems in bookmark 
+%%% view in adobe reader (why?! what is the actual problem?), \lcodetitle, however, does NOT support stuff like '_' etc.
+\newcommand{\lcodetitle}[1]{ {\ttfamily #1} }
+%
+%
+\newcommand{\ASKI}{ {\ttfamily ASKI} }
+%
+%
+% OTHER NEW COMMANDS
+%
+\newcommand{\inotice}[1]{ \fbox{\parbox[t]{0.9\textwidth}{{\bf Important:} \\#1}} }
+\newcommand{\notice}[1]{ \fbox{\parbox[t]{0.9\textwidth}{#1}} }
+\newcommand{\myref}[1]{\ref{#1} (page~\pageref{#1})}
+\newcommand{\myaref}[1]{$\rightarrow$~\ref{#1} (page~\pageref{#1})}
+%
+\newcommand{\vecthree}[3]{\left( 
+  \begin{array}{c}
+    #1 \\ #2 \\ #3
+  \end{array}
+\right)}
+\newcommand{\weights}{$w_1,\dots,w_{n_c}$}
+\newcommand{\weightsS}{$w^S_1,\dots,w^S_{n_c}$}
+\newcommand{\wpG}{$\mathbf{x}_1,\dots,\mathbf{x}_{n_c}$}
+\newcommand{\wpS}{$\mathbf{x}^S_1,\dots,\mathbf{x}^S_{n_c}$}
+\newcommand{\RRR}{\mathbb{R}^3}
+\newcommand{\Rd}{\mathbb{R}^d}
+\newcommand{\R}[1]{$\mathbb{R}^{#1}$}
+\newcommand{\brackr}[1]{\left( #1 \right)}
+\newcommand{\brackg}[1]{\left\{ #1 \right\}}
+%
+%-------------------------------
+%
+% END OF PREAMBLE
+%####################################################################
+%
+\begin{document}
+%
+\setlength{\parindent}{0cm}
+\addtolength{\parskip}{0.1cm}
+% TeX's first attempt at breaking lines is performed without even trying hyphenation: 
+% TeX sets its "tolerance" of line breaking oddities to the internal value \pretolerance
+% an "infinite" tolerance is represented by the value 10000, but may lead to very bad line breaks indeed!
+%\pretolerance=10000
+%
+%-------------------------------
+% TITLE PAGE(s)
+%
+\input{title}
+%
+%-------------------------------
+% LICENSE
+Copyright \copyright 2013 Florian Schumacher.
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3
+or any later version published by the Free Software Foundation;
+with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+A copy of the license is included in the section entitled ``GNU
+Free Documentation License''.
+
+\vspace{1cm}
+
+This documentation was written in the hope that it will be useful to the user,
+but it \emph{cannot be assured} that it is accurate in every respect or complete in any sense.\\
+Please do not hesitate to improve this documentation by incorporating your experiences with \ASKI 
+and your personal experience of getting used to it. When you have developed new \ASKI components or 
+have modified existing once, please extend / modify this document accoringly.
+
+Furthermore, my moderate experience with \LaTeX may well give rise to improving the document 
+style, hence the readability of the manual as a whole, as well as the coding style of the 
+particular \lcode{.tex} files. 
+
+The \LaTeX source files and all related components of this document are available via 
+\url{http://www.rub.de/ASKI}
+\begin{flushright}
+Florian Schumacher, 2013
+\end{flushright}
+%
+%-------------------------------
+% CHAPTER Introduction
+\chapter*{How to use this manual}
+\phantomsection  % so hyperref creates bookmarks
+\input{howto}
+%
+%-------------------------------
+% TABLE OF CONTENTS
+\tableofcontents
+%
+%-------------------------------
+% CHAPTER Guide
+\setcounter{chapter}{-1}
+\chapter{Guide} \label{guide}
+%\phantomsection  % so hyperref creates bookmarks
+%\addcontentsline{toc}{chapter}{Guide}
+\input{guide}
+%
+%-------------------------------
+% CHAPTER Basic Steps
+%\setcounter{chapter}{-1}
+\chapter{Basic Steps} \label{basic_steps}
+\input{basic_steps}
+%
+%-------------------------------
+% APPENDIX CONTAINING CHAPTERS WITH MORE DETAILS
+%\appendix
+%
+%-------------------------------
+% APPENDIX CHAPTER file formats
+\chapter{Files} %\label{files}
+\input{files}
+%
+%-------------------------------
+% APPENDIX CHAPTER programs and scripts
+\chapter{Programs, Scripts and Modules} %\label{programs_scripts_modules}
+\input{programs_scripts_modules}
+%
+%-------------------------------
+% CHAPTER GNU Free Documentation License
+\input{fdl-1.3}
+%
+%----------------------------------------------------------
+% BIBLIOGRAPHY
+\bibliographystyle{alpha}
+\bibliography{bibliography}
+% in order to create a bibliography from file bibliography.bib run:
+% > pdflatex manual
+% > bibtex manual
+% > pdflatex manual
+% > pdflatex manual
+%----------------------------------------------------------
+\end{document}
