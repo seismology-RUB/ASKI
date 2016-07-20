@@ -1,2 +1,0 @@
-# ASKI
-ASKI main package
