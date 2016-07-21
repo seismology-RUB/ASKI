@@ -2,7 +2,7 @@
 THIS IS A VERY SHORT DOCUMENTATION ON HOW TO GET
 STARTED WITH
 
-    A S K I  - version 1.0
+    A S K I  - version 1.1
 
 ####################################################
 
@@ -13,13 +13,13 @@ authors, who are very eager on any feedback, especially about problems you may
 encounter installing or using the software.
 
 The authors are Florian Schumacher (Ruhr-University Bochum, Germany)
-and Wolfgang Friederich (Ruhr-University Bochum, Germany), 2015.
+and Wolfgang Friederich (Ruhr-University Bochum, Germany), 2016.
 
-ASKI version 1.0 is free software: you can redistribute it and/or modify
+ASKI version 1.1 is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 2 of the License, or
 any later version.
-ASKI version 1.0 is distributed in the hope that it will be useful,
+ASKI version 1.1 is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
@@ -30,9 +30,8 @@ you may also see <http://www.gnu.org/licenses/>.
 ##########
 REQUIREMENTS
 ##########
-Unix-like operating system (?!), so far only run on Debian GNU/Linux 8 (jessie)
 GNU Make
-Fortran compiler (sufficient standard) (so far only tested: GNU Fortran (Debian 4.9.2-10) 4.9.2)
+Fortran compiler (sufficient standard) (so far tested: GNU Fortran (Ubuntu 5.2.1-22ubuntu2) 5.2.1 20151010)
 BLAS and LAPACK  libraries for all applications ,
 BLACKS, SCALAPACK and MPI libraries optionally for few parallel applications (e.g. available via <http://www.netlib.org/>)
 
@@ -40,36 +39,19 @@ BLACKS, SCALAPACK and MPI libraries optionally for few parallel applications (e.
 ##########
 INSTALLATION
 ##########
-0) Extract the directory ASKI_1.0 containing all files and subdirectories to some path,
+0) Extract the directory ASKI_1.1 containing all files and subdirectories to some path,
    if not done yet
 
 1) Adjust the software to your system and personal requirements by:
-   + setting the variables COMPILER, MPICOMPILER in file ASKI_1.0/Makefile appropriately
-   + setting the variables BLAS, LAPACK, (BLACS, SCALAPACK, MPILIB) in file ASKI_1.0/Makefile in order to correctly bind the libraries
-   + adjusting the variable FFLAGS in file ASKI_1.0/Makefile , if required
+   + setting the variables COMPILER, MPICOMPILER in file ASKI_1.1/Makefile appropriately
+   + setting the variables BLAS, LAPACK, (BLACS, SCALAPACK, MPILIB) in file ASKI_1.1/Makefile in order to correctly bind the libraries
+   + adjusting the variable FFLAGS in file ASKI_1.1/Makefile , if required
 
-2) Run command "make all" in ASKI_1.0/ to compile all serial programs (nearly all functionality)
+2) Run command "make all" in ASKI_1.1/ to compile all serial programs (nearly all functionality)
 
-3) Run command "make parallel" in ASKI_1.0/ to compile all parallel programs (two optional linear system solvers which run in parallel)
+3) Run command "make parallel" in ASKI_1.1/ to compile all parallel programs (two optional linear system solvers which run in parallel)
 
-Now ASKI_1.0/bin should contain all binaries and no error should have occurred (at best...).
-
-
-##########
-WHAT COMES WITH THE SOFTWARE?
-##########
-+ ASKI_1.0/f90 contains all FORTRAN code files (even if the FORTRAN standard used
-  by your compile should be higher than FORTRAN90, it is still called f90...)
-
-+ After installing and compilation of the fortran code, ASKI_1.0/bin contains the executables
-  of ASKI. 
-
-+ ASKI_1.0/obj is only used for object and mod files during compilation
-
-+ ASKI_1.0/py contains python scripts and modules of ASKI, which are referred to in the manual
-
-+ ASKI_1.0/template contains a lot of template parameter files which can be used to create 
-  specific ones for your purpos
+Now ASKI_1.1/bin should contain all binaries and no error should have occurred (at best...).
 
 
 ##########
