@@ -1,0 +1,23 @@
+## 
+## Cubit Version 14.0
+## Cubit Build 387010
+## Revised 2013-06-11 10:13:37 -0600 (Tue, 11 Jun 2013)
+## Running 11/05/2015 04:41:10 PM
+## Command Options:
+## -warning = On
+## -information = On
+reset
+brick x 15 y 15 z 20
+move volume 1 x 0 y 0 z 10
+create cylinder height 10 radius 2.5
+move volume 2 x 0 y 0 z 5
+subtract volume 2 from volume 1
+webcut volume all with plane zplane offset 15 noimprint nomerge
+volume 3 scheme tetmesh
+surface 10 11 size 5
+surface 22 12 19 20 21 size 7
+mesh volume 3
+volume 1 scheme tetmesh
+volume 1 size 5
+mesh volume 1
+compress all

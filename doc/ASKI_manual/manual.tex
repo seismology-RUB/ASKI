@@ -1,5 +1,7 @@
+% -*-LaTex-*-
+
 %-----------------------------------------------------------------------------
-%   Copyright 2013 Florian Schumacher
+%   Copyright 2015 Florian Schumacher
 %
 %   This file is part of the ASKI manual as a LaTeX document with main file
 %   manual.tex
@@ -12,6 +14,34 @@
 %   Free Documentation License''. 
 %-----------------------------------------------------------------------------
 %
+%#########################################################################
+% ATTENTION: THERE ARE STILL SEVERAL PROBLEMS TO COMPILE THIS DOCUMENT RESULTING
+% IN A LOT OF WARNINGS. YOU PROBABLY NEED TO COMPILE THIS DOCUMENT IN MODE 
+% ``nonstopmode'' by:
+% 
+% pdflatex \\nonstopmode\\input manual.tex
+% bibtex manual
+% pdflatex \\nonstopmode\\input manual.tex
+% pdflatex \\nonstopmode\\input manual.tex
+% pdflatex \\nonstopmode\\input manual.tex
+% 
+%#########################################################################
+
+
+
+%#########################################################################
+%%   TODO DOCUMENTATION:
+%% 
+%%  ->  put text boxes for ``simple solution'' and ``advanced options'', where applicable
+%% 
+%%  ->  possible name for successor program package:
+%%         ANSI - ANalysis of Sensitivity and Inversion
+%%      with regard to the common (however, not official) name ``ANSI'' of a group of 
+%%      ASCII-based 8-byte character sets like Latin 1, UTF-8.
+%% 
+%#########################################################################
+
+
 \documentclass[12pt,a4paper]{book}
 
 \usepackage[english]{babel} %language selection
@@ -89,11 +119,11 @@
 \newcommand{\myref}[1]{\ref{#1} (page~\pageref{#1})}
 \newcommand{\myaref}[1]{$\rightarrow$~\ref{#1} (page~\pageref{#1})}
 %
-\newcommand{\vecthree}[3]{\left( 
-  \begin{array}{c}
+\newcommand{\vecthree}[3]{
+  \begin{pmatrix}
     #1 \\ #2 \\ #3
-  \end{array}
-\right)}
+  \end{pmatrix}
+}
 \newcommand{\weights}{$w_1,\dots,w_{n_c}$}
 \newcommand{\weightsS}{$w^S_1,\dots,w^S_{n_c}$}
 \newcommand{\wpG}{$\mathbf{x}_1,\dots,\mathbf{x}_{n_c}$}
@@ -111,8 +141,8 @@
 %
 \begin{document}
 %
-\setlength{\parindent}{0cm}
-\addtolength{\parskip}{0.1cm}
+\setlength{\parindent}{0em}
+\setlength{\parskip}{0.5em}
 % TeX's first attempt at breaking lines is performed without even trying hyphenation: 
 % TeX sets its "tolerance" of line breaking oddities to the internal value \pretolerance
 % an "infinite" tolerance is represented by the value 10000, but may lead to very bad line breaks indeed!
@@ -125,7 +155,7 @@
 %
 %-------------------------------
 % LICENSE
-Copyright \copyright 2013 Florian Schumacher.
+Copyright \copyright 2015 Florian Schumacher.
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3
 or any later version published by the Free Software Foundation;
@@ -135,20 +165,36 @@ Free Documentation License''.
 
 \vspace{1cm}
 
+If you use \ASKI for your own research, please cite our paper \cite{Schumacher16}:
+
+F. Schumacher, W. Friederich and S. Lamara, \\
+"A flexible, extendable, modular and 
+computationally efficient approach to scattering-integral-based seismic full waveform 
+inversion", \\
+\emph{Geophysical Journal International}, \\
+Accepted 2015 November 17.  Received 2015 November 17; in original form 2015 April 8\\
+http://dx.doi.org/10.1093/gji/ggv505
+
+\vspace{1em}
+
 This documentation was written in the hope that it will be useful to the user,
-but it \emph{cannot be assured} that it is accurate in every respect or complete in any sense.\\
-Please do not hesitate to improve this documentation by incorporating your experiences with \ASKI 
-and your personal experience of getting used to it. When you have developed new \ASKI components or 
+but it \emph{cannot be assured} that it is accurate in every respect or complete in any sense.
+In fact, at some places \emph{this manual is work in progress}.\\
+lease do not hesitate to report any inconsistencies via \url{http://www.rub.de/aski} or
+to improve this documentation by incorporating your experiences with \ASKI 
+and your personal experience of getting used to it (plus, let us know about it! Thanks). 
+When you have developed new \ASKI components or 
 have modified existing once, please extend / modify this document accoringly.
 
-Furthermore, my moderate experience with \LaTeX may well give rise to improving the document 
+Furthermore, I am aware of the poor \LaTeX coding of this document. There is a lot of potential
+to improve the document 
 style, hence the readability of the manual as a whole, as well as the coding style of the 
-particular \lcode{.tex} files. 
+particular \lcode{.tex} files. \emph{Please do not hesitate to improve!}
 
-The \LaTeX source files and all related components of this document are available via 
-\url{http://www.rub.de/ASKI}
+The \LaTeX source files and all related components of this document are available via\\
+\url{http://www.rub.de/aski}
 \begin{flushright}
-Florian Schumacher, 2013
+Florian Schumacher, Dec 2015
 \end{flushright}
 %
 %-------------------------------
@@ -156,6 +202,12 @@ Florian Schumacher, 2013
 \chapter*{How to use this manual}
 \phantomsection  % so hyperref creates bookmarks
 \input{howto}
+%
+%-------------------------------
+% CHAPTER Introduction
+\chapter*{What is \ASKI?} \label{guide,sec:ASKI}
+\phantomsection  % so hyperref creates bookmarks
+\input{what_is_aski}
 %
 %-------------------------------
 % TABLE OF CONTENTS
@@ -190,17 +242,20 @@ Florian Schumacher, 2013
 \input{programs_scripts_modules}
 %
 %-------------------------------
-% CHAPTER GNU Free Documentation License
-\input{fdl-1.3}
-%
-%----------------------------------------------------------
 % BIBLIOGRAPHY
 \bibliographystyle{alpha}
 \bibliography{bibliography}
+\phantomsection  % so hyperref creates bookmarks
+\addcontentsline{toc}{chapter}{Bibliography}
 % in order to create a bibliography from file bibliography.bib run:
 % > pdflatex manual
 % > bibtex manual
 % > pdflatex manual
 % > pdflatex manual
-%----------------------------------------------------------
+%
+%-------------------------------
+% CHAPTER GNU Free Documentation License
+\input{fdl-1.3}
+%
+
 \end{document}

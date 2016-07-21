@@ -1,5 +1,7 @@
+% -*-LaTex-*-
+
 %-----------------------------------------------------------------------------
-%   Copyright 2013 Florian Schumacher
+%   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 %
 %   This file is part of the ASKI manual as a LaTeX document with main file
 %   manual.tex
@@ -20,9 +22,9 @@ specific steps or objects, we always refer to the respective sections below in t
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 \begin{itemize}
-\item Download here: \url{http://www.rub.de/ASKI}
-\item Unpack tar ball somewhere
-\item Follow the directions in file \lcode{ASKI_0.3/README}
+\item Download main package \lcode{ASKI_1.0.tar.gz} from \url{http://www.rub.de/aski}
+\item Unpack tar ball (containing the directory \lcode{ASKI_1.0/}) somewhere
+\item Follow the directions in file \lcode{ASKI_1.0/README}
 \end{itemize}
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -122,7 +124,7 @@ different meaning:
 In \ASKI, frequencies are given by a frequency step $\Delta f$[Hz] and by a set of integer valued 
 frequency indices.
 
-For specific frequency index $i$, the corresponding frequency $f_i$ [Hz] computes as $f_i \,=\, i \,\cdot\, \Delta f$.
+For specific frequency index $i\in\mathbb{N}$, the corresponding frequency $f_i$ [Hz] computes as $f_i \,=\, i \,\cdot\, \Delta f$.
 E.g.\ $\Delta f \,=\, 10$ Hz and frequency indices $i \,=\, 2,\; 3,\; 5,\; 7,\; 10$ define the set of 
 discrete frequencies $f_i \,=\, 20.0,\; 30.0,\; 50.0,\; 70.0,\; 100.0$ [Hz].
 %
@@ -130,11 +132,12 @@ discrete frequencies $f_i \,=\, 20.0,\; 30.0,\; 50.0,\; 70.0,\; 100.0$ [Hz].
 \section{Prepare Measured Data} \label{basic_steps,sec:measured_data}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
-{\bf In the future}, we plan to have a binary program \lcode{createMeasuredData}, which converts time-domain data 
-to the special frequency-domain form required by \ASKI. It is planned to supporte measured data given in some 
-basic data formats like Seismic Unix and time-series given as textfiles per trace.
+For measured data given in some basic data formats like Seismic Unix and time-series given as textfiles per trace,
+the binary program \lcode{createMeasuredData} \myaref{programs_scripts,sec:bin_prog,sec:create_measured_data} 
+converts the time-domain data to the special frequency-domain
+form required by \ASKI. Call \lcode{createMeasuredData} (without arguments), then a help message will be printed how to use it.
 
-For now, you must prepare measured data files on your own as required by \ASKI, see sections~\myref{basic_steps,sec:data_general} 
+Otherwise you might well prepare measured data files on your own as required by \ASKI, see sections~\myref{basic_steps,sec:data_general} 
 and~\myref{files,sec:measured_data}. 
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -149,6 +152,184 @@ All inversion grids are defined by setting parameters \lcode{TYPE_INVERSION_GRID
 
 In the following, we present the supported inversion grid types and explain the particular
 parameters in the respective inversion grid parameter file.
+%
+%----------------------------------------------------------
+\subsection{\lcodetitle{chunksInversionGrid}} \label{basic_steps,sec:invgrid,sub:chunks}
+%----------------------------------------------------------
+%
+The chunks inversion grid consists of 1, 2, 3 or 6 chunks of a cubed sphere (such as the 
+schunk inversion grid). The chunk width is always 90 degrees, except for 1-chunk grids
+where smaller chunks are allowed. The inversion grid base cells are equi-angularly distributed,
+resulting in cells which are more or less evenly distributed in size (by contrast to the 
+schunk inversion grid, where the lateral projections of the cells onto the tangential plane
+have an equi-distant distribution on the plane).\\ 
+2 chunk grids consist of two neighbouring 90-degree chunks, 3 chunk grids of three chunks 
+which are ALL neighbours of each other (i.e. essentially half of the Earth).\\
+Inside the chunks, the inversion grid cells are constructed on the basis of regularly distributed
+base cells in the fashion of the schunk inversion grid, having a certain number of refinement
+blocks in depth inside which a fixed regular lateral resolution and depth resolution can be chosen.
+(THE FOLLOWING FEATURE IS NOT YET IMPLEMENTED: thereafter, by certain mechanisms, the base cells
+can be locally refined, e.g. due to ray coverage of the data)
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.65\textwidth]{images/chunksInversionGrid_manual.png}
+  \caption{Example of a chunks inversion grid (with 3 chunks in global projection)}
+  \label{basic_steps,sec:invgrid,sub:chunks,fig:grid}
+\end{figure}
+
+The inversion grid is defined via a paramter file, a template of which is file 
+\lcode{template/chunksInversionGrid_parfile_template} (the template file defines the inversion grid
+shown in the above figure).
+The meaning of the keywords in the parameter file defining an inversion grid of type \lcode{chunksInversionGrid}
+are as follows:
+
+\subsubsection{\lcode{CHUNKS_INVGRID_GEOM_NCHUNK}} %\label{files,sec:iter_parfile,itm:invgrid_rad}
+Number of chunks (1, 2, 3, or 6).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{CHUNKS_INVGRID_GEOM_RMAX}} 
+Maximum radius (upper boundary of the chunk(s)) [must be the same unit in which wavefield points are given, usually be in km]
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{CHUNKS_INVGRID_GEOM_CLAT}, \lcode{CHUNKS_INVGRID_GEOM_CLON}} 
+Center of cubed-sphere chunk in degrees.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{CHUNKS_INVGRID_GEOM_WLAT}, \lcode{CHUNKS_INVGRID_GEOM_WLON}} 
+Assuming \lcode{ROT = 0}.\\
+Width of cubed-sphere chunk in degrees (must be 90.0 for NCHUNK $> 1$).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{CHUNKS_INVGRID_GEOM_ROT}} 
+Rotation of chunk around local vertical counterclockwise in degrees.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{CHUNKS_INVGRID_BASE_NREF_BLOCKS}}
+Number of blocks of layers within which lateral cell width remains comstant.\\
+(compare \lcode{scartInversionGrid}~\myref{basic_steps,sec:invgrid,sub:scart}: definition and usage of \lcode{NREF_BLOCKS}, 
+\lcode{NLAY}, \lcode{THICKNESS}, \lcode{NX}, \lcode{NY})
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{CHUNKS_INVGRID_BASE_NLAY}}
+Number of layers within each block (integer array).\\
+(compare \lcode{scartInversionGrid}~\myref{basic_steps,sec:invgrid,sub:scart}: definition and usage of \lcode{NREF_BLOCKS}, 
+\lcode{NLAY}, \lcode{THICKNESS}, \lcode{NX}, \lcode{NY})
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{CHUNKS_INVGRID_BASE_THICKNESS}}
+Thickness of layers in each block in km (real array).\\
+(compare \lcode{scartInversionGrid}~\myref{basic_steps,sec:invgrid,sub:scart}: definition and usage of \lcode{NREF_BLOCKS}, 
+\lcode{NLAY}, \lcode{THICKNESS}, \lcode{NX}, \lcode{NY})
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{CHUNKS_INVGRID_BASE_NLAT}, \lcode{CHUNKS_INVGRID_BASE_NLON}}
+Number of cells in latitude/longitude direction for each layer block.\\
+(compare \lcode{scartInversionGrid}~\myref{basic_steps,sec:invgrid,sub:scart}: definition and usage of \lcode{NREF_BLOCKS}, 
+\lcode{NLAY}, \lcode{THICKNESS}, \lcode{NX}, \lcode{NY})
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{CHUNKS_INVGRID_FILE}}
+Filename of binary inversion grid file (relative to \lcode{MAIN_PATH_INVERSION}/\lcode{ITERATION_STEP_PATH/})
+to which a newly created inversion grid will be written and from which the inversion grid
+will be read if it exists and if not recreating the inversion grid.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{VTK_PROJECTION}}
+\lcode{VTK_PROJECTION} is one of:
+\begin{itemize}
+\item[]'\lcode{GLOBAL}': center of chunk(s) in \lcode{CLAT}, \lcode{CLON}, with applied \lcode{CHUNKS_INVGRID_GEOM_ROT}
+\item[]'\lcode{LOCAL_CURV}': center of chunk in x=y=0, NO \lcode{CHUNKS_INVGRID_GEOM_ROT} applied, but with curvature
+\item[]'\lcode{LOCAL_FLAT}': center of chunk in x=y=0, NO \lcode{CHUNKS_INVGRID_GEOM_ROT}, NO curvature, i.e. projection of each depth onto the tangential x-y-plane
+\item[]'\lcode{LOCAL_NORTH_CURV}': same as '\lcode{LOCAL_CURV}', but WITH \lcode{CHUNKS_INVGRID_GEOM_ROT} applied, i.e. x really points to south
+\item[]'\lcode{LOCAL_NORTH_FLAT}': same as '\lcode{LOCAL_FLAT}', but WITH \lcode{CHUNKS_INVGRID_GEOM_ROT} applied, i.e. x really points to south
+\end{itemize}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{VTK_GEOMETRY_TYPE}}
+Select the geometry type. \lcode{VTK_GEOMETRY_TYPE} is one of:
+\begin{itemize}
+\item[]'\lcode{CELLS}': data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as \lcode{UNSTRUCTURED_GRID} datasets) -> intuitive volumetric view
+\item[]'\lcode{CELL_CENTERS}': data on inversion grids will be written on the cell center POINTS to vtk files (as \lcode{POLYDATA} datasets) -> smaller files, better to apply filters in ParaView
+\end{itemize}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{SCALE_VTK_COORDS}, \lcode{VTK_COORDS_SCALING_FACTOR}}
+Scale vtk geometry coordinates by factor \lcode{VTK_COORDS_SCALING_FACTOR}, if \lcode{SCALE_VTK_COORDS = .True.}
+this may be helpful if coordinate values (e.g. in m) get so large that they cause problems in paraview.
+%
+%----------------------------------------------------------
+\subsection{\lcodetitle{schunkInversionGrid}} \label{basic_steps,sec:invgrid,sub:schunk}
+%----------------------------------------------------------
+The spherical chunk inversion grid is derived from a simple planar cartesian
+grid by projection of each grid plane onto a spherical shell, assuming that
+the cartesian grid plane touches the spherical shell at its center.
+Since cells have uniform size in the planar cartesian grid plane, cells
+on the spherical shell become successively smaller with distance from the 
+center of the spherical chunk. Radially, the inversion grid may consist of
+several layer blocks each of which may have its own cell size.\\
+To describe points in the spherical chunk, we either use LOCAL cartesian coordinates
+with the center of the chunk at x=y=0 and z=r, or GLOBAL cartesian coordinates
+with z pointing towards the north pole, x pointing towards the equator at lon=0
+and y pointing towards the equator at lon=90.\\
+The center of the chunk may be shifted to any place on the sphere and, in addition,
+may be rotated counterclockwise around its local vertical.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.65\textwidth]{images/schunkInversionGrid_manual.png}
+  \caption{Example of a simple chunk inversion grid (global projection, note the slight curvature of the small chunk)}
+  \label{basic_steps,sec:invgrid,sub:schunk,fig:grid}
+\end{figure}
+
+The inversion grid is defined via a paramter file, a template of which is file 
+\lcode{template/schunkInversionGrid_parfile_template} (the template file defines the inversion grid
+shown in the above figure).
+The meaning of the keywords in the parameter file defining an inversion grid of type \lcode{schunkInversionGrid}
+are as follows:
+
+\subsubsection{\lcode{SCHUNK_INVGRID_CLAT},\lcode{SCHUNK_INVGRID_CLON}} %\label{files,sec:iter_parfile,itm:invgrid_rad} 
+Geographic latitude/longitude of center of spherical chunk in degrees.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{SCHUNK_INVGRID_RMAX}}
+Maximum radius (upper boundary of spherical chunk) in km.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{SCHUNK_INVGRID_WLAT}, \lcode{SCHUNK_INVGRID_WLON}}
+Assuming \lcode{ROT = 0}.\\
+Width of spherical chunk parallel to longitude/latitude in degrees.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{SCHUNK_INVGRID_ROT}}
+Rotation of chunk around local vertical counterclockwise in degrees.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{SCHUNK_INVGRID_NREF_BLOCKS}}
+Number of blocks of layers within which lateral cell width remains constant.\\
+(compare \lcode{scartInversionGrid}~\myref{basic_steps,sec:invgrid,sub:scart}: definition and usage of \lcode{NREF_BLOCKS}, 
+\lcode{NLAY}, \lcode{THICKNESS}, \lcode{NX}, \lcode{NY})
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{SCHUNK_INVGRID_NLAY}}
+Number of layers within each block (integer array).\\
+(compare \lcode{scartInversionGrid}~\myref{basic_steps,sec:invgrid,sub:scart}: definition and usage of \lcode{NREF_BLOCKS}, 
+\lcode{NLAY}, \lcode{THICKNESS}, \lcode{NX}, \lcode{NY})
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{SCHUNK_INVGRID_THICKNESS}}
+Thickness of layers in each block in km (real array).\\
+(compare \lcode{scartInversionGrid}~\myref{basic_steps,sec:invgrid,sub:scart}: definition and usage of \lcode{NREF_BLOCKS}, 
+\lcode{NLAY}, \lcode{THICKNESS}, \lcode{NX}, \lcode{NY})
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{SCHUNK_INVGRID_NLAT}, \lcode{SCHUNK_INVGRID_NLON}}
+Number of cells in latitude/longitude direction for each layer block.\\
+(compare \lcode{scartInversionGrid}~\myref{basic_steps,sec:invgrid,sub:scart}: definition and usage of \lcode{NREF_BLOCKS}, 
+\lcode{NLAY}, \lcode{THICKNESS}, \lcode{NX}, \lcode{NY})
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{VTK_PROJECTION}}
+\lcode{VTK_PROJECTION} is one of:
+\begin{itemize}
+\item[] '\lcode{GLOBAL}': center of chunk in \lcode{CLAT}, \lcode{CLON}, with applied \lcode{SCHUNK_INVGRID_ROT}
+\item[] '\lcode{LOCAL_CURV}': center of chunk in x=y=0, NO \lcode{SCHUNK_INVGRID_ROT} applied, but with curvature
+\item[] '\lcode{LOCAL_FLAT}': center of chunk in x=y=0, NO \lcode{SCHUNK_INVGRID_ROT} applied, NO curvature, i.e. projection of each depth onto the tangential x-y-plane
+\item[] '\lcode{LOCAL_NORTH_CURV}': same as '\lcode{LOCAL_CURV}', but WITH \lcode{SCHUNK_INVGRID_ROT} applied, i.e. x really points to south
+\item[] '\lcode{LOCAL_NORTH_FLAT}': same as '\lcode{LOCAL_FLAT}', but WITH \lcode{SCHUNK_INVGRID_ROT} applied, i.e. x really points to south
+\end{itemize}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{VTK_GEOMETRY_TYPE}}
+Select the geometry type. \lcode{VTK_GEOMETRY_TYPE} is one of:
+\begin{itemize}
+\item[]'\lcode{CELLS}': data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as \lcode{UNSTRUCTURED_GRID} datasets) -> intuitive volumetric view
+\item[]'\lcode{CELL_CENTERS}': data on inversion grids will be written on the cell center POINTS to vtk files (as \lcode{POLYDATA} datasets) -> smaller files, better to apply filters in ParaView
+\end{itemize}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{SCALE_VTK_COORDS}, \lcode{VTK_COORDS_SCALING_FACTOR}}
+Scale all VTK point coordinates by an additional factor,
+if \lcode{SCALE_VTK_COORDS = .false.}, then \lcode{VTK_COORDS_SCALING_FACTOR} is ignored.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
 %----------------------------------------------------------
 \subsection{\lcodetitle{scartInversionGrid}} \label{basic_steps,sec:invgrid,sub:scart}
@@ -248,6 +429,13 @@ by \lcode{SCART_INVGRID_ROT} and no shift by \lcode{SCART_INVGRID_CX}, \lcode{SC
 \lcode{SCART_INVGRID_ZMAX} (cuboid centered in \lcode{X=Y=0} and \lcode{ZMAX=0})\\
 Example:\\
 \lcode{USE_LOCAL_INVGRID_COORDS_FOR_VTK = .false.}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{VTK_GEOMETRY_TYPE}}
+Select the geometry type. \lcode{VTK_GEOMETRY_TYPE} is one of:
+\begin{itemize}
+\item[]'\lcode{CELLS}': data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as \lcode{UNSTRUCTURED_GRID} datasets) -> intuitive volumetric view
+\item[]'\lcode{CELL_CENTERS}': data on inversion grids will be written on the cell center POINTS to vtk files (as \lcode{POLYDATA} datasets) -> smaller files, better to apply filters in ParaView
+\end{itemize}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \subsubsection{\lcode{SCALE_VTK_COORDS,VTK_COORDS_SCALING_FACTOR}}
 Scale vtk geometry coordinates by factor \lcode{VTK_COORDS_SCALING_FACTOR} (real number), if 
@@ -267,7 +455,7 @@ since support for hexahedreal cells is not completed throughout. However, even f
 of neighbours did not work properly in some test cases! So if you intend to use this inversion grid, please have a look 
 at the grid and all neighbours (neighbours only required for model smoothing in case of solving the Kernel system of equations).
 You can do that by using binary program} \lcode{invgrid2vtk} \emph{along with option} \lcode{-nb} \emph{. Call} 
-\lcode{invgrid2vtk -h} \emph{for further details on how to use it.}
+\lcode{invgrid2vtk} \emph{(without arguments)} \myaref{programs_scripts,sec:bin_prog,sec:invgrid_vtk} \emph{for further details on how to use it.}
 
 An \lcode{E}xternal \lcode{CART}esian inversion grid is defined by several text files containing the definintion 
 of nodes (i.e.\  essentially the corner points, or rather the control nodes of the inversion grid cells) and the 
@@ -348,6 +536,13 @@ this file is recreated.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \subsubsection{\lcode{ECART_INVGRID_FILE_NEIGHBOURS_IS_BINARY}}
 Logical value to indicate whether \lcode{ECART_INVGRID_FILE_NEIGHBOURS} should be binary or not.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{VTK_GEOMETRY_TYPE}}
+Select the geometry type. \lcode{VTK_GEOMETRY_TYPE} is one of:
+\begin{itemize}
+\item[]'\lcode{CELLS}': data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as \lcode{UNSTRUCTURED_GRID} datasets) -> intuitive volumetric view
+\item[]'\lcode{CELL_CENTERS}': data on inversion grids will be written on the cell center POINTS to vtk files (as \lcode{POLYDATA} datasets) -> smaller files, better to apply filters in ParaView
+\end{itemize}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \subsubsection{\lcode{SCALE_VTK_COORDS,VTK_COORDS_SCALING_FACTOR}}
 Scale vtk geometry coordinates by factor \lcode{VTK_COORDS_SCALING_FACTOR} (real number), if 
@@ -368,7 +563,8 @@ geometry, including information on neighbour cells and the values of the jacobia
 point contained in an element are read from files which are produced by \lcode{SPECFEM3D} methods.
 
 Every type of integration weights is supported by this type of inversion grid, including weights of type 
-\lcode{6} (external integration weights).
+\lcode{6} (external integration weights, i.e.\ the very integration weights that already \lcode{SPECFEM3D}
+uses to integrate over spectral elements).
 
 Please refer to the documentation of your \lcode{SPECFEM3D} forward method (\myref{basic_steps,sec:forward_problem})
 on how to define an inversion grid of type \lcode{specfem3dInversionGrid}.
@@ -384,18 +580,20 @@ On the one hand you may use any (standard) earth model provided by the forward m
 If this is not possible, or the models provided do not meet your needs, you may use binary 
 \lcode{createStartmodelKim} along with the inversion grid of your first iteration (which you should 
 have already defined) to produce an inverted model file containing some simple model on this inversion grid. 
-\lcode{createStartmodelKim -h} will print a help message how to use the program. Afterwards you may 
+Executing \lcode{createStartmodelKim} (without arguments) will print a help message how to use the program 
+\myaref{programs_scripts,sec:bin_prog,sec:create_startmod_kim}. Afterwards you may 
 export the produced model file to your forward method as explained in section~\myref{basic_steps,sec:export_kim}.
+Template files of starting model descriptions may be found in \lcode{template/}.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Export Inverted Model} \label{basic_steps,sec:export_kim}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
-The binary program \lcode{exportKim} exports an inverted model file (``kim'' stands for ``K''ernel 
+The executable \lcode{exportKim} exports an inverted model file (``kim'' stands for ``K''ernel 
 ``I''nverted ``M''odel) along with the respective inversion grid specifications to a text file, 
 which may be used to communicate such a model to a forward method or postprocess the model values in any way. 
-\lcode{exportKim -h} will print a help message how to use it. Template files of starting model descriptions
-may be found in \lcode{template/}.
+Executing \lcode{exportKim} (without argument) will print a help message how to use it 
+\myaref{programs_scripts,sec:bin_prog,sec:exp_Kim}.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Solving the Forward Problem} \label{basic_steps,sec:forward_problem}
@@ -404,16 +602,21 @@ may be found in \lcode{template/}.
 In the following, all wave propagation codes which are supported by \ASKI are listed.
 Refer to the given documentation on any details regarding the interaction of the forward codes with \ASKI.
 \subsection*{\lcode{Gemini II}}
-\lcode{Gemini II} is not yet fully supported in this release version. For some test cases, waveform kernels were
-successfully computed using \lcode{Gemini II} in Cartesian as well as spherical setting. We hope to provide the 
-\lcode{Gemini II} interface for \ASKI soon.
+\lcode{Gemini II} is supported in this release version, for Cartesian as well as spherical setting. 
+The \lcode{Gemini} routines producing spectral output for \ASKI, however, might not yet be available. 
+We hope to be able to provide them in due time. Until now, please contact us via \url{http://www.rub.de/aski}
+if you want to use \lcode{Gemini II} as a forward solver for \ASKI.
 \subsection*{\lcode{SPECFEM3D_Cartesian}}
-The Cartesian spectral element code \lcode{SPECFEM3D_Cartesian} is supported by \ASKI, 
-cf.~\cite{Specfem3D_Cartesian_for_ASKI}
+The Cartesian spectral element code \lcode{SPECFEM3D_Cartesian}, version \lcode{3.0} is supported by \ASKI, 
+cf.~\cite{Specfem3D_Cartesian_for_ASKI}.
 \subsection*{\lcode{SPECFEM3D_GLOBE}}
-The global spectral element code \lcode{SPECFEM3D_GLOBE} is not yet fully supported in this release version. 
-For some test cases, waveform kernels were successfully computed using \lcode{SPECFEM3D_GLOBE}. We hope to 
-provide the \lcode{SPECFEM3D_GLOBE} interface for \ASKI soon.
+The global spectral element code \lcode{SPECFEM3D_GLOBE}, version \lcode{7.0}, is fully supported in 
+this release version. However, the extension package for \lcode{SPECFEM3D_GLOBE} will not be available 
+until the beginning of 2016. 
+\subsection*{\lcode{NEXD}}
+Support for the nodal discontinous Galerkin code \lcode{NEXD} by Lasse Lambrecht (Ruhr-University Bochum, Germany)
+is being implemented and tested at the moment. \lcode{NEXD}, including \ASKI support, will be available 
+under terms of the GPL soon.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Choose Integration Weights} \label{basic_steps,sec:intw}
@@ -454,31 +657,33 @@ data sample (model parameter) refers to which dimension (i.e.\ entry in vector) 
 The $m\times n$ sensitivity kernel matrix will then connect a vector of model updates from model space in \R n 
 to your specific data vector from \R m.
 
-In the following, we describe how data samples and model parameters are defined in this software package and how you can 
+In the following, we describe how data samples and model parameters are characterized in this software package and how you can 
 choose specific subsets to be used. 
 %----------------------------------------------------------
-\subsection{Definition of Data Samples}
+\subsection{How Data Samples are Characterized}
 %----------------------------------------------------------
 As the sensitivities are calculated in frequency domain, the data live in frequency domain, too.\\
 A data sample is uniquely characterized by a seismic \emph{source}, a \emph{component} 
-of a seismic \emph{receiver}, and a \emph{frequency}, as well as if it is \emph{real} or \emph{imaginary} part 
+of a seismic \emph{receiver}, and a \emph{frequency}, as well as whether it is the \emph{real} or \emph{imaginary} part 
 of the complex spectral values. Refer to \myref{basic_steps,sec:data_general} for details on data in \ASKI.
 %----------------------------------------------------------
-\subsection{Definition of Model Parameters} \label{basic_steps,sec:dmspace,sub:mparam}
+\subsection{How Model Parameters are Characterized} \label{basic_steps,sec:dmspace,sub:mparam}
 %----------------------------------------------------------
-A model parameter is uniquely  characterized by a parameter name (mus be a valid parameter name of the model
+A model parameter is uniquely  characterized by a parameter name (must be a valid parameter name of the model
 parametrization as defined by \lcode{MODEL_PARAMETRIZATION} \myref{files,sec:main_parfile,itm:mod_pmtrz}) 
 and an inversion grid cell index in valid range.
 %----------------------------------------------------------
-\subsection{Choosing a Set of Data Samples and Model Parameters}
+\subsection{How to Define Data and Model Space: Choosing a Set of Data Samples and Model Parameters}
 %----------------------------------------------------------
-Create a text file as described in section \myref{files,sec:dmspace}.
+Create a text file as described in section \myref{files,sec:dmspace}, e.g.\ by adjusting the provided
+template files in \lcode{template/}.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Initiate Basic Requirements} \label{basic_steps,sec:initBasics}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
-Run binary \lcode{initBasics}, \lcode{initBasics -h} will print a help message how to use it.
+Use the executable \lcode{initBasics}. Executing \lcode{initBasics} (without arguments) 
+will print a help message how to use it \myaref{programs_scripts,sec:bin_prog,sec:in_basics}.
 
 It first checks if all parameters needed are present in the parameter files and then creates all
 basic requirements for \ASKI operations:\\
@@ -495,83 +700,113 @@ to recreate them.
 
 Also a lot of \lcode{.vtk} files with statistics are produced having base filename \lcode{FILEBASE_BASIC_STATS} as 
 defined in the parameter file of the current iteration step. Those files mainly regard the inversion grid, 
-the wavefield points and the integration weights, whereby the respective filenames are extended (by something 
+the wavefield points and the integration weights, where the respective filenames are extended (by something 
 with ``.vtk''). It is \emph{highly recommended} to call \lcode{initBasics -recr} in order to assure that all
 those \lcode{.vtk} files are produced and to actually have a look at them before continuing any \ASKI operation!
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-\section{Compute Standard Sensitivity Kernels} \label{basic_steps,sec:compute_kernels}
+\section{Compute Spectral Waveform Sensitivity Kernels} \label{basic_steps,sec:compute_kernels}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
-The kernels are computed by combining green tensor and forward wavefield for a given path, and
-by integration over all inverison grid cells. I.e.\ there is one sensitivity kernel file for a
-specific path. This file contains sensitivity values of the three Cartesian receiver components 
-\lcode{CX}, \lcode{CY}, \lcode{CZ} for all model parameters of your model parametrization, with 
-the values living on the inverison grid cells.
+The kernels are computed by combining green tensor component(s) and forward wavefield for a given event-station
+pair (called ``path'' below. By default, the kernels are integrated over the inverison grid cells. I.e.\ there is one sensitivity 
+kernel file for a specific event-station path. This file contains sensitivity values of the requested 
+receiver components for the requested model parameters of your model parametrization, with 
+the values living on the inverison grid cells. Alternatively, kernels can be computed on the wavefield points,
+without pre-integration (for inspection only, cannot be used for waveform inversion in that case).
 
-Use binary \lcode{computeKernels}. \lcode{computeKernels -h} will print a help message how to use it.
-It makes sense, to only compute kernel files for those paths that you are going to use (defined by
-your data model space file).
+Use executable \lcode{computeKernels}. Executing \lcode{computeKernels} (without arguments) 
+will print a help message how to use it \myaref{programs_scripts,sec:bin_prog,sec:com_kernel}.
+It makes sense, to only compute kernel files for those event-station paths that you are going to use (defined by
+your data-model-space file).
 
-You can define the set of paths for which sensitivities should be computed in two ways:
+You can define the set of event-station paths, receiver components and model parameters for which 
+sensitivities should be computed in two ways:
 \begin{itemize}
-\item[way 1] compute a kernel for only one path, defined by eventID and station name using options \lcode{-evid} 
-and \lcode{-stname}
-\item[way 2] input a data and model space file (as defined by \myref{basic_steps,sec:dmspace}) by option 
-\lcode{-dmspace}, defining all paths for which kernels should be computed; optionally define range of path index
+\item[way 1] compute a kernel for only one event-station path, defined by eventID and station name using options 
+\lcode{-evid}, \lcode{-stname}, \lcode{-comp}, \lcode{-param}
+\item[way 2] input a data-model-space file (as defined by \myref{basic_steps,sec:dmspace}) by option 
+\lcode{-dmspace}, defining all event-station paths and respective receiver components and model parameters 
+for which kernels should be computed; optionally define range of path index
 by \lcode{-ipath1}, \lcode{-ipath2}
 \end{itemize}
+Setting option \lcode{-wp} will compute plain kernel values on wavefield points (no pre-integration onto inversion
+grid). \emph{This option will produce separate files, so you can compute both, kernels on wavefield points and
+on inversion grid}.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Transform to Time-Domain Sensitivity Kernels} \label{basic_steps,sec:compute_time_kernels}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 The time kernels are computed from the standard frequency-domain kernels (which were computed path-wise)
-by applying an inverse Fourier transform. The transforation is done for specific data components
-(e.g. \lcode{N}, \lcode{DOWN}, \lcode{CY}, ..), where first the spectra for the standard component 
-\lcode{CX}, \lcode{CY}, \lcode{CZ} are rotated and afterwards the respective event filter and station component
-filter are applied before the actual Fourier transform takes place.
+by applying an inverse Fourier transform. 
 
-Use binary \lcode{spec2timeKernels}. \lcode{spec2timeKernels -h} will print a help message how to use it.
-It makes sense, to only compute kernel files for those paths that you are going to use (defined by
-your data model space file).
+Use executable \lcode{spec2timeKernels}. Executing \lcode{spec2timeKernels} (without arguments) will print a 
+help message how to use it \myaref{programs_scripts,sec:bin_prog,sec:spec_time_kernels}.
 
-You can define the set of paths for which the time-domain kernels should be computed in two ways:
-\begin{itemize}
-\item[way 1] transform a kernel for only one path, defined by eventID and station name using options \lcode{-evid} 
-and \lcode{-stname}
-\item[way 2] input a data and model space file (as defined by \myref{basic_steps,sec:dmspace}) by option 
-\lcode{-dmspace}, defining all paths for which kernels should be transformed; optionally define range of path index
-by \lcode{-ipath1}, \lcode{-ipath2}
-\end{itemize}
+The set of event-station paths, receiver components and model parameters for which time kernels should be produced
+are defined in the same ``two ways'' (by the same options) as computing spectral waveform kernels 
+\myaref{basic_steps,sec:compute_kernels}.
+
+Additionally, you need to define the time discretization of the produced time kernel by options 
+\lcode{-dt}, \lcode{-nt1}, \lcode{-nt2}, \lcode{-t0}.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-\section{Plot Standard Sensitivity Kernels} \label{basic_steps,sec:plot_kernels}
+\section{Plot Spectral Waveform Sensitivity Kernels} \label{basic_steps,sec:plot_kernels}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 One way to plot a specific sensitivity Kernel in frequency domain, i.e.\ the sensitivity spectra for a specific
-path, is to procuce vtk files with binary \lcode{kernel2vtk}. \lcode{kernel2vtk -h} will print a help message 
-how to use it.\\
+event-station path, is to procuce vtk files using executable \lcode{kernel2vtk}. 
+Executing \lcode{kernel2vtk} will print a help message how to use it \myaref{programs_scripts,sec:bin_prog,sec:kernel_2_vtk}.
+
 Please note, that the output \lcode{.vtk} files (one for every frequency) might get large, dependent on the resolution 
 of the inversion grid, since the geometry information of the inversion grid cells is contained in each \lcode{.vtk} file.
+If the files become too large for you, you might consider setting \lcode{DEFAULT_VTK_FILE_FORMAT = BINARY} in your 
+main parameter file.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Plot Time Sensitivity Kernels} \label{basic_steps,sec:plot_time_kernels}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
-One way to plot a specific sensitivity Kernel in time domain, is to procuce vtk files with binary \lcode{timeKernel2vtk}. 
-\lcode{timeKernel2vtk -h} will print a help message how to use it.\\
+One way to plot a specific sensitivity Kernel in time domain, is to procuce vtk files using executable \lcode{timeKernel2vtk}. 
+Executing \lcode{timeKernel2vtk} (without arguments) will print a help message how to use it \myaref{programs_scripts,sec:bin_prog,sec:timeKernel_2_vtk}.\\
+
 Please note, that the output \lcode{.vtk} files (one for every time step) might get large, dependent on the resolution 
 of the inversion grid, since the geometry information of the inversion grid cells is contained in each \lcode{.vtk} file.
+If the files become too large for you, you might consider setting \lcode{DEFAULT_VTK_FILE_FORMAT = BINARY} in your 
+main parameter file.
+For a lot of time steps, the \lcode{.vtk} file format is actually not optimally chosen by \ASKI, since the complete geometry
+information is contained in every time-step file (a lot of redundant information is written to hard disc).
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Solve Kernel System} \label{basic_steps,sec:solve_kernel_system}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
-Call binary \lcode{solveKernelSystem} to set up the kerne matrix, read in synthetic
-and real data, add smoothing (if required). \lcode{solveKernelSystem -h} will print a help message how to use it.
+At the moment, there are 3 executable programs implemented which solve the kernel linear system.
+\begin{itemize}
+\item
+\lcode{solveKernelSystem} is a serial program which sets up the kernel matrix, 
+reads in synthetic and measured data, adds regularization condutions to the system if 
+requested (smoothing, damping) and solves the system based on \lcode{LAPACK} libraries.\\
+Executing \lcode{solveKernelSystem} (without arguments) will print a help message how to use it 
+\myaref{programs_scripts,sec:bin_prog,sec:sol_Ker_Sys}.
+\item 
+\lcode{solveParKernelSystem} does essentially the same as \lcode{solveKernelSystem}, but uses
+parallelized \lcode{ScaLAPACK} libraries to solve the (regularized) kernel linear system. You
+must compile executable \lcode{solveParKernelSystem} separately (\lcode{make all} does not
+compile it, make sure you have \lcode{ScaLAPACK} libraries installed and linked in the 
+\lcode{Makefile}).
+Executing \lcode{solveParKernelSystem} (without arguments) will print a help message how to use it 
+\myaref{programs_scripts,sec:bin_prog,sec:solve_par_kernel_sys}.
+This executable requires an additional parameter file, see template file\\
+\lcode{templated/solveParKernelSystem_parfile_template}.
+\item 
+\lcode{solveCglsrKernelSystem} sets up the (regularized) kernel linear system, as the above
+excecutables do, but the uses a conjugate gradient algorithm to solve the kernel linear system
+in a least-squares sense \myaref{programs_scripts,sec:bin_prog,sec:solve_cgls_kernel_sys}.
+This executable requires an additional parameter file, see template file\\
+\lcode{templated/solveCglsKernelSystem_parfile_template}.\\
+Executing \lcode{solveCglsKernelSystem} (without arguments) will print a help message how to use it 
+\myaref{programs_scripts,sec:bin_prog,sec:solve_cgls_kernel_sys}.
+\end{itemize}
 
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: "manual"
-%%% End:

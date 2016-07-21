@@ -1,5 +1,7 @@
+% -*-LaTex-*-
+
 %-----------------------------------------------------------------------------
-%   Copyright 2013 Florian Schumacher
+%   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 %
 %   This file is part of the ASKI manual as a LaTeX document with main file
 %   manual.tex
@@ -12,7 +14,7 @@
 %   Free Documentation License''. 
 %-----------------------------------------------------------------------------
 %
-This chapter collects documentation on file formats involved in \ASKI. 
+This chapter collects documentation on file formats involved in \ASKI.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Parameter Files} \label{files,sec:parfiles}
@@ -49,22 +51,40 @@ Here, shortly all keywords required in the main parameter file for your specific
 \subsubsection{\lcode{FORWARD_METHOD}} \label{files,sec:main_parfile,itm:forward_method}
 \begin{itemize}
 \item[] \lcode{GEMINI}
-\item[] \lcode{SPECFEM3D} $\rightarrow$ \lcode{SPECFEM3D_Cartesian} , \lcode{SPECFEM3D_GLOBE}
+\item[] \lcode{SPECFEM3D} $\rightarrow$ \lcode{SPECFEM3D_Cartesian} and \lcode{SPECFEM3D_GLOBE}
+\item[] \lcode{NEXD} 
 \end{itemize}
 For details on the methods and references to their documentation, refer to section~\ref{basic_steps,sec:forward_problem}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{\lcode{MODEL_PARAMETRIZATION}} \label{files,sec:main_parfile,itm:mod_pmtrz}
 \begin{itemize}
-\item[] \lcode{isoLame} $\rightarrow$ isotropic Lam\´e parameters $\rho$, $\lambda$, $\mu$
-\item[] \lcode{isoVelocity} $\rightarrow$ isotropic seismic velocities $\rho$, $v_p$, $v_s$
+\item[] \lcode{isoLameSI} $\rightarrow$ isotropic Lam\'e parameters and density in SI units: 
+    $\rho$ (\lcode{rho}) [kg/m\textsuperscript{3}], $\lambda$ (\lcode{lambda}) [Pa], $\mu$ (\lcode{mu})  [Pa]
+\item[] \lcode{isoVelocitySI} $\rightarrow$ isotropic seismic velocities and density in SI units:
+    $\rho$ (\lcode{rho}) [kg/m\textsuperscript{3}], $v_p$ (\lcode{vp}) [m/s], $v_s$ (\lcode{vs}) [m/s]
+\item[] \lcode{isoVelocity1000} $\rightarrow$ isotropic seismic velocities and density in  
+  units involving a factor of 1000: $\rho$ (\lcode{rho}) [g/cm\textsuperscript{3}], $v_p$ (\lcode{vp}) [km/s], 
+  $v_s$ (\lcode{vs}) [km/s]
 \end{itemize}
-Nothing else supported yet
+Nothing other parameterization supported yet.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{\lcode{MAIN_PATH_INVERSION}} \label{files,sec:main_parfile,itm:main_path}
 All subpaths for filenames are considered relative to this main path. This
 directory is thought to contain all your relevant output and (temporary) data.\\
-Example: \lcode{MAIN_PATH_INVERSION = /scratch/inversions/Aegean1/}
+Example: \lcode{MAIN_PATH_INVERSION = /data/inversions/Aegean1/}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\subsubsection{\lcode{PARAMETER_CORRELATION_MODE}} \label{files,sec:main_parfile,itm:par_cor_mode}
+Any model parameters can be correlated to others which are not inverted for. So far supported correlation modes:
+\begin{itemize}
+\item[] \lcode{NONE} $\rightarrow$ no parameter correlation will be done whatsoever
+\item[] \lcode{CORRELATE_KERNELS} $\rightarrow$ will add correlated kernel values of other parameters to the kernels
+  of those parameters which are inverted for (experimental feature, not yet tested in practice).
+\end{itemize}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{PARAMETER_CORRELATION_FILE}} \label{files,sec:main_parfile,itm:par_cor_file}
+File (relative to \lcode{MAIN_PATH_INVERSION}) containing the definition of the correlation and the correlation coefficients. 
+The given filename is ignored in case of \lcode{PARAMETER_CORRELATION_MODE = NONE}.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{\lcode{CURRENT_ITERATION_STEP}} \label{files,sec:main_parfile,itm:cur_iter_step}
 Example: \lcode{CURRENT_ITERATION_STEP = 3}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -73,35 +93,45 @@ Relative to main path, defining name of subdirectory of \lcode{MAIN_PATH_INVERSI
 all relevant (meta)data of an inversion step. A three-digit integer (= \lcode{CURRENT_ITERATION_STEP}) 
 and ``/'' will be appended to \lcode{ITERATION_STEP_PATH} (i.e.\ ``001/'', ``002/'', \dots) defining the 
 first, second \dots iteration step directory.\\
-Example: \lcode{ITERATION_STEP_PATH = iteration_step_}
+Example (default): \lcode{ITERATION_STEP_PATH = iteration_step_}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \subsubsection{\lcode{PARFILE_ITERATION_STEP}} \label{files,sec:main_parfile,itm:iter_parfile}
 File name of iteration step specific parameter file, relative to \lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH}
 Example: \lcode{PARFILE_ITERATION_STEP = iter_parfile}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\subsubsection{\lcode{PATH_MEASURED_DATA,PATH_EVENT_FILTER,PATH_STATION_FILTER}} 
+\subsubsection{\lcode{PATH_MEASURED_DATA,APPLY_EVENT_FILTER,PATH_EVENT_FILTER,APPLY_STATION_FILTER,PATH_STATION_FILTER}} 
 \label{files,sec:main_parfile,itm:path_mdata_filters}
-Paths where \ASKI finds files related to the measured data files. These paths can be everywhere, e.g.\ close to where you 
+Paths and flags related to the measured data. The paths are \emph{absolute}, i.e.\ can be everywhere, 
+e.g.\ close to where you 
 have stored/processed your (time domain) data, or in directory \lcode{MAIN_PATH_INVERSION}, etc.\ \dots
-The naming convention of files in these directories is:\\
-\lcode{FILE_MEASURED_DATA}: \lcode{data_EVENTID_STATIONNAME_COMP},
-\lcode{FILE_EVENT_FILTER}: \lcode{filter_EVENTID},
-\lcode{FILE_STATION_FILTER}: \lcode{filter_STATIONNAME_COMP}, 
-where filters are dependet on component and \lcode{STATIONNAME} and \lcode{EVENTID} are 
+
+If you do not wish to use any filtering per events, you can switch to\\
+\lcode{APPLY_EVENT_FILTER = .false.},\\
+if you do not wish to use any fitering per stations, you can switch to\\
+\lcode{APPLY_STATION_FILTER = .false.}.\\
+In these cases, the respective filter files are not expected to exist and the respective filter paths are
+ignored.
+
+The naming convention of the files in the respective directories is:\\
+\lcode{FILE_MEASURED_DATA}: \lcode{data_EVENTID_STATIONNAME_COMP},\\
+\lcode{FILE_EVENT_FILTER}: \lcode{filter_EVENTID},\\
+\lcode{FILE_STATION_FILTER}: \lcode{filter_STATIONNAME_COMP}, \\
+where station filters are dependet on component and \lcode{STATIONNAME} and \lcode{EVENTID} are 
 defined in \lcode{FILE_STATION_LIST} and \lcode{FILE_EVENT_LIST} file, and \lcode{COMP} 
-is a valid component supported by module \lcode{componentTransformation}\\
+is a valid component (for valid components see \ref{basic_steps,sec:data_general})\\
 Example: \\
 \lcode{PATH_MEASURED_DATA = /mydata/your_name_of_inversion/ASKI_data/}\\
 \lcode{PATH_EVENT_FILTER = /mydata/your_name_of_inversion/ASKI_event_filter/}\\
-\lcode{PATH_STATION_FILTER = /mydata/your_name_of_inversion/ASKI_station_filter/}
+\lcode{PATH_STATION_FILTER = /mydata/your_name_of_inversion/ASKI_station_filter/}\\
+
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \subsubsection{\lcode{FILE_EVENT_LIST}} \label{files,sec:main_parfile,itm:file_event_list}
-Absolute filename where ASKI finds a text file defining a set of events in the required format 
+Absolute filename where \ASKI finds a text file defining a set of events in the required format 
 (\ref{files,sec:event_list})\\
 Example: \lcode{FILE_EVENT_LIST = /mydata/your_name_of_inversion/ASKI_events}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \subsubsection{\lcode{FILE_STATION_LIST}} \label{files,sec:main_parfile,itm:file_station_list}
-Absolute filename where ASKI finds a text file defining a set of stations in the required format 
+Absolute filename where \ASKI finds a text file defining a set of stations in the required format 
 (\ref{files,sec:station_list})\\
 Example: \lcode{FILE_STATION_LIST = /mydata/your_name_of_inversion/ASKI_stations}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -117,6 +147,13 @@ Example:\\
 \lcode{MEASURED_INDEX_OF_FREQ = 2 3 5 7 10}\\
 which corresponds to the 5 frequencies $20,30,50,70,100$ Hz
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\subsubsection{\lcode{UNIT_FACTOR_MEASURED_DATA}} 
+Indicate the unit factor of the measured data. The definition of the factor is:\\
+Multiplication of the measured data (displacement) with this factor gives values in the SI unit of meters [m].\\
+Example: If you use seismic time-domain data for ASKI in the unit of nano meters [nm], then \lcode{UNIT_FACTOR_MEASURED_DATA}
+must be set to \lcode{1.0e-9} , because the data values in nano meters [nm] must be divided by $1.0\cdot 10^9$ in order to get meters [m].
+If you use seismic displacement data in the SI unit of meters, then \lcode{UNIT_FACTOR_MEASURED_DATA} must be set to \lcode{1.0}.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \subsubsection{\lcode{DEFAULT_VTK_FILE_FORMAT}} 
 Either \lcode{BINARY} or \lcode{ASCII} defining the default type of \lcode{vtk} files 
 which will be produced in the course of running the programs.
@@ -127,16 +164,22 @@ which will be produced in the course of running the programs.
 %
 Here, shortly all keywords required in a parameter file for a specific iteration step, i.e.\ \\
 \lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH/PARFILE_ITERATION_STEP} , are described.
+
+These parameter files are created automatically by script \lcode{py/create_ASKI_dir.py}. 
+Alternatively, you can look at the template file \lcode{template/iter_parfile_template}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\subsubsection{\lcode{ITERATION_STEP_NUMBER_OF_FREQ,ITERATION_STEP_INDEX_OF_FREQ}} \label{files,sec:iter_parfile,itm:iter_freq}
+\subsubsection{\lcode{USE_PATH_SPECIFIC_MODELS}}
+Set the flag to .true. if you intend to use the ASKI functionality of path specific kernel reference models (usually only for the very first iteration and a 1D method). If you want to use one global kernel reference model (for all paths, i.e. kernels) set this flag to .false. .
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\subsubsection{\lcode{ITERATION_STEP_NUMBER_OF_FREQ, ITERATION_STEP_INDEX_OF_FREQ}} \label{files,sec:iter_parfile,itm:iter_freq}
 Frequency discretization of this iteration step, must be a subset of global frequency discretization 
 for this inversion defined as defined by \ref{files,sec:main_parfile,itm:mdata_freq}. \\
-\lcode{ITERATION_STEP_NUMBER_OF_FREQ <= MEASURED_DATA_NUMBER_OF_FREQ} and vector \\
+\lcode{ITERATION_STEP_NUMBER_OF_FREQ} must be smaller or equal to \lcode{MEASURED_DATA_NUMBER_OF_FREQ} and vector \\
 \lcode{ITERATION_STEP_INDEX_OF_FREQ} (of length \lcode{ITERATION_STEP_NUMBER_OF_FREQ})
-must only contain indices contained in \lcode{MEASURED_DATA_INDEX_OF_FREQ}\\
-All indices here are assumed in accordance with the global frequency step \lcode{MEASURED_DATA_FREQUENCY_STEP}
+must only contain indices contained in \lcode{MEASURED_DATA_INDEX_OF_FREQ}.\\
+All indices here are assumed in accordance with the global frequency step \lcode{MEASURED_DATA_FREQUENCY_STEP}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\subsubsection{\lcode{TYPE_INVERSION_GRID,PARFILE_INVERSION_GRID}} \label{files,sec:iter_parfile,itm:invgrid}
+\subsubsection{\lcode{TYPE_INVERSION_GRID, PARFILE_INVERSION_GRID}} \label{files,sec:iter_parfile,itm:invgrid}
 Type of inversion grid (as supported, cf.\ \ref{basic_steps,sec:invgrid}) and corresponding
 filename of parameter file defining this inversion grid, relative to \\
 \lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH/}
@@ -161,29 +204,36 @@ Base filename of vtk stats output files (related to inversion grid, wavefield po
 events, stations), relative to \lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH}. 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \subsubsection{\lcode{PATH_OUTPUT_FILES}}
-Folder relative to which some sensitivity analysis and inversion programs write their output (relatively small output
+Folder relative to which some sensitivity analysis and inversion programs may write their output (relatively small output
 like models, coefficients etc., NO wavefields/kernels etc.!), relative to 
-\lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH}.  Be sure, the path ends on ``/".
+\lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH}.  Make sure the path ends on ``/".
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{\lcode{PATH_KERNEL_DISPLACEMENTS}} 
 Subdirectory of current iteration step path
 \lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH} which contains the 
-kernel displacement files. Be sure, the path ends on ``/".
+kernel displacement files. Make sure the path ends on ``/".
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{\lcode{PATH_KERNEL_GREEN_TENSORS}} 
 Subdirectory of current iteration step path
 \lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH} which contains the 
-kernel green tensor files. Be sure, the path ends on ``/".
+kernel green tensor files. Make sure the path ends on ``/".
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{\lcode{PATH_SENSITIVITY_KERNELS}} 
 Subdirectory of current iteration step path
 \lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH} which contains the 
-velocity kernel files. Be sure, the path ends on ``/".
+velocity kernel files. Make sure the path ends on ``/".
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{\lcode{PATH_SYNTHETIC_DATA}} 
 Subdirectory of current iteration step path
 \lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH} which contains the 
-files with synthetic data. Be sure, the path ends on ``/".
+files with synthetic data. Make sure the path ends on ``/".
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{PATH_KERNEL_REFERENCE_MODELS}} 
+This path and any contained files are only relevant for \lcode{USE_PATH_SPECIFIC_MODELS = .true.}!
+Subdirectory of current iteration step path
+\lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH} in which path-specific kernel reference models are expected.
+The reference model files are assumed to have names like \lcode{krm_EVENTID_STATIONNAME}.
+Make sure the path ends on ``/".
 
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -210,8 +260,8 @@ Please find the template event list file \lcode{template/file_event_list_templat
     wavefield points / inversion grid -frame (``C'') (read \ref{basic_steps,sec:invgrid})
   \item[depth] source depth in km (``S''), or third coordinate in wavefield points / inversion grid -frame (``C'') 
     (read \ref{basic_steps,sec:invgrid})
-  \item[typ] source type:  0 = force, 1 = moment tensor, -1: not specified
   \item[mag] factor on source mechanism
+  \item[typ] source type:  0 = force, 1 = moment tensor, -1: not specified
   \item[mom/frce] either 3 values (force vector) or 6 values (moment tensor)
   \end{itemize}
 \end{itemize}
@@ -250,29 +300,29 @@ One measured data file contains all data values for one specific receiver compon
 Its filename is by convention \lcode{data_EVENTID_STATIONNAME_COMP}
 
 The files are text files containing $1$ column of \lcode{MEASURED_DATA_NUMBER_OF_FREQ} complex numbers, 
-which can be understood by \lcode{FORTRAN} \lcode{read} command.
+which can be understood by \lcode{FORTRAN} \lcode{read} command, i.e.\ of form \lcode{( real_part , imag_part)} .
 
-Line \lcode{i} contains measured data values for the \lcode{i}\textsuperscript{th} frequency, as defined by vector
+Line \lcode{i} contains the measured data value for the \lcode{i}\textsuperscript{th} frequency, as defined by vector
 of indices \lcode{MEASURED_DATA_INDEX_OF_FREQ} and frequency step \lcode{MEASURED_DATA_FREQUENCY_STEP}. \\
 In particular, this means that \emph{all} measured data files must contain the \emph{same} frequency discretization, given
 by parameters \lcode{MEASURED_DATA_INDEX_OF_FREQ}, \lcode{MEASURED_DATA_FREQUENCY_STEP} of the main 
 parameter file.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-\section{Synthetic Data Files} \label{files,sec:synth_data}
+\section{Synthetic Data Files} \label{files,sec:synth_data} 
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 All synthetic data files are expected to be in the directory \lcode{PATH_SYNTHETIC_DATA} as defined 
 in the parameter file of the current iteration step.
 
-One synthetic data file contains the complete synthetic data values for one specific path (i.e.\ a specific
-source-receiver combination). Its filename is by convention \lcode{synthetics_EVENTID_STATIONNAME}
+One synthetic data file contains the complete synthetic data values for one specific combination of
+event, station and receiver component. Its filename is by convention \lcode{synthetics_EVENTID_STATIONNAME_COMP}
 
-The files are text files containing \lcode{ITERATION_STEP_NUMBER_OF_FREQ} lines and $3$ columns of 
-complex numbers, which can be understood by \lcode{FORTRAN} \lcode{read} command:\\
-Line \lcode{i} contains synthetic data values for the \lcode{i}\textsuperscript{th} frequency, as defined by vector
+The files are text files containing $1$ column of \lcode{ITERATION_STEP_NUMBER_OF_FREQ}  
+complex numbers, which can be understood by \lcode{FORTRAN} \lcode{read} command, i.e.\ of form \lcode{( real_part , imag_part)} .
+
+Line \lcode{i} contains the synthetic data value for the \lcode{i}\textsuperscript{th} frequency, as defined by vector
 of indices \lcode{ITERATION_STEP_INDEX_OF_FREQ} and frequency step \lcode{MEASURED_DATA_FREQUENCY_STEP}.
-The $3$ complex numbers on a line refer to the $3$ Cartesian components \lcode{CX}, \lcode{CY}, \lcode{CX}.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Vtk Files} \label{files,sec:vtk_files}
@@ -280,39 +330,46 @@ The $3$ complex numbers on a line refer to the $3$ Cartesian components \lcode{C
 %
 For visualization of basic objects of the inversion, such as the inversion grid, 
 the wavefield points, the integration weights etc., as well as some inversion results
-and models, we use the \lcode{vtk} file format.\\
+and models, we use the \lcode{vtk} file format. The files contain \emph{both}, geometry
+information and data values on geometric objects. The format can be either \lcode{ASCII} or 
+\lcode{BINARY}, controlled by flag \lcode{DEFAULT_VTK_FILE_FORMAT} in main parfile.\\
 General information on this file format may be found under \url{www.vtk.org/VTK/img/file-formats.pdf}
 
-PUT HERE:\\
-General info about the two types of vtk files (invgridVtk, wavefield points Vtk files)\\
-Some basic content description about some special vtk files.
+\ASKI uses different software modules for writing \lcode{vtk} based on wavefield points, or 
+inversion grids or event-station path lines (or event, station coorrdinates). 
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Data and Model Space File} \label{files,sec:dmspace}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
-Files in which a data and model space is defined have the following form. Also have a look at 
-example template files \lcode{template/data_model_space_info_template_*}
+Files in which a data and model space is defined have the following form. \emph{It might be very instructive 
+to also have a look at the provided example template files} \lcode{template/data_model_space_info_template_*} .
 
-The blocks described in the subsections below should be put into a file, one after another. The header block must come
-first, then the data space block and model parameter block. The order of the latter two is arbitrary, both orders are 
-allowed, however if the model parameters block is defined first, an additional check for empty kernel file names will
-be done in the processing of the data samples block.
+The blocks described in the subsections below should be put into a text file, one after another, in arbitrary order, 
+i.e.\ it does not matter which block comes first (DATA SAMPLE or MODEL VALUES). It is
+also supported to provide only one of the blocks, if the other one is not required for some application. 
+
+\emph{There can be arbitrary commentary in front of a block, between blocks and after the blocks.} However, 
+any line starting with \lcode{DATA SAMPLES} or \lcode{MODEL VALUES} is interpreted as the starting line
+of the respective block. Inside the blocks, ther must not be unexpected lines!
+
+%The header block must come first, then the data space block and model parameter block. The order of the latter two is arbitrary, both orders are allowed. %% IN CASE OF INTRODUCING SOME HEADER BLOCK IN THE FUTURE
+
+%% %---------------------------------------------------------
+%% \subsection{Header Block}
+%% %---------------------------------------------------------
+%% {\bf line 1}: currently ignored (file format version specification possible, header comment)
+
+%% {\bf line 2}: must either contain \lcode{ASCII} or \lcode{BINARY}\\
+%% At the moment, this file must be a formatted text file (nothing else supported yet). In the future, also 
+%% binary or mixed text/binary formats could be supported (similar to e.g. vtk)
 
 %---------------------------------------------------------
-\subsection{Header Block}
-%---------------------------------------------------------
-{\bf line 1}: currently ignored (file format version specification possible, header comment)
-
-{\bf line 2}: must either contain \lcode{ASCII} or \lcode{BINARY}\\
-currently ignored (possible form definition like ASCII / mixed ASCII/BINARY (similar to in vtk(?)))\\
-At the moment, this file must be a formatted text file. 
-%---------------------------------------------------------
-\subsection{Model Parameters Block}
+\subsection{Model Values Block}
 %---------------------------------------------------------
 
-{\bf line}: \lcode{MODEL PARAMETERS}\\
-this defines that the definition of the model parameters starts here.
+{\bf line}: \lcode{MODEL VALUES}\\
+this line defines that the model values block (definition of the model values) starts here. 
 
 {\bf line}: \lcode{INVERSION_GRID_CELLS value}\\
 where \lcode{value} is either \lcode{ALL} (all inversion grid cells are taken) or \lcode{SPECIFIC} 
@@ -323,49 +380,61 @@ where \lcode{value} is either \lcode{ALL} (all inversion grid cells are taken) o
 (specific definition of model parameters for each invgrid cell, following below. Only allowed if 
 \lcode{INVERSION_GRID_CELLS SPECIFIC}). 
 
-{\bf If \lcode{PARAMETERS ALL}, line}: \lcode{nparam pmtrization_1 param_1 ... pmtrization_n param_n}\\
-defines the parametrization used for all inversion grid cells.
+{\bf If \lcode{PARAMETERS ALL}, line}: \lcode{nparam param_1 ... param_n}\\
+defines the parameters used for all inversion grid cells (assuming \lcode{MODEL_PARAMETRIZATION} defined in main parameter file).
 
 If \lcode{INVERSION_GRID_CELLS SPECIFIC}, the following line must contain the number of cells \lcode{ncell} 
 which should be taken, followed by \lcode{ncell} blocks of lines, each defining an inversion grid cell. In case
 of \lcode{PARAMETERS ALL}, these blocks consist of a single line line containing an inversion grid cell index.
 In case of \lcode{PARAMETERS SPECIFIC}, these blocks consist of two lines: one line containing an inversion grid cell
 index and an additional second line of the form\\
-\lcode{nparam pmtrization_1 param_1 ... pmtrization_n param_n} \\
-defining the parameters to be used for this specific inversion grid cell.
+\lcode{nparam param_1 ... param_n} \\
+defining the parameters to be used for this specific inversion grid cell (assuming \lcode{MODEL_PARAMETRIZATION} defined in main parameter file).
 
 %---------------------------------------------------------
 \subsection{Data Samples Block}
 %---------------------------------------------------------
-line ``DATA SAMPLES''
-%
-line of form: ``PATHS value'', where value is either ``ALL'' (all paths for a given set of event and station indices
-are used), or ``SPECIFIC'' (a specific definition of paths as a series of event and station index pairs follows below)
+line \lcode{DATA SAMPLES}\\
+this line defines that the data samples block starts (definition of data samples) here. 
 
-If ``PATHS ALL'', the next two lines are of form ``nev iev\_1 ... iev\_n'' and ``nstat istat\_1 ... istat\_n'', defining the set
+line of form: \lcode{WEIGHTING value}, where value is one of is one of \lcode{NONE}, \lcode{BY_PATH}, 
+\lcode{BY_FREQUENCY}, \lcode{BY_PATH_AND_FREQUENCY}\\
+In case of \lcode{NONE}, all data weights are internally set to 1.0 (i.e. no actual weighting is performed).
+Values \lcode{BY_PATH} and \lcode{BY_PATH_AND_FREQUENCY} are only allowed in case of \lcode{PATH SPECIFIC}, in which case
+the pairs \lcode{evid staname} in a specific path definition (below) is expected to be followed by one number $>$ 0.0 and $\le$ 1.0 (the weight).
+The frequency dependent weighting values (in cases \lcode{BY_FREQUENCY}, \lcode{BY_PATH_AND_FREQUENCY}) are defined
+in a separate line following the lines of form \lcode{nfreq ifreq_1 ... ifreq_n} (for either case of \lcode{FREQUENCIES ALL}
+or \lcode{FREQUENCIES SPECIFIC}). This separate lines have themselves the form \lcode{nfreq w_1 ... w_n} defining \lcode{nfreq} weights
+in range $>$ 0.0 and $\le$ 1.0. 
+In case \lcode{BY_PATH_AND_FREQUENCY}, both weights (for path and frequency) are \emph{multiplied} for each data sample.
+
+line of form: \lcode{PATHS value}, where value is either \lcode{ALL} (all paths for a given set of event and station indices
+are used), or \lcode{SPECIFIC} (a specific definition of paths as a series of event and station index pairs follows below)
+
+If \lcode{PATHS ALL}, the next two lines are of form \lcode{nev iev_1 ... iev_n} and \lcode{nstat istat_1 ... istat_n}, defining the set
 of event and station indices, which form (by all combinations) the used paths. 
 
-line of form: ``COMPONENTS value'', where value is either ``ALL'' (for all paths, the same components are used) or ``SPECIFIC''
-(only allowed if ``PATHS SPECIFIC'', for each path a specific set of components may be defined)
+line of form: \lcode{COMPONENTS value}, where value is either \lcode{ALL} (for all paths, the same components are used) or \lcode{SPECIFIC}
+(only allowed if \lcode{PATHS SPECIFIC}, for each path a specific set of components may be defined)
 
-If ``COMPONENTS ALL'', the next line is of form ``ncomp comp\_1 ... comp\_n'' defining the component indices for all paths.
+If \lcode{COMPONENTS ALL}, the next line is of form \lcode{ncomp comp_1 ... comp_n} defining the component indices for all paths.
 
-line of form: ``FREQUENCIES value'', where value is either ``ALL'' (for all paths, the same frequency indices are used) or ``SPECIFIC''
-(only allowed if ``PATHS SPECIFIC'', for each path a specific set of frequency indices may be defined)
+line of form: \lcode{FREQUENCIES value}, where value is either \lcode{ALL} (for all paths, the same frequency indices are used) or \lcode{SPECIFIC}
+(only allowed if \lcode{PATHS SPECIFIC}, for each path a specific set of frequency indices may be defined)
 
-If ``FREQUENCIES ALL'', the next line is of form ``nfreq ifreq\_1 ... ifreq\_n'' defining the frequency indices for all paths.
+If \lcode{FREQUENCIES ALL}, the next line is of form \lcode{nfreq ifreq_1 ... ifreq_n} defining the frequency indices for all paths.
 
-line of form: ``IMRE value'', where value is either ``ALL'' (for all paths, the same set of imaginary/real parts are used) or ``SPECIFIC''
-(only allowed if ``PATHS SPECIFIC'', for each path a specific set of imaginary/real parts may be defined)
+line of form: \lcode{IMRE value}, where value is either \lcode{ALL} (for all paths, the same set of imaginary/real parts are used) or \lcode{SPECIFIC}
+(only allowed if \lcode{PATHS SPECIFIC}, for each path a specific set of imaginary/real parts may be defined)
 
-If ``IMRE ALL'', the next line is of form ``nimre imre\_1 ... imre\_n'' defining imaginary (i.e. imre\_i = ``im'') or real parts 
-(imre\_i = ``re'') for all paths.
+If \lcode{IMRE ALL}, the next line is of form \lcode{nimre imre_1 ... imre_n} defining imaginary (i.e. \lcode{imre_i} = \lcode{im}) or real parts 
+(\lcode{imre_i} = \lcode{re}}) for all paths.
 
-If ``PATHS SPECIFIC'', the following line must contain the number ``npaths'' of paths which should be used, followed by 
+If \lcode{PATHS SPECIFIC}, the following line must contain the number \lcode{npaths} of paths which should be used, followed by 
 npahts blocks of lines, each defining the path and the data samples for that path. \\
-These blocks constist of at least one line containing the event /station index pair ``iev istat''. \\
-For each keyword ``COMPONENTS'', ``FREQUENCIES'' and ``IMRE'' -- if ``SPECIFIC'' -- one line is added to such a block 
-of lines, in the same form as the line following ``keyword ALL'' (see above), 
+These blocks constist of at least one line containing the event /station index pair \lcode{iev istat}. \\
+For each keyword \lcode{COMPONENTS}, \lcode{FREQUENCIES} and \lcode{IMRE} -- if \lcode{SPECIFIC} -- one line is added to such a block 
+of lines, in the same form as the line following \lcode{keyword ALL} (see above), 
 defining the specific components, frequencies or set of imaginary/real parts for each of the specific paths.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -416,7 +485,3 @@ no neighbours) followed by \lcode{nnb} cell indices \lcode{icell_1 ... icell_nnb
 the neighbour cells, if there are any neighbours.
 
 
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: "manual"
-%%% End:

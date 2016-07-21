@@ -1,0 +1,28 @@
+COMMAND:
+
+/home/florian/programme/ASKI/bin/invgrid2vtk -igtype ecartInversionGrid -igpar ecartInversionGrid_parfile_template -igpath ./ -o invgrid_cells > invgrid2vtk.out
+
+SCREEN OUTPUT:
+
+--------------------------------------------------------------------------------
+                         | DOCUMENTATION OF COMMANDLINE CONTENTS |
+                         -----------------------------------------
+Program:     invgrid2vtk
+Description: Create vtk file(s) of the given inversion grid (useful to look at, to see if the specifications are correct)
+ 
+Positional arguments:
+ 
+Optional arguments:
+       -igtype: Type =  sval, Value   = ecartInversionGrid
+        -igpar: Type =  sval, Value   = ecartInversionGrid_parfile_template
+       -igpath: Type =  sval, Value   = ./
+            -o: Type =  sval, Value   = invgrid_cells
+       -overwr: Type =  none, Default = none
+           -nb: Type =  ivec, Default = 
+       -all_nb: Type =  none, Default = none
+          -bin: Type =  none, Default = none
+         -recr: Type =  none, Default = none
+      -bndcond: Type =  sval, Default = standard
+--------------------------------------------------------------------------------
+ 
+ writing inversion grid with invgrid index as data to vtk file with basename 'invgrid_cells'
