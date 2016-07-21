@@ -75,7 +75,7 @@ NITER_WINDOW_LTA =
 #------------------------------------------------------------------------------------
 # NUMERICAL PERFORMANCE
 #
-# I there is an error that some values become NaN , you should try to use double precision
+# If there is an error that some values become NaN , you should try to use double precision
 # variables for vectors and scalars in the CGLS algorithm by Bjoerck et al. This might be 
 # helpful if the kernel matrix contains values which are so low that certain summations 
 # become not representable in single prercision.

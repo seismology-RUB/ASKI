@@ -25,25 +25,31 @@
 #------------------------------------------------------------------------------
 
 
-#  path where all txt trace files can be found (must end on '/')
+#  Path where all txt trace files can be found (must end on '/').
+#  The trace files in that path are expected to have filenames of form 
+#  EVID_STANAME_COMP.txt
 #
   PATH_TXT_TRACES = /home/florian/inversion/ASKI_borehole4/measured_data_txt/
 
 
 #  dataModelSpaceInfo text file defining the set of data samples for which the conversion will be done:
-#  for all present receiver components of all present data paths, the complete spectrum will be generated
-#  as defined by global frequency discretization from main parfile
+#  For all present receiver components of all present data paths, the complete spectrum will be generated
+#  as defined by global frequency discretization from main parfile.
+#  I.e. any specific frequency definition in the data model space info file will be ignored.
 #
   FILE_DATA_MODEL_SPACE_INFO = data_model_space_info_all
  
 
-#  Global time discretization (timestep and number of samples) for ALL txt trace files
+#  Global time discretization (timestep and number of samples) for ALL txt trace files.
+#  If some of your data have other time discretizations than others, you would need to 
+#  re-run this program for each time discretization, properly re-defining the data subset 
+#  through the data_model_space_info file.
 #
   DT = 8.8e-05
   NSTEP = 2816
 
 
-#  the integer value COLUMN_OF_TRACE defines the column of the txt trace files in which the actual time-series
+#  The integer value COLUMN_OF_TRACE defines the column of the txt trace files in which the actual time-series
 #  is found (e.g. if the files contain the time as first column and amplitude values as second column, set
 #  COLUMN_OF_TRACE = 2; if only one column with amplitude values is contained in the files, set COLUMN_OF_TRACE = 1)
 #

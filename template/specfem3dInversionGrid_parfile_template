@@ -45,7 +45,8 @@
 #  SPECFEM3D-FOR-ASKI MAIN FILE
 #---------------------------------------------------------------------------
 
-#  file name relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/ of inversion grid file
+#  file name relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/ of file from SPECFEM3D
+# containing all information about the inversion grid (any *.main output file)
 #  
   SPECFEM3D_ASKI_MAIN_FILE = kernel_displacements/kernel_displ_S001.main
 
@@ -63,8 +64,8 @@
 #  Scale vtk geometry coordinates by factor VTK_COORDS_SCALING_FACTOR, if SCALE_VTK_COORDS = .True.
 #  this may be helpful if coordinate values (e.g. in m) get so large that they cause problems in paraview
 #
-  SCALE_VTK_COORDS = .False.
-  VTK_COORDS_SCALING_FACTOR = 1.
+  SCALE_VTK_COORDS = .false.
+  VTK_COORDS_SCALING_FACTOR = 1.0
 
 #  in case of using SPECFEM3D_GLOBE, define here the maximum radius [km] of the sphere, by which Earth is approximated
 #  (only used to interpret "depth" and "altitude" of events and stations when plotting to vtk files, this is

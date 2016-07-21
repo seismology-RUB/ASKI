@@ -1,0 +1,171 @@
+#------------------------------------------------------------------------------
+#  PARAMETER FILE FOR PROGRAM createSpectralFilters to generate event filters
+#------------------------------------------------------------------------------
+#
+#  HOWTO USE THE PARAMETER FILE:
+#
+# comment lines, STARTING with "#" are ignored
+# empty lines and lines containing blanks only are ignored
+# lines not containing "=" are ignored
+#
+# specify one parameter per line, valid lines having the form "keyword = value"
+# (blanks leading or following the keyword, the "=", or the value are ignored)
+#
+# in a non comment line, all characters in front of "=" (without leading and appending blanks)
+# are interpreted as the keyword, allowing for blank characters within the keyword (e.g. for lines  "   key word = value   ",
+# the string "key word" is used as the keyword)
+# all characters behind "=" (without leading and appending blanks) are interpreted as the value string from 
+# which the value is read, which in particular means that "#" comments at the end of a line (such as 
+# " keyword = value  # comment ") are NOT allowed (in the latter case, the string "value  # comment" would be used
+# to read a value from)
+#
+# by ASKI convention, specify PATHS (i.e. directory names, which will be 
+# concatenated with a filename of a file in that directory) always ending on '/'
+# specify FILENAMES always WITHOUT leading '/'
+#------------------------------------------------------------------------------
+
+
+#  Decide if the event filters should be created by the source wavelet (defined below in section "SOURCE WAVELET",
+#  or by a spectral butterworth low-/high-/bandpass filter (defined below in section "BUTTERWORTH FILTER")
+#  EXACTLY ONE of the following logical flags must be .true., the others must be .false. Otherwise the 
+#  program createSpectralFilters terminates and raises an error.
+#
+  CREATE_FILTERS_BY_SOURCE_WAVELET = .true.
+  CREATE_FILTERS_BY_SPECTRAL_BUTTERWORTH = .false.
+
+
+#  Define those event ID's for which an event filter file should be generated (filter will be the SAME
+#  for all events, if you need different filters for different events, you need to re-run this program
+#  appropriately). There are two valid formats of the value of keyworkd EVENT_IDS:
+#    EVENT_IDS = ALL   (all event ID's will be used and the value of NUMBER_OF_EVENTS is ignored)
+#    EVENT_IDS = source01 source02 source204   (white-space-separated vector of valid event ID's, 
+#                                               NUMBER_OF_EVENTS gives the number of values in the vector)
+#
+  NUMBER_OF_EVENTS = 
+  EVENT_IDS = ALL
+
+
+#  Decide whether the resulting spectral event filters should be CONVOLVED by some other filter
+#  (defined below in sections "CONVOLVE WITH OTHER WAVELET" and/or "MULTIPLY BY OTHER SPECTRAL FILTER").
+#  This functionality is sensible to use, e.g. if you want to create a butterworth filter
+#  which should be convolved with some finite source moment-rate function. Note, that the resulting
+#  event filters should describe the SOURCE contribution to the filter that brings the synthetic
+#  displacement wavefield to the measured data. Hence, the functionality of CONVOLVE_WITH_OTHER_WAVELET
+#  or MULTIPLY_BY_OTHER_SPECTRAL_FILTER should NOT be used to deconvolve the Gaussian that was used to
+#  generate synthetics in some iteration step, since the resulting event filters are not intended
+#  to be modified throughout an inversion. However, if you know what you're doing, you are welcome
+#  to "abuse" this functionality for your own purposes.
+#  The logical flags CONVOLVE_WITH_OTHER_WAVELET and MULTIPLY_BY_OTHER_SPECTRAL_FILTER can both be .true.
+#  (in that case accounting for both contributions).
+#
+  CONVOLVE_WITH_OTHER_WAVELET = .false.
+  MULTIPLY_BY_OTHER_SPECTRAL_FILTER = .false.
+  
+
+#---------------------------------------------------------------------------
+#  SOURCE WAVELET (STF - Source-Time-Function)
+#---------------------------------------------------------------------------
+
+#  text file of source wavelet
+#
+  STF_FILE = /home/florian/inversion/ASKI_borehole4/ricker_wavelet.txt
+
+
+#  the integer value STF_COLUMN_OF_TRACE defines the column of the txt trace file given by STF_FILE
+#  (e.g. if the files contain the time as first column and amplitude values as second column, set
+#  STF_COLUMN_OF_TRACE = 2; if only one column with amplitude values is contained in the files, set 
+#  STF_COLUMN_OF_TRACE = 1, etc.)
+#
+  STF_COLUMN_OF_TRACE = 2
+
+
+#  Time discretization of file STF_FILE. STF_NSTEP gives the number of samples that are read from 
+#  the (rows of the) file. The values are interpreted to have a time stepping of STF_DT. 
+#  The first sample is interpreted to have time 0.0 . This should not pose a problem, since program
+#  createMeasuredData makes the very same assumption and all forward methods should produce their 
+#  spectral synthetics in the same way (as displacement wavefields w.r.t. a Dirac impuls at time 0.0
+#  and with the Fourier transform starting with the first time-sample at time 0.0).
+#
+  STF_DT = 8.8e-05
+  STF_NSTEP = 2816
+
+
+#---------------------------------------------------------------------------
+#  BUTTERWORTH FILTER (BTW)
+#
+#  If you want to define a Butterworth band-pass filter, please define BOTH, a suitable low-pass AND 
+#  a suitable high-pass filter below.
+#  If above CREATE_FILTERS_BY_SPECTRAL_BUTTERWORTH = .true. , at least one of BTW_LOW_PASS_APPLY or
+#  BTW_HIGH_PASS_APPLY must be set to .true. 
+#---------------------------------------------------------------------------
+
+#  Decide whether a low-pass butterworth filter should be applied (logical BTW_LOW_PASS_APPLY) and 
+#  define order (integer BTW_LOW_PASS_ORDER) and corner frequency (real BTW_LOW_PASS_FC).
+#  If BTW_LOW_PASS_APPLY = .false., then any values given for BTW_LOW_PASS_ORDER and BTW_LOW_PASS_FC are ignored.
+#
+  BTW_LOW_PASS_APPLY = .false.
+  BTW_LOW_PASS_ORDER = 
+  BTW_LOW_PASS_FC = 
+
+
+#  Decide whether a high-pass butterworth filter should be applied (logical BTW_HIGH_PASS_APPLY) and 
+#  define order (integer BTW_HIGH_PASS_ORDER) and corner frequency (real BTW_HIGH_PASS_FC).
+#  If BTW_HIGH_PASS_APPLY = .false., then any values given for BTW_HIGH_PASS_ORDER and BTW_HIGH_PASS_FC are ignored.
+#
+  BTW_HIGH_PASS_APPLY = .false.
+  BTW_HIGH_PASS_ORDER = 
+  BTW_HIGH_PASS_FC = 
+
+
+#---------------------------------------------------------------------------
+#  CONVOLVE WITH OTHER WAVELET
+#---------------------------------------------------------------------------
+
+#  text file of other wavelet to be convolved
+#
+  CONV_WAVEL_FILE = /home/florian/inversion/ASKI_borehole4/convolve_wavelet.txt
+
+
+#  the integer value CONV_WAVEL_COLUMN_OF_TRACE defines the column of the txt trace file given by CONV_WAVEL_FILE
+#  (e.g. if the files contain the time as first column and amplitude values as second column, set
+#  CONV_WAVEL_COLUMN_OF_TRACE = 2; if only one column with amplitude values is contained in the files, set 
+#  CONV_WAVEL_COLUMN_OF_TRACE = 1, etc.)
+#
+  CONV_WAVEL_COLUMN_OF_TRACE = 2
+
+
+#  Time discretization of file CONV_WAVEL_FILE. CONV_WAVEL_NSTEP gives the number of samples that are read from 
+#  the (rows of the) file. The values are interpreted to have a time stepping of CONV_WAVEL_DT. 
+#  The first sample is interpreted to have time 0.0 . This should not pose a problem, since program
+#  createMeasuredData makes the very same assumption and all forward methods should produce their 
+#  spectral synthetics in the same way (as displacement wavefields w.r.t. a Dirac impuls at time 0.0
+#  and with the Fourier transform starting with the first time-sample at time 0.0).
+#
+  CONV_WAVEL_DT = 8.8e-05
+  CONV_WAVEL_NSTEP = 2816
+
+
+#  Logical flag DECONVOLVE_WAVEL_INSTEAD controls whether instead of CONvolving with the wavelet, it should be 
+#  DEconvolved
+#
+  DECONVOLVE_WAVEL_INSTEAD = .false.
+
+
+#---------------------------------------------------------------------------
+#  MULTIPLY BY OTHER SPECTRAL FILTER
+#---------------------------------------------------------------------------
+
+#  Text file in the format of a filter file, containing the spectral filter which is in the end to be
+#  multiplied onto the event filters. The file must contain MEASURED_DATA_NUMBER_OF_FREQ many rows, 
+#  each of which corresponds to the frequency as defined by MEASURED_DATA_INDEX_OF_FREQ and 
+#  MEASURED_DATA_FREQUENCY_STEP (in main parfile) and on each row a complex value must define the filter
+#  coefficient as understood by Fortran, i.e., in the format:
+#    ( real_part , imag_part )
+#
+  CONV_SPEC_FILE = /home/florian/inversion/ASKI_borehole4/convolve_spectral_filter.txt
+
+
+#  Logical flag DECONVOLVE_SPEC_INSTEAD controls whether instead of multiplying with the spectrum (i.e. 
+#  convolving with the filter), it should be DIVIDED by it (i.e. DEconvolvolving the filter)
+#
+  DECONVOLVE_SPEC_INSTEAD = .false.

@@ -56,7 +56,7 @@ NCOL_PER_BLOCK =
 #     for this operation it is efficient if NROW_TO_PROCESS_AT_ONCE is a multiple of the number of data samples per data path (in case
 #     all data paths have the same number of data samples, i.e. the same number of frequencies and components)
 #     otherwise kernel files might be opened and closed several times, which could cost little extra performance...
-#   - the smoothing equations will also be requested by the master process and then distributed onto the process grid. this
+#   - the regularization equations will also be requested by the master process and then distributed onto the process grid. this
 #     will be done in sections of rows, each containing NROW_TO_PROCESS_AT_ONCE rows
 
 NROW_TO_PROCESS_AT_ONCE = 

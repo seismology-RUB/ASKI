@@ -1,0 +1,28 @@
+#------------------------------------------------------------------------------
+#  PARAMETER FILE FOR PROGRAM createSpectralFilters to generate station filters
+#------------------------------------------------------------------------------
+#
+#  HOWTO USE THE PARAMETER FILE:
+#
+# comment lines, STARTING with "#" are ignored
+# empty lines and lines containing blanks only are ignored
+# lines not containing "=" are ignored
+#
+# specify one parameter per line, valid lines having the form "keyword = value"
+# (blanks leading or following the keyword, the "=", or the value are ignored)
+#
+# in a non comment line, all characters in front of "=" (without leading and appending blanks)
+# are interpreted as the keyword, allowing for blank characters within the keyword (e.g. for lines  "   key word = value   ",
+# the string "key word" is used as the keyword)
+# all characters behind "=" (without leading and appending blanks) are interpreted as the value string from 
+# which the value is read, which in particular means that "#" comments at the end of a line (such as 
+# " keyword = value  # comment ") are NOT allowed (in the latter case, the string "value  # comment" would be used
+# to read a value from)
+#
+# by ASKI convention, specify PATHS (i.e. directory names, which will be 
+# concatenated with a filename of a file in that directory) always ending on '/'
+# specify FILENAMES always WITHOUT leading '/'
+#------------------------------------------------------------------------------
+
+
+#  CREATING STATION (COMPONENT) FILTERS IS NOT YET SUPPORTED BY PROGRAM createSpectralFilters
