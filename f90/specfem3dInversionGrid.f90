@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief inversion grid consisting SPECFEM3D elements as inversion grid cells
 !!
@@ -32,12 +32,14 @@
 !!   cell are assumed in a row)
 !!
 !! \author Florian Schumacher
-!! \date Jul 2013
+!! \date Nov 2015
 !
 module specfem3dInversionGrid
 !
+  use specfem3dForASKIFiles
   use inputParameter
   use vectorPointer
+  use mathConstants
   use errorMessage
 !
   implicit none
@@ -45,6 +47,8 @@ module specfem3dInversionGrid
   type specfem3d_inversion_grid
      private
      logical :: is_defined = .false. !< flag indicating the correct definition (initialization) of the object (i.e. all following values)
+!
+     integer :: specfem_version = 0 !< 1 = SPECFEM3D_GLOBE, 2 = SPEECFEM3D_Cartesian
 !
      ! GLL POINTS
      integer :: NGLLX,NGLLY,NGLLZ
@@ -67,12 +71,81 @@ module specfem3dInversionGrid
      ! COORDINATES SPECIFICATION FOR VTK OUTPUT
      logical :: apply_vtk_coords_scaling_factor
      real :: vtk_coords_scaling_factor
+     integer :: vtk_geometry_type_int = -1 !< type of vtk geometry:  0 = volumetric cells , 1 = cell center points
+     real :: R_EARTH_KM
      ! in the future: there could be flags in parameter file like: DONT_SMOOTH_LAYER_BOUNDARIES, 
      ! or SMOOTHING_BOUNDARY_CONDITIONS which could be taken into account here, and memorized for better handling 
      ! of smoothing conditions in calls to certain routines below
   end type specfem3d_inversion_grid
 !
 contains
+!------------------------------------------------------------------------
+!> \brief logical return whether this specfem3d_inversion_grid is able to transform points (of given coords type) to vtk plot projection
+!
+  function canTransformToVtkPointsOutsideSpecfem3dInversionGrid(this,coords_type) result(l)
+    type(specfem3d_inversion_grid) :: this
+    character(len=*) :: coords_type
+    logical :: l
+    ! technically, the specfem3d_inversion_grid has NO capability to transform points to vtk projection which
+    ! are outside the inversion grid. However, when using this type of inversion grid, the wavefield points
+    ! in use must be from the same simulation, which means that always all wavefield points are inside
+    ! the inversion grid, by definition, and there are no empty cells.
+    ! Furthermore, the only possible vtk projection is global view, which means that any station and event
+    ! coordinates will be plotted to their global coordinates. 
+    ! Hence, this routine will have no effect in practical use. Return .false. anyway for safety reasons.
+    l = .false.
+  end function canTransformToVtkPointsOutsideSpecfem3dInversionGrid
+!------------------------------------------------------------------------
+!> \brief get unit factor of the volume element
+!! \param this specfem3d inversion grid
+!! \param uf_wp unit factor of wavefield points
+!! \param uf_vol unit factor of volume element (return value of this subroutine)
+!! \param errmsg error message
+!
+  subroutine getUnitFactorOfVolumeElementSpecfem3dInversionGrid(this,uf_wp,uf_vol,errmsg)
+    type (specfem3d_inversion_grid) :: this
+    real :: uf_wp,uf_vol
+    type (error_message) :: errmsg
+    character (len=50) :: myname = 'getUnitFactorOfVolumeElementSpecfem3dInversionGrid'
+!
+    call addTrace(errmsg,myname)
+!
+    if(.not.this%is_defined) then
+       call add(errmsg,2,"inversion grid not yet defined",myname)
+       return
+    end if
+!
+    ! The specfem3d inversion grid does not assume specific units for its spatial extension but simply 
+    ! assumes that they are the same as for the wavefield point coordinates (which are located inside the
+    ! inversion grid cells only according to their pure numerical values). Hence, for this 3D volumetric
+    ! inversion grid, the volume element has a unit which is the cube of the unit of the wavefield points.
+    select case(this%specfem_version)
+    case(version_globe_specfem3d_for_ASKI_files)
+       ! SPECFEM3D_GLOBE writes jacobians of the transformation of points in unit km to standart cell.
+       ! I.e., for 3D integration, the unit factor of the weights is 1000^3 
+       uf_vol = 1.0e9
+    case(version_cartesian_specfem3d_for_ASKI_files)
+       ! ASKI for SPECFEM3D_Cartesian simply takes the numbers of the mesh coordinates generated by the user.
+       ! Hence, for this 3D volumetric inversion grid, the volume element has a unit which is the cube of the 
+       ! unit of the wavefield points.
+       uf_vol = uf_wp*uf_wp*uf_wp
+    end select
+  end subroutine getUnitFactorOfVolumeElementSpecfem3dInversionGrid
+!------------------------------------------------------------------------
+!> \brief map vtk geometry type names to integers
+!
+  function intGeometryTypeSpecfem3dInversionGrid(vtk_geometry_type_str) result(vtk_geometry_type_int)
+    character(len=*), intent(in) :: vtk_geometry_type_str
+    integer :: vtk_geometry_type_int
+    select case(trim(vtk_geometry_type_str))
+    case('CELLS')
+       vtk_geometry_type_int = 0
+    case('CELL_CENTERS')
+       vtk_geometry_type_int = 1
+    case default
+       vtk_geometry_type_int = -1
+    end select
+  end function intGeometryTypeSpecfem3dInversionGrid
 !------------------------------------------------------------------------
 !> \brief create specfem3d inversion grid
 !! \details the parameter file given, must contain all necessary parameters to define
@@ -91,19 +164,15 @@ contains
     character(len=400) :: errstr
     character(len=28) :: myname = 'createSpecfem3dInversionGrid'
     type (input_parameter) :: inpar
-    character (len=80), dimension(3) :: inpar_keys
-    data inpar_keys/'SPECFEM3D_ASKI_MAIN_FILE','SCALE_VTK_COORDS','VTK_COORDS_SCALING_FACTOR'/
-    integer :: ios,ntot_wp,nf,specfem_version,type_invgrid,nproc,len_id
+    character (len=80), dimension(5) :: inpar_keys
+    data inpar_keys/'SPECFEM3D_ASKI_MAIN_FILE','VTK_GEOMETRY_TYPE','SCALE_VTK_COORDS','VTK_COORDS_SCALING_FACTOR',&
+         'SPECFEM3D_R_EARTH_KM'/
+    integer :: ios,ntot_wp,type_invgrid,ncell
     integer :: n,icell,cell_shift,p1_shift,p2_shift,p3_shift,p4_shift,p5_shift,p6_shift,p7_shift,p8_shift
     integer :: igllx_cc_1,igllx_cc_2,iglly_cc_1,iglly_cc_2,igllz_cc_1,igllz_cc_2,ix,iy,iz,ip
     integer, dimension(:), allocatable :: igll_cc_mean
     real :: cc_mean_factor
-    integer :: nnb_total,nnb_count,ncell,nnb
-    real :: df
-    integer, dimension(:), pointer :: idx
-    character(len=1) :: dummy_char
-    real, dimension(:), allocatable :: x,y,z
-    integer, dimension(:), allocatable :: jf
+    real, dimension(:), pointer :: x,y,z
 !
     call addTrace(errmsg,myname)
     if(this%is_defined) then
@@ -115,37 +184,29 @@ contains
     call readSubroutineInputParameter(inpar,lu,parfile,errmsg)
     if (.level.errmsg == 2) return
 !
-    open(unit=lu,file=trim(path)//trim(inpar.sval.'SPECFEM3D_ASKI_MAIN_FILE'),status='old',&
-         action='read',access='stream',form='unformatted',iostat=ios)
-    if (ios /= 0) then
-       call add(errmsg,2,"File '"//trim(parfile)//"' cannot be opened to read",myname)
-       goto 1
-    endif
+    call readSpecfem3dForASKIMainFile(trim(path)//trim(inpar.sval.'SPECFEM3D_ASKI_MAIN_FILE'),lu,errmsg,&
+         specfem_version=this%specfem_version,type_inversion_grid=type_invgrid,nwp=ntot_wp,x=x,y=y,z=z,&
+         ngllx=this%NGLLX,nglly=this%NGLLY,ngllz=this%NGLLZ,jacobian=this%jacobian,ncell=ncell,nb_idx=this%face_neighbour)
+    if(.level.errmsg == 2) goto 1
 !
-    read(lu) specfem_version
-    select case(specfem_version)
-    case(1,2)
-       ! OK, so pass doing nothing
+    select case(this%specfem_version)
+    case(version_globe_specfem3d_for_ASKI_files)
+       this%R_EARTH_KM = rval(inpar,'SPECFEM3D_R_EARTH_KM',iostat=ios)
+       if(ios /= 0) then
+          call add(errmsg,2,"could not read real value for 'SPECFEM3D_R_EARTH_KM' from '"//&
+               trim(inpar.sval.'SPECFEM3D_R_EARTH_KM')//"'",myname)
+          goto 1
+       end if
+    case(version_cartesian_specfem3d_for_ASKI_files)
+       this%R_EARTH_KM = 0 ! ignore value, REARTH is not used for vtk output
     case default
-       write(errstr,*) "specfem version = ",specfem_version," is not supported: 1 = SPECFEM3D_GLOBE, 2 = SPECFEM3D_Cartesian"
+       write(errstr,*) "readSpecfem3dForASKIMainFile returned specfem_version = ",this%specfem_version,&
+            "; this module only supports specfem versions ",version_globe_specfem3d_for_ASKI_files," = SPECFEM3D_GLOBE and ",&
+            version_cartesian_specfem3d_for_ASKI_files," = SPECFEM3D_Cartesian ."
        call add(errmsg,2,errstr,myname)
        goto 1
     end select
 ! 
-    read(lu) len_id
-    if(len_id<1) then
-       write(errstr,*) "negative id length ",len_id," in ASKI main file '"//trim(path)//&
-            trim(inpar.sval.'SPECFEM3D_ASKI_MAIN_FILE')//"'"
-       call add(errmsg,2,errstr,myname)
-       goto 1
-    end if
-    ! read id character by character
-    do n=1,len_id
-       read(lu) dummy_char
-    end do ! i
-!
-    read(lu) nproc,type_invgrid,ntot_wp,df,nf
-!
     select case(type_invgrid)
     case(4)
        ! OK, so pass doing nothing
@@ -155,18 +216,21 @@ contains
        goto 1
     end select
 !
-    if(nf<1 .or. ntot_wp<1) then
-       write(errstr,*) "ntot_wp,df,nf =",ntot_wp,df,nf,"; ntot_wp and nf should be positive"
+    if(ntot_wp <= 0) then
+       write(errstr,*) "readSpecfem3dForASKIMainFile returned number of wavefield points = ",ntot_wp,". Must be positive"
        call add(errmsg,2,errstr,myname)
        goto 1
     end if
-    allocate(jf(nf))
-    read(lu) jf
-    allocate(x(ntot_wp),y(ntot_wp),z(ntot_wp))
-    read(lu) x
-    read(lu) y
-    read(lu) z
-    read(lu) this%NGLLX,this%NGLLY,this%NGLLZ
+    if(.not.(associated(x).and.associated(y).and.associated(z))) then
+       call add(errmsg,2,"readSpecfem3dForASKIMainFile did not return all of x,y,z vectors",myname)
+       goto 1
+    end if
+    if(size(x)/=ntot_wp .or. size(y)/=ntot_wp .or. size(z)/=ntot_wp) then
+       write(errstr,*) "readSpecfem3dForASKIMainFile returned vectors x,y,z which do not all have expected size ",ntot_wp
+       call add(errmsg,2,errstr,myname)
+       goto 1
+    end if
+!
     if(this%NGLLX<2 .or. this%NGLLY<2 .or. this%NGLLZ<2) then
        write(errstr,*) "NGLLX,NGLLY,NGLLZ =",this%NGLLX,this%NGLLY,this%NGLLZ," must at least be 2"
        call add(errmsg,2,errstr,myname)
@@ -278,11 +342,17 @@ contains
             0.412458795, 0.341122692, 0.210704227, 0.035714286 /)
     end select
 !
-    allocate(this%jacobian(ntot_wp))
-    read(lu) this%jacobian
+    if(.not.associated(this%jacobian)) then
+       call add(errmsg,2,"readSpecfem3dForASKISpectralWavefieldFile did not return jacobian",myname)
+       goto 1
+    end if
+    if(size(this%jacobian) /= ntot_wp) then
+       write(errstr,*) "readSpecfem3dForASKISpectralWavefieldFile returned jacobian of size ",&
+            size(this%jacobian),"; expected size ",ntot_wp
+       call add(errmsg,2,errstr,myname)
+       goto 1
+    end if
 !
-    ! read in information on neighbours
-    read(lu) ncell,nnb_total
     if(ncell/=this%ncell) then
        write(errstr,*) "the total number of cells ",ncell," contained in main file does not match "//&
             "the total number of cells ",this%ncell," which computes from the number of wavefield points ",&
@@ -290,20 +360,14 @@ contains
        call add(errmsg,2,errstr,myname)
        goto 1
     end if
-    allocate(this%face_neighbour(this%ncell))
-    nnb_count = 0
-    do icell=1,this%ncell
-       read(lu) nnb; nnb_count=nnb_count+1
-       if(nnb>0) then
-          allocate(idx(nnb))
-          read(lu) idx
-          call associateVectorPointer(this%face_neighbour(icell),idx); nullify(idx)
-          nnb_count=nnb_count+nnb
-       end if
-    end do ! icell
-    if(nnb_count /= nnb_total) then
-       write(errstr,*) "the total number of integers in main file containing neighbour information ",nnb_count,&
-            " does not match the expected number of integers ",nnb_total,"; file is inconsistent!"
+!
+    if(.not.associated(this%face_neighbour)) then
+       call add(errmsg,2,"readSpecfem3dForASKISpectralWavefieldFile did not return invgrid cell neighbours",myname)
+       goto 1
+    end if
+    if(size(this%face_neighbour)/=this%ncell) then
+       write(errstr,*) "readSpecfem3dForASKISpectralWavefieldFile returned invgrid cell neighbours of size ",&
+            size(this%face_neighbour),"; expected size ",this%ncell
        call add(errmsg,2,errstr,myname)
        goto 1
     end if
@@ -428,12 +492,17 @@ contains
        end if
     end if
 !
-2   close(lu)
-    if(allocated(jf)) deallocate(jf)
-    if(allocated(x)) deallocate(x)
-    if(allocated(y)) deallocate(y)
-    if(allocated(z)) deallocate(z)
+    this%vtk_geometry_type_int = intGeometryTypeSpecfem3dInversionGrid(inpar.sval.'VTK_GEOMETRY_TYPE')
+    if(this%vtk_geometry_type_int < 0) then
+       call add(errmsg,2,"vtk geometry type '"//trim(inpar.sval.'VTK_GEOMETRY_TYPE')//"' is invalid",myname)
+       goto 1
+    end if
+!
+    ! if code comes here, everything went alright. indicate so and return
     this%is_defined = .true.
+2   if(associated(x)) deallocate(x)
+    if(associated(y)) deallocate(y)
+    if(associated(z)) deallocate(z)
     return
 !
 1   call deallocateSpecfem3dInversionGrid(this)
@@ -461,6 +530,7 @@ contains
        end do
        deallocate(this%face_neighbour)
     end if
+    this%vtk_geometry_type_int = -1
     this%is_defined = .false.
   end subroutine deallocateSpecfem3dInversionGrid
 !------------------------------------------------------------------------
@@ -493,11 +563,44 @@ contains
     real, dimension(:), intent(inout) :: c1,c2,c3
     character(len=*) :: coords_type
     type (error_message) :: errmsg
+    real, dimension(:), allocatable :: lat,lon,z
 !
     call addTrace(errmsg,'transformToVtkSpecfem3dInversionGrid')
 !
-    ! no need of selecting coords_type: always do the same, since in case of using the 
-    ! specfem3d inversion grid the wavefield points as well as event and station coordinates
+    ! when using spherical inversion grids, the event and station coordinates
+    ! are assumed to be given in spherical coordinates in degrees (and depth / altitude, respectively)
+    ! so in case of coords_type = 'event' or 'station', transform the incoming c1,c2,c3 to respective
+    ! global Cartesian coordinates first, then execute the transformations below
+    if(this%specfem_version == version_globe_specfem3d_for_ASKI_files) then
+!
+       select case(coords_type)
+       case('station','event')
+          allocate(lat(size(c1)),lon(size(c1)),z(size(c1)))
+          lat = c1; lon = c2; z = c3
+          ! first define unit vectors (c1,c2,c3) in global Cartesian coordinates pointing to the direction of the event/station location
+          c1 = cos(lat*mc_deg2rad)*cos(lon*mc_deg2rad)
+          c2 = cos(lat*mc_deg2rad)*sin(lon*mc_deg2rad)
+          c3 = sin(lat*mc_deg2rad)
+          ! then scale the unit vectors (c1,c2,c3) according to the incoming third coordinate z
+          select case(coords_type)
+          case('station')
+             ! for station coordinates, the incoming 3rd coordinate is altitude in meters, which here is ignored: so scale to surface of the earth
+             c1 = c1 * this%R_EARTH_KM
+             c2 = c2 * this%R_EARTH_KM
+             c3 = c3 * this%R_EARTH_KM
+          case('event')
+             ! for event coordinates, the incoming 3rd coordinate is depth in km
+             c1 = c1 * (this%R_EARTH_KM-z)
+             c2 = c2 * (this%R_EARTH_KM-z)
+             c3 = c3 * (this%R_EARTH_KM-z)
+          end select
+          deallocate(lat,lon,z)
+       end select
+!
+    end if ! this%specfem_version == version_globe_specfem3d_for_ASKI_files
+!
+    ! when using Cartesian specfem, there is no need of selecting coords_type: 
+    ! always do the same, since the wavefield points as well as event and station coordinates
     ! are expected as x,y,z coordinates (in that order)
 !
     if(this%apply_vtk_coords_scaling_factor) then
@@ -509,9 +612,10 @@ contains
 !------------------------------------------------------------------------
 !> \brief return geometry information on cells for vtk output
 !
-  subroutine getGeometryVtkSpecfem3dInversionGrid(this,points,cell_connectivity,cell_type,cell_indx_out,errmsg,&
+  subroutine getGeometryVtkSpecfem3dInversionGrid(this,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,errmsg,&
        cell_indx_req,indx_map_out)
     type (specfem3d_inversion_grid) :: this
+    integer :: geometry_type
     integer, dimension(:), optional :: cell_indx_req
     ! outgoing
     real, dimension(:,:), pointer :: points
@@ -523,6 +627,7 @@ contains
     character(len=400) :: errstr
     integer :: size_cell_indx_req,i,ncell_return,icell,jcell,ncell_con
     logical, dimension(:), allocatable :: valid_non_duplicate_cell_indx_req
+    real :: c1,c2,c3
 !
     call addTrace(errmsg,myname)
 !
@@ -584,18 +689,37 @@ contains
 !
     end if ! present(cell_indx_req)
 !
-    ! define arrays points,cell_type,cell_connectivity
-    allocate(points(3,8*ncell_return),cell_type(ncell_return),cell_connectivity((8+1)*ncell_return))
-    cell_type = 12
-    ! loop on cell_indx_out
-    ncell_con = 0 ! counter on entries in connectivity array
-    do icell = 1,ncell_return; jcell = cell_indx_out(icell)
-       ! for each cell, store all its 8 points (do not search for common points of cells)
-       points(1:3,(icell-1)*8+1:icell*8) = this%vtk_points(1:3,1:8,jcell)
-       ! in cell_connectivity, refer the very points just defined 
-       cell_connectivity((icell-1)*9+1) = 8
-       cell_connectivity((icell-1)*9+2:icell*9) = (/ (i,i=(icell-1)*8,icell*8-1) /) !(note, that for vtk format, point indices have offset 0!)
-    end do ! icell
+    select case(this%vtk_geometry_type_int)
+    case(0) ! CELLS
+       ! define arrays points,cell_type,cell_connectivity
+       allocate(points(3,8*ncell_return),cell_type(ncell_return),cell_connectivity((8+1)*ncell_return))
+       cell_type = 12
+       ! loop on cell_indx_out
+       ncell_con = 0 ! counter on entries in connectivity array
+       do icell = 1,ncell_return; jcell = cell_indx_out(icell)
+          ! for each cell, store all its 8 points (do not search for common points of cells)
+          points(1:3,(icell-1)*8+1:icell*8) = this%vtk_points(1:3,1:8,jcell)
+          ! in cell_connectivity, refer the very points just defined 
+          cell_connectivity((icell-1)*9+1) = 8
+          cell_connectivity((icell-1)*9+2:icell*9) = (/ (i,i=(icell-1)*8,icell*8-1) /) !(note, that for vtk format, point indices have offset 0!)
+       end do ! icell
+       geometry_type = 0
+!
+    case(1) ! CELL CENTERS
+       ! do not define arrays cell_connectivity and cell_type in this case. Only return points as cell centers
+       allocate(points(3,ncell_return))
+       do icell = 1,ncell_return
+          call getCenterCellSpecfem3dInversionGrid(this,cell_indx_out(icell),c1,c2,c3,'wp')
+          points(1,icell) = c1
+          points(2,icell) = c2
+          points(3,icell) = c3
+       end do ! icell
+       geometry_type = 1
+    end select ! this%vtk_geometry_type
+!
+    if(this%apply_vtk_coords_scaling_factor) then
+       points = points*this%vtk_coords_scaling_factor
+    end if
 !
   end subroutine getGeometryVtkSpecfem3dInversionGrid
 !------------------------------------------------------------------------
@@ -720,6 +844,7 @@ contains
 !------------------------------------------------------------------------
 !> \brief transform given coordinates of points contained in cell icell to standard cell and compute their jacobian
 !! \param this specfem3d inversion grid
+!! \param icell global inversion grid cell index
 !! \param x vector of global x coordinate (contains x-values in standard cell on exit)
 !! \param y vector of global y coordinate (contains y-values in standard cell on exit)
 !! \param z vector of global z coordinate (contains z-values in standard cell on exit)
@@ -746,7 +871,7 @@ contains
        return
     end if
 !
-    ! in routine transformVectorGlobalToLocalInversionGrid of module inversionGrid it was already assured
+    ! in routine transformToStandardCellInversionGrid of module inversionGrid it was already assured
     ! that this%is_defined, icell is valid and that x,y,z contain values and are all of same length!
     nwp = size(x)
 !
@@ -761,7 +886,7 @@ contains
     end if
 !
     ! We could check the (first few?, e.g. first cell) coordinates, stored in this%vtk_point, if they match the values in x,y,z to be sure.
-    ! Here we check the corners of the first cell. if wavefield points were read from the very same file, the floating point representations
+    ! Here we check the corners of the incoming cell. if wavefield points were read from the very same file, the floating point representations
     ! should be exactly the same as here (so check with "/=" makes sense and should work)
     xyz_inconsistent = .false.
     ip = 1
@@ -805,11 +930,11 @@ contains
     end if
 !
     ! IF TYPE_STANDARD_CELL == -1 :
-    !   as the standard interfaces to module integrationWeights do not permitt to communicate
+    !   As the standard interfaces to module integrationWeights do not permitt to communicate
     !   NGLLX,NGLLY,NGLLZ (in that case, module integrationWeights could have implemented (hardcoded) the
     !   standard GLL weights and compute the weights on its own), we communicate the weights
-    !   via the variable jacobian
-    !   in this fashion, other methods as well may use their own integration weights
+    !   via the variable jacobian. 
+    !   In this fashion, other methods as well may use their own integration weights
     !   (don't need a new integration weights type for every method that wants to do that)
     !   ALSO RETURN XI,ETA,ZETA IN THIS CASE!
     if(type_standard_cell == -1) then
@@ -862,18 +987,14 @@ contains
 !! \param volume volume of cell icell
 !! \param errmsg error message
 !
-  subroutine getVolumeCellSpecfem3dInversionGrid(this,icell,volume,errmsg)
+  subroutine getVolumeCellSpecfem3dInversionGrid(this,icell,volume)
     type (specfem3d_inversion_grid) :: this
     integer, intent(in) :: icell
     real :: volume
-    type (error_message) :: errmsg
     ! local
-    character (len=35) :: myname = 'getVolumeCellSpecfem3dInversionGrid'
     integer :: ix,iy,iz,ip
 !
-    call addTrace(errmsg,myname)
-!
-    ! in routine transformVectorGlobalToLocalInversionGrid of module inversionGrid it was already assured
+    ! in routine getVolumeCellInversionGrid of module inversionGrid it was already assured
     ! that this%is_defined and icell is valid
 !
     volume = 0.
@@ -892,46 +1013,84 @@ contains
 !> \brief get center of inversion grid cell
 !! \param this inversion grid
 !! \param icell index of inversion grid for which center should be returned
-!! \param xc first coordinate of center of cell icell
-!! \param yc second coordinate of center of cell icell
-!! \param zc third coordinate of center of cell icell
-!! \param errmsg error message
+!! \param c1 first coordinate of center of cell icell
+!! \param c2 second coordinate of center of cell icell
+!! \param c3 third coordinate of center of cell icell
+!! \param coords_type 'wp','event','station'; optional request
 !
-  subroutine getCenterCellSpecfem3dInversionGrid(this,icell,xc,yc,zc,errmsg)
+  subroutine getCenterCellSpecfem3dInversionGrid(this,icell,c1,c2,c3,coords_type)
     type (specfem3d_inversion_grid) :: this
     integer, intent(in) :: icell
-    real :: xc,yc,zc
-    type (error_message) :: errmsg
+    real :: c1,c2,c3
+    character(len=*), optional :: coords_type
     ! local
-    character (len=35) :: myname = 'getCenterCellSpecfem3dInversionGrid'
+    double precision :: r,theta,phi
+    character(len=7) :: coords_type_tested
 !
-    call addTrace(errmsg,myname)
+    ! IN CASE OF SPECFEM3D_Cartesian APPLICATIONS:
+    ! no need of selecting coords_type (or even checking if present): 
+    ! always do the same, since in case of using the 
+    ! specfem3d inversion grid the wavefield points as well as event and station coordinates
+    ! are expected as x,y,z coordinates (in that order)
+    ! THIS IS NOT VALID FOR SPECFEM3D_GLOBE APPLICATIONS!!
 !
-    ! in routine transformVectorGlobalToLocalInversionGrid of module inversionGrid it was already assured
+    ! in routine getCenterCellInversionGrid of module inversionGrid it was already assured
     ! that this%is_defined and icell is valid
-    xc = this%cell_center(1,icell)
-    yc = this%cell_center(2,icell)
-    zc = this%cell_center(3,icell)
+    c1 = this%cell_center(1,icell)
+    c2 = this%cell_center(2,icell)
+    c3 = this%cell_center(3,icell)
+!
+    if(present(coords_type)) then
+       coords_type_tested = coords_type
+    else
+       coords_type_tested = 'wp'
+    end if
+!
+    ! when using spherical inversion grids, the event and station coordinates
+    ! are assumed to be given in spherical coordinates in degrees (and depth / altitude, respectively)
+    ! so in case of coords_type = 'event' or 'station', transform the outgoing c1,c2,c3 
+    ! further (which at this point are in global Cartesian coordinates, i.e. 'wp'-form)
+    if(this%specfem_version == version_globe_specfem3d_for_ASKI_files) then
+       select case(coords_type_tested)
+       case('station','event')
+          ! r = sqrt(x^2+y^2+z^2)
+          ! theta = arccos(z/r) \in [0,pi] (d.h. 90deg-theta rechnen!)
+          ! phi = atan2(x,y)
+          r = dsqrt( dble(c1)*dble(c1) + dble(c2)*dble(c2) + dble(c3)*dble(c3) )
+          theta = acos(dble(c3)/r)
+          phi = atan2(dble(c1),dble(c2))
+       
+          ! define the first two coordinates (c1 = latitude in degrees (-90<=c1<=90), c2 = lon in degrees (0<=lon<=360))
+          c1 = real( (0.5d0*mc_pid - theta) / mc_deg2radd )
+          c2 = real( phi / mc_deg2radd )
+
+          ! define third coordinate (different definition for 'station' than for 'event'):
+          ! 'station': put point onto surface of the earth (ignoring altitude [m], which c3 actually means in that case)
+          ! 'event': c3 is depth [km]
+          select case(coords_type_tested)
+          case('station')
+             c3 = this%R_EARTH_KM
+          case('event')
+             c3 = real( dble(this%R_EARTH_KM)-r )
+          end select ! coords_type_tested
+       end select ! coords_type_tested
+    end if ! this%specfem_version == version_globe_specfem3d_for_ASKI_files
+!
   end subroutine getCenterCellSpecfem3dInversionGrid
 !------------------------------------------------------------------------
 !> \brief get radius of inversion grid cell
 !! \param this inversion grid
 !! \param icell index of inversion grid for which radius should be returned
 !! \param radius radius of cell icell
-!! \param errmsg error message
 !
-  subroutine getRadiusCellSpecfem3dInversionGrid(this,icell,radius,errmsg)
+  subroutine getRadiusCellSpecfem3dInversionGrid(this,icell,radius)
     type (specfem3d_inversion_grid) :: this
     integer, intent(in) :: icell
     real :: radius
-    type (error_message) :: errmsg
     ! local
-    character (len=35) :: myname = 'getRadiusCellSpecfem3dInversionGrid'
     real, dimension(3) :: p1,p2,p3,p4,p5,p6,p7,p8
 !
-    call addTrace(errmsg,myname)
-!
-    ! in routine transformVectorGlobalToLocalInversionGrid of module inversionGrid it was already assured
+    ! in routine getRadiusCellInversionGrid of module inversionGrid it was already assured
     ! that this%is_defined and icell is valid
 !
     ! pi is the vector pointing from cell center to i'th cell corner

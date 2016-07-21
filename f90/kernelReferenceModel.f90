@@ -1,21 +1,22 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
 !   and Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   and Christian Ullisch (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief Wrapper module for kernelReferenceModel
 !!
@@ -25,15 +26,17 @@
 !
 module kernelReferenceModel
   use modelParametrization
-!!$  use geminiEarthModel
+  use geminiEarthModel
   use specfem3dKernelReferenceModel
+  use nexdKernelReferenceModel
   use errorMessage
   use fileUnitHandler
   implicit none
-  interface dealloc; module procedure deallocKernelReferenceModel; end interface
+  interface dealloc; module procedure deallocateKernelReferenceModel; end interface
   type kernel_reference_model
-!!$     type (gemini_earth_model), pointer :: gemini_em => null()
-     type (specfem3d_kernel_reference_model), pointer :: specfem_em => null()
+     type (gemini_earth_model), pointer :: gemini_krm => null()
+     type (specfem3d_kernel_reference_model), pointer :: specfem3d_krm => null()
+     type (nexd_kernel_reference_model), pointer :: nexd_krm => null()
   end type kernel_reference_model
 !
 contains
@@ -50,15 +53,19 @@ contains
     !
     call addTrace(errmsg,myname)
     select case (method)
-!!$    case('GEMINI')
-!!$       allocate(this%gemini_em)
-!!$       errmsg = readSAGeminiEarthModel(this%gemini_em,fuh,filename)
-!!$       if (.level.errmsg == 2) then
-!!$          call addTrace(errmsg,myname); return
-!!$       endif
+    case('GEMINI')
+       allocate(this%gemini_krm)
+       call readSAGeminiEarthModel(this%gemini_krm,fuh,filename,errmsg)
+       if (.level.errmsg == 2) return
     case('SPECFEM3D')
-       allocate(this%specfem_em)
-       call readSpecfem3dKernelReferenceModel(this%specfem_em,fuh,filename,errmsg)
+       allocate(this%specfem3d_krm)
+       call readSpecfem3dKernelReferenceModel(this%specfem3d_krm,get(fuh),filename,errmsg)
+       call undo(fuh)
+       if (.level.errmsg == 2) return
+    case('NEXD')
+       allocate(this%nexd_krm)
+       call readNexdKernelReferenceModel(this%nexd_krm,get(fuh),filename,errmsg)
+       call undo(fuh)
        if (.level.errmsg == 2) return
     case default
        call add(errmsg,2,'Invalid forward computation method',myname)
@@ -68,14 +75,19 @@ contains
 !------------------------------------------------------------------------
 !> \brief Deallocate kernel reference model
 !
-  subroutine deallocKernelReferenceModel(this)
+  subroutine deallocateKernelReferenceModel(this)
     type (kernel_reference_model) :: this
-!!$    if (associated(this%gemini_em)) call dealloc(this%gemini_em)
-    if (associated(this%specfem_em)) call dealloc(this%specfem_em)
-  end subroutine deallocKernelReferenceModel
+    if (associated(this%gemini_krm)) call dealloc(this%gemini_krm)
+    if (associated(this%specfem3d_krm)) call dealloc(this%specfem3d_krm)
+    if (associated(this%nexd_krm)) call dealloc(this%nexd_krm)
+  end subroutine deallocateKernelReferenceModel
 !------------------------------------------------------------------------
 !> \brief Get model values for some particular parameter of some particular parametrization
-!! \param pmtrz some model parametrization, as defined in module modelParametrization (e.g. "isoVelocity")
+!! \details When writing a method-specific version of this routine, allocate space for
+!!  model_values. Some realizations of kernelReferenceModel may not store model values on wavefield points
+!!  in the object but construct them on the fly here. Routines calling getModelValuesKernelReferenceModel 
+!!  should care for deallocation of pointer model_values!
+!! \param pmtrz some model parametrization, as defined in module modelParametrization (e.g. "isoVelocitySI")
 !! \param param model parameter, which must be one of parametrization pmtrz
 !! \param model_values pointer to array of model values on wavefield points. Nullified if there is a problem
 !
@@ -86,11 +98,13 @@ contains
     nullify(model_values)
     if(.not.validModelParametrization(pmtrz)) return
     if(.not.validParamModelParametrization(pmtrz,param)) return
-!!$    if (associated(this%gemini_em)) then
-!!$       model_values => getModelValuesWPGeminiEarthModel(this%gemini_em,pmtrz,param)
-!!$    else if (associated(this%specfem_em)) then
-       model_values => getModelValuesSpecfem3dKernelReferenceModel(this%specfem_em,pmtrz,param)
-!!$    endif
+    if (associated(this%gemini_krm)) then
+       model_values => getModelValuesWPGeminiEarthModel(this%gemini_krm,pmtrz,param)
+    else if (associated(this%specfem3d_krm)) then
+       model_values => getModelValuesSpecfem3dKernelReferenceModel(this%specfem3d_krm,pmtrz,param)
+    else if (associated(this%nexd_krm)) then
+       model_values => getModelValuesNexdKernelReferenceModel(this%nexd_krm,pmtrz,param)
+    endif
   end function getModelValuesKernelReferenceModel
 !
 end module kernelReferenceModel

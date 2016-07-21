@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief Module computing, writing, reading, dealing with integration weights
 !!
@@ -65,6 +65,7 @@ module integrationWeights
      type (real_vector_pointer), dimension(:), pointer :: weight => null() !< Integration weights for wavefield points in given inversion cell
      integer, dimension(:), pointer :: err_level_weights => null() !< stores for each cell error level of weight computation
      integer, dimension(:), pointer :: type_weights => null() !< stores for each cell the type of integration weights which are used
+     real :: unit_factor = 0 !< unit factor of integration weights
   end type integration_weights
 !
 contains
@@ -78,6 +79,14 @@ contains
     if(present(err)) call addTrace(err,'validTypeIntegrationWeights')
     select case(itype)
     case(0,1,2,3,4,5,6)
+    ! Type of integration weights: 
+    !   0 = all weights the same, weight = 1/number_of_points_in_box, i.e. no integration, just build average
+    !   1 = Scattered Data Integration, as in D. Levin [1999], polynomial degree 1
+    !   2 = Scattered Data Integration, as in D. Levin [1999], polynomial degree 2, i.e. approximation order 3 (?)
+    !   3 = Scattered Data Integration, as in D. Levin [1999], polynomial degree 3, i.e. approximation order 4 (?)
+    !   4 = for each cell compute the highest possible order of SDI integration (trying degrees 3,2,1 , in that order). if not even SDI degree 1 is successful, choose weights of type 5
+    !   5 = average of function values, multiplied with volume of box (i.e. some sort of linear integration)
+    !   6 = external integration weights, to be used along with a suitable inversion grid (e.g. specfem3dInversionGrid)
        l = .true.
     case default
        l = .false.
@@ -122,7 +131,8 @@ contains
     integer, dimension(:), pointer :: idx
     real, dimension(:), pointer :: weight,jacobian
     real, dimension(:), allocatable :: x,y,z
-    real :: sum_intw,volume
+    real :: volume,uf_intw,uf_wp
+    double precision :: sum_intw
     integer :: ncell_invgrid,icell,cnt_empty_cells,size_idx,type_standard_cell
 !
     call addTrace(errmsg,myname)
@@ -131,6 +141,46 @@ contains
             "deallocating now before creating new ones",myname)
        call deallocateIntegrationWeights(this)
     end if
+!
+!  compute unit factor of integration weights (only dependent on unit factor of wavefield points and on type integration weights)
+!
+    call getUnitFactorWavefieldPoints(wp,uf_wp,errmsg)
+    if(.level.errmsg == 2) goto 1
+    if(uf_wp <= 0) then
+       write(errstr,*) "The unit factor of wavefield points = ",uf_wp,&
+            " is not strictly positive. This is not supported by ASKI, there seems to be some problem."
+       call add(errmsg,2,trim(errstr),myname)
+       goto 1
+    end if
+    select case(intw_type)
+    case ( 0 )
+       ! When building the average, no actual integration is done, hence there is no volume element and no 
+       ! unit to account for. In the concept of ASKI, this can be achieved by setting this%unit_factor to 
+       ! 1.0 , i.e. the neutral value of multiplication
+       this%unit_factor = 1.0
+    case ( 1, 2, 3, 4, 5, 6 )
+       ! For types 1, 2, 3, 4, a transformation to a standard cell and jacobian values
+       ! must be provided by the inversion grid module. Even if those are all weights for 3D integration, 
+       ! the unit of the volume element does not necessarily need to be the cube of the unit of the 
+       ! wavefield point coordinates:
+       ! E.g. the inversion grid could allow for different units of wavefield
+       ! points, while mandating an inversion grid specific unit of the volume element (spherical grids will
+       ! e.g. use km^3, but could allow for wavefield points given in m etc).
+       ! Weights of type 5 will use the cell volume which is provided by the inversion grid module (and 
+       ! should naturally have the unit of the volume element).
+       ! Weights of type 6 will be provided directly by the inversion grid module, hence the unit factor
+       ! of the volume element should in any case be provided by the inversion grid.
+       ! Hence, we ask the inversion grid object, to which value this%unit_factor should be set here.
+       call getUnitFactorOfVolumeElementInversionGrid(invgrid,uf_wp,uf_intw,errmsg)
+       if(.level.errmsg == 2) goto 1
+       if(uf_intw <= 0) then
+          write(errstr,*) "The unit factor of integration weights returned by inversion grid = ",uf_intw,&
+               " is not strictly positive. This is not supported by ASKI, there seems to be some problem."
+          call add(errmsg,2,trim(errstr),myname)
+          goto 1
+       end if
+       this%unit_factor = uf_intw
+    end select ! case intw_type
 !
 !  locate wavefield points inside inversion grid cells
 !
@@ -141,7 +191,7 @@ contains
     end if
     this%ntot_wp = .ntot.wp
 !
-    call locateWpInsideInversionGrid(invgrid,c1,c2,c3,this%wp_idx,errmsg)
+    call locateWpInsideInversionGrid(invgrid,c1,c2,c3,uf_wp,this%wp_idx,errmsg)
     if(.level.errmsg == 2) goto 1
     if(.not.associated(this%wp_idx)) then
        call add(errmsg,2,"wavefield points could not be located inside inversion grid",myname)
@@ -163,7 +213,7 @@ contains
     nullify(jacobian)
 !
     cnt_empty_cells = 0
-    sum_intw = 0.
+    sum_intw = 0.d0
     do icell = 1,ncell_invgrid
 !
        idx => getVectorPointer(this%wp_idx(icell))
@@ -206,7 +256,7 @@ contains
              x = c1(idx); y = c2(idx); z = c3(idx)
              type_standard_cell = 0
              call new(errmsg2,myname)
-             call transformToStandardCellInversionGrid(invgrid,icell,x,y,z,jacobian,type_standard_cell,errmsg2)
+             call transformToStandardCellInversionGrid(invgrid,icell,x,y,z,uf_wp,jacobian,type_standard_cell,errmsg2)
              if(.level.errmsg2/=0) call print(errmsg2)
              if(.level.errmsg2==2) then
                 write(errstr,*) "error transforming wavefield points contained in cell ",icell," to standard cell"
@@ -290,12 +340,21 @@ contains
                       call dealloc(errmsg2)
                       call new(errmsg2,myname)
                       weight => computeWeightLinearSDI(type_standard_cell,size_idx,x,y,z,jacobian,errmsg2)
-                      ! whether the computation was successful or not, the type of weights will be set to 1 here
-                      this%type_weights(icell) = 1
-                      ! if still not worked out, tell errmsg that the other weights were not successfull either
-                      if(.level.errmsg2 /= 0) then
-                         call addTrace(errmsg2,myname)
-                         call add(errmsg2,0,'computing SDI weights of degree 3 and 2 were not successfull, either',myname)
+                      if(.level.errmsg2 == 0) then
+                         this%type_weights(icell) = 1
+                      else
+                         ! if not worked out, set to linear weights (constant weights = volum/number_of_points )
+                         if(associated(weight)) deallocate(weight)
+                         call dealloc(errmsg2)
+                         call new(errmsg2,myname)
+                         call getVolumeCellInversionGrid(invgrid,icell,volume,errmsg2)
+                         if(.level.errmsg2==2) then
+                            write(errstr,*) "error getting volume of inversion grid cell ",icell
+                            call add(errmsg,2,trim(errstr),myname)
+                            goto 1
+                         endif
+                         weight => computeWeightLinearIntegration(volume,size_idx)
+                         this%type_weights(icell) = 5
                       endif
                    endif
                 endif
@@ -342,10 +401,10 @@ contains
              if(associated(jacobian)) deallocate(jacobian)
              allocate(x(size_idx),y(size_idx),z(size_idx),jacobian(size_idx))
              x = c1(idx); y = c2(idx); z = c3(idx)
-             call new(errmsg2,myname)
-             ! by indicating type_standard_cell = -1, jacobian will contain the total weights on return
+             ! by indicating type_standard_cell = -1 on enter, jacobian is supposed to contain the total weights on return and not only the jacobian values
              type_standard_cell = -1
-             call transformToStandardCellInversionGrid(invgrid,icell,x,y,z,jacobian,type_standard_cell,errmsg2)
+             call new(errmsg2,myname)
+             call transformToStandardCellInversionGrid(invgrid,icell,x,y,z,uf_wp,jacobian,type_standard_cell,errmsg2)
              if(.level.errmsg2/=0) call print(errmsg2)
              if(.level.errmsg2==2) then
                 write(errstr,*) "error transforming wavefield points contained in cell ",icell," to standard cell"
@@ -363,7 +422,7 @@ contains
              goto 1
           end select ! intw_type
 !
-          sum_intw = sum_intw + sum(weight)
+          sum_intw = sum_intw + sum(dble(weight))
           ! finally store conputed weights
           call associateVectorPointer(this%weight(icell),weight)
           nullify(weight)
@@ -543,7 +602,7 @@ contains
     nh = max(floor((np/4.)**third),1)
     h = 2./nh ! 2., as we use [-1,1]^3 as the 'standard' invgrid cell in which we do the integration
 !
-    write(errstr,*) 'cell will be subdivided into nh^3 subcells, nh = ',nh
+    write(errstr,*) 'cell will be subdivided into nh^3 subcells, nh = ',nh,", since np = ",np
     call add(errmsg,0,trim(errstr),myname)
 !
     ! give warning, if this invgrid cell contains less than 4 points, as then
@@ -1394,7 +1453,7 @@ contains
           !call add(errmsg,2,'STOP, found what I looked for',myname)
           !return
           write(errstr,*) 'integration weights look ok, as sum(weights_standard_cell) = ',sumw_std_cell,&
-               ' differs by less than 0.05 perscent from expected value ( = 8.)'
+               ' differs by less than 0.05 percent from expected value ( = 8.)'
           call add(errmsg,0,trim(errstr),myname)
        endif ! abs(sumw_std_cell-8.)>0.004
     endif ! abs(sumw_std_cell-8.)>0.08
@@ -1685,7 +1744,7 @@ contains
           !call add(errmsg,2,'STOP, found what I looked for',myname)
           !return
           write(errstr,*) 'integration weights look ok, as sum(weights_standard_cell) = ',sumw_std_cell,&
-               ' differs by less than 0.05 perscent from expected value ( = 1/6)'
+               ' differs by less than 0.05 percent from expected value ( = 1/6)'
           call add(errmsg,0,trim(errstr),myname)
        endif ! abs(sumw_std_cell-sixth)>(sixth/2000.)
     endif ! abs(sumw_std_cell-sixth)>(sixth/100.)
@@ -2062,7 +2121,7 @@ contains
           !call add(errmsg,2,'STOP, found what I looked for',myname)
           !return
           write(errstr,*) 'integration weights look ok, as sum(weights_standard_cell) = ',sumw_std_cell,&
-               ' differs by less than 0.05 perscent from expected value ( = 8.)'
+               ' differs by less than 0.05 percent from expected value ( = 8.)'
           call add(errmsg,0,trim(errstr),myname)
        endif ! abs(sumw_std_cell-8.)>0.004
     endif ! abs(sumw_std_cell-8.)>0.08
@@ -2378,7 +2437,7 @@ contains
           !call add(errmsg,2,'STOP, found what I looked for',myname)
           !return
           write(errstr,*) 'integration weights look ok, as sum(weights_standard_cell) = ',sumw_std_cell,&
-               ' differs by less than 0.05 perscent from expected value ( = 1/6)'
+               ' differs by less than 0.05 percent from expected value ( = 1/6)'
           call add(errmsg,0,trim(errstr),myname)
        endif ! abs(sumw_std_cell-sixth)>(sixth/2000.)
     endif ! abs(sumw_std_cell-sixth)>(sixth/100.)
@@ -2406,6 +2465,7 @@ contains
     if (associated(this%err_level_weights)) deallocate(this%err_level_weights)
     if (associated(this%type_weights)) deallocate(this%type_weights)
     this%ntot_wp = 0
+    this%unit_factor = 0
   end subroutine deallocateIntegrationWeights
 !------------------------------------------------------------------------------------
 !> \brief Get total number of inversion grid cells, used to create this integration weights object
@@ -2478,6 +2538,27 @@ contains
        endif
     enddo ! i
   end function getAtWavefieldPointsIntegrationWeights
+!------------------------------------------------------------------------------------
+!> \brief Get cell index for each wavefield points (if not located, set -1)
+!
+  function getCellIdexAtWavefieldPointsIntegrationWeights(this) result(icell)
+    type (integration_weights) :: this
+    integer, dimension(:), pointer :: icell
+    integer :: i
+    integer, dimension(:), pointer :: idx
+!
+    nullify(icell)
+    if(this%ntot_wp==0 .or. .not.associated(this%wp_idx)) return
+!
+    allocate(icell(this%ntot_wp))
+    icell = -1
+    do i = 1,size(this%wp_idx) ! i is inversion grid cell index
+       if(.not.this%empty_cell(i)) then
+          idx => getVectorPointer(this%wp_idx(i))
+          icell(idx) = i
+       end if
+    end do ! i
+  end function getCellIdexAtWavefieldPointsIntegrationWeights
 !------------------------------------------------------------------------------------
   function getNwpPerBoxIntegrationWeights(this) result(n)
     type (integration_weights) :: this
@@ -2646,6 +2727,21 @@ contains
     deallocate(indx_outside)
   end function anyWpIsOutsideInvgridIntegrationWeights
 !------------------------------------------------------------------------------------
+!> \brief Get unit factor of integration weights
+!
+  subroutine getUnitFactorIntegrationWeights(this,uf_intw,errmsg)
+    type (integration_weights) :: this
+    real :: uf_intw
+    type (error_message) :: errmsg
+    if(this%unit_factor == 0) then
+       call add(errmsg,2,"the integration weights object is not yet created; unit factor is still unknown",&
+            "getUnitFactorIntegrationWeights")
+       uf_intw = 0
+    else
+       uf_intw = this%unit_factor
+    end if
+  end subroutine getUnitFactorIntegrationWeights
+!------------------------------------------------------------------------------------
 !> \brief Write integration weights to unformatted file
 !
   subroutine writeIntegrationWeights(this,lu,filename,errmsg)
@@ -2702,7 +2798,7 @@ contains
        write(lu) j,size(pidx)
        write(lu) pidx,pw
     enddo
-    write(lu) this%ntot_wp
+    write(lu) this%unit_factor,this%ntot_wp
     write(lu) size(this%empty_cell)
     write(lu) this%empty_cell
     write(lu) size(this%err_level_weights)
@@ -2722,6 +2818,8 @@ contains
     integer :: ierr,j,j_read,size_wp_idx,size_pidx,size_array
     integer, dimension(:), pointer :: pidx
     real, dimension(:), pointer :: pw
+    real :: unit_factor
+    integer :: ntot_wp
     character (len=22) :: myname = 'readIntegrationWeights'
     character (len=400) :: errstr
 !
@@ -2759,7 +2857,21 @@ contains
        call associateIntegerVectorPointer(this%wp_idx(j),pidx)
        call associateRealVectorPointer(this%weight(j),pw)
     enddo
-    read(lu) this%ntot_wp
+    read(lu) unit_factor,ntot_wp
+    if(unit_factor <= 0) then
+       write(errstr,*) "unit factor of integration weights read from file = ",unit_factor,&
+            "; must be > 0 , hence integration weights file seems to be inconsistent"
+       call add(errmsg,2,trim(errstr),myname)
+       return
+    end if
+    if(ntot_wp <= 0) then
+       write(errstr,*) "number of wavefield points read from file = ",ntot_wp,&
+            "; is expected to be > 0 , hence integration weights file seems to be inconsistent"
+       call add(errmsg,2,trim(errstr),myname)
+       return
+    end if
+    this%unit_factor = unit_factor
+    this%ntot_wp = ntot_wp
     ! this%empty_cell
     read(lu) size_array
     if (size_array /= size_wp_idx) then

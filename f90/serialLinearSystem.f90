@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !----------------------------------------------------------------
 !> \brief handle linear systems and solve them with LAPACK
@@ -25,7 +25,7 @@
 !!  are supported.
 !! 
 !! \author Florian Schumacher
-!! \date 2012
+!! \date 2015
 !---------------------------------------------------------------
 module serialLinearSystem
 !
@@ -60,7 +60,8 @@ module serialLinearSystem
 		integer :: ncol = 0 !< number of columns of linear system
 		integer :: nrhs = 0 !< number of right-hand-sides of linear system
 		real, dimension(:,:), pointer :: A => null() !< nrow-by-ncol system matrix
-		real, dimension(:,:), pointer :: b => null() !< nrow-by-nrhs array, right-hand-side(s) of system
+		character(len=1) :: transpose = '' !< either 'N' (default) or 'T', indicating whether A or A^T is involved in solving the linear system
+		real, dimension(:,:), pointer :: b => null() !< array of size(nrow,nrhs) ('N') or size(ncol,nrhs) ('T'), right-hand-side(s) of system
 		! FOR PACKED STORAGE OF SYMMETRIC LINEAR SYSTEMS:
 		character(len=1) :: UPLO = '' !< indicating if A contains columnwisely the 'U'pper or 'L'ower triangular matrix
 		! if UPLO = 'U', A_packed(i + (j-1)*j/2) = A(i,j) for 1<=i<=j
@@ -82,9 +83,10 @@ contains
 !! \param A pointer to system matrix
 !! \param b pointer to matrix of right-hand-sides
 !
-	subroutine createUnpackedSerialLinearSystem(this,nrow,ncol,nrhs,A,b)
+	subroutine createUnpackedSerialLinearSystem(this,nrow,ncol,nrhs,A,b,transpose)
 	type (serial_linear_system) :: this
 	integer :: nrow,ncol,nrhs
+	character(len=*), optional :: transpose
 	real, dimension(:,:), pointer :: A
 	real, dimension(:,:), pointer :: b
 	call deallocSerialLinearSystem(this)
@@ -92,6 +94,11 @@ contains
 	this%A => A
 	this%A_packed => null()
 	this%b => b
+	if(present(transpose)) then
+		this%transpose = transpose
+	else
+		this%transpose = 'N'
+	endif
 	end subroutine createUnpackedSerialLinearSystem
 !------------------------------------------------------------------------
 !> \brief create packed symmetric serial linear system
@@ -136,39 +143,59 @@ contains
 !!  the solution by least squares (if nrow >= ncol), or computes the minimum norm solution (if nrow < ncol).
 !! \param this serial_linear_system object
 !! \param x ncol-by-nrhs solution array (first ncol columns of argument "B" of LAPACK routine "SGELS")
-!! \param override logical to indicate whether system matrix A should be overwritten or not
+!! \param overwrite_A logical to indicate whether system matrix A should be overwritten or not
 !! \param errmsg error_message object
 !! \return error message
 !! \pre You need LAPACK libraries. Routine "SGELS" is called here.
 !
-	function solveLeastSquaresSerialLinearSystem(this,x,res,override_A) result(errmsg)
+	function solveLeastSquaresSerialLinearSystem(this,x,res,overwrite_A) result(errmsg)
 	type (serial_linear_system) :: this
 	real, dimension(:,:), pointer :: x,res
-	logical, optional :: override_A
+	logical, optional :: overwrite_A
 	type (error_message) :: errmsg
 	character (len=35) :: myname = 'solveLeastSquaresSerialLinearSystem'
 	character (len=400) :: errstr
 	real, dimension(:,:), pointer :: A_tmp,x_tmp
 	integer :: LDB,LWORK,INFO
 	real, dimension(:), allocatable :: WORK
-	logical :: override
-	if(present(override_A)) then
-		override = override_A
-	else
-		override = .true.
-	endif
+	logical :: overwrite
 	call new(errmsg,myname)
+	if(present(overwrite_A)) then
+		overwrite = overwrite_A
+	else
+		overwrite = .true.
+	endif
+	if(overwrite) then
+		call add(errmsg,0,"this routine will overwrite the system matrix in oder to "//&
+		   "reduce the memory requirements",myname)
+	else
+		call add(errmsg,0,"this routine will NOT overwrite the system matrix, "//&
+		   "hence twice as much memory for the matrix required",myname)		
+	endif
+!
 	if(.not.associated(this%A) .or. .not.associated(this%b)) then
 		call add(errmsg,2,'the unpacked system matrix, or right hand side(s) are not defined',myname)
 		return
 	endif
-	if(this%nrow<this%ncol) call add(errmsg,1,'calculating minimum norm solution, as nrow < ncol',myname)
-	if(this%nrow==this%ncol) call add(errmsg,1,'calculating least square solution with nrow == ncol',myname)
+	select case(this%transpose)
+	case('N')
+		if(this%nrow<this%ncol) call add(errmsg,1,'calculating minimum norm solution of untransposed system, as nrow < ncol',myname)
+		if(this%nrow==this%ncol) call add(errmsg,1,'calculating least square solution of untransposed system with nrow == ncol',myname)
+	case('T')
+		if(this%nrow>this%ncol) call add(errmsg,1,'calculating minimum norm solution of transposed system, as nrow > ncol',myname)
+		if(this%nrow==this%ncol) call add(errmsg,1,'calculating least square solution of transposed system with nrow == ncol',myname)
+	case default
+		call add(errmsg,2,"transpose flag '"//trim(this%transpose)//"' must be either 'N' or 'T'",myname)
+		return
+	end select
 	LDB = max(this%nrow,this%ncol)
 	allocate(x_tmp(LDB,this%nrhs))
 	x_tmp(:,:) = 0.
-	x_tmp(1:this%nrow,:) = this%b(:,:)
-	if(override) then
+	select case(this%transpose)
+	case('N'); x_tmp(1:this%nrow,:) = this%b(:,:)
+	case('T'); x_tmp(1:this%ncol,:) = this%b(:,:)
+	end select
+	if(overwrite) then
 		A_tmp => this%A
 	else
 		allocate(A_tmp(this%nrow,this%ncol))
@@ -176,12 +203,12 @@ contains
 	endif
 	! first carry out workspace query in order to optimally allocate space for WORK array
 	allocate(WORK(1)); LWORK = -1
-	call SGELS( 'N', this%nrow, this%ncol, this%nrhs, A_tmp, this%nrow, x_tmp, LDB, WORK, LWORK,INFO )
+	call SGELS( this%transpose, this%nrow, this%ncol, this%nrhs, A_tmp, this%nrow, x_tmp, LDB, WORK, LWORK,INFO )
 	if(INFO/=0) then
 		write(errstr,"('LAPACK routine SGELS (called for workspace query) exited with INFO = ',i7)") INFO
 		call add(errmsg,2,trim(errstr),myname)
  		deallocate(WORK,x_tmp)
-		if(.not.override) deallocate(A_tmp)
+		if(.not.overwrite) deallocate(A_tmp)
 		return
 	endif
 	LWORK = WORK(1)
@@ -189,21 +216,33 @@ contains
 	call add(errmsg,0,trim(errstr),myname)
 	deallocate(WORK); allocate(WORK(LWORK))
 	! now solve the system
-	call SGELS( 'N', this%nrow, this%ncol, this%nrhs, A_tmp, this%nrow, x_tmp, LDB, WORK, LWORK,INFO )
+	call SGELS( this%transpose, this%nrow, this%ncol, this%nrhs, A_tmp, this%nrow, x_tmp, LDB, WORK, LWORK,INFO )
 	if(INFO/=0) then
 		write(errstr,"('LAPACK routine SGELS exited with INFO = ',i7)") INFO
 		call new(errmsg,2,trim(errstr),myname)
 	endif
-	allocate(x(this%ncol,this%nrhs))
-	x(:,:) = x_tmp(1:this%ncol,:)
-	if(this%nrow>this%ncol) then
-		allocate(res(this%nrow-this%ncol,this%nrhs))
-		res(:,:) = x_tmp(this%ncol+1:this%nrow,:)
-	else
-		res => null()
-	endif
+	select case(this%transpose)
+	case('N') !x_tmp(1:this%nrow,:) = this%b(:,:)
+		allocate(x(this%ncol,this%nrhs))
+		x(:,:) = x_tmp(1:this%ncol,:)
+		if(this%nrow>this%ncol) then
+			allocate(res(this%nrow-this%ncol,this%nrhs))
+			res(:,:) = x_tmp(this%ncol+1:this%nrow,:)
+		else
+			res => null()
+		endif	
+	case('T') !x_tmp(1:this%ncol,:) = this%b(:,:)
+		allocate(x(this%nrow,this%nrhs))
+		x(:,:) = x_tmp(1:this%nrow,:)
+		if(this%ncol>this%nrow) then
+			allocate(res(this%ncol-this%nrow,this%nrhs))
+			res(:,:) = x_tmp(this%nrow+1:this%ncol,:)
+		else
+			res => null()
+		endif	
+	end select
 	deallocate(WORK,x_tmp)
-	if(.not.override) deallocate(A_tmp)
+	if(.not.overwrite) deallocate(A_tmp)
 	end function solveLeastSquaresSerialLinearSystem
 !-----------------------------------------------------------------
 !> \brief solve general linear system
@@ -211,28 +250,36 @@ contains
 !!  In this case, nrow must equal ncol. 
 !! \param this serial_linear_system object
 !! \param x solution array (argument "B" of LAPACK routine "SGESV")
-!! \param override logical to indicate whether system matrix A should be overwritten or not
+!! \param overwrite_A logical to indicate whether system matrix A should be overwritten or not
 !! \param errmsg error_message object
 !! \return error message
 !! \pre You need LAPACK libraries. Routine "SGESV" is called here.
 !
-	function solveGeneralSerialLinearSystem(this,x,override_A) result(errmsg)
+	function solveGeneralSerialLinearSystem(this,x,overwrite_A) result(errmsg)
 	type (serial_linear_system) :: this
 	real, dimension(:,:), pointer :: x
-	logical, optional :: override_A
+	logical, optional :: overwrite_A
 	type (error_message) :: errmsg
 	character (len=30) :: myname = 'solveGeneralSerialLinearSystem'
 	character (len=400) :: errstr
 	real, dimension(:,:), pointer :: A_tmp
 	integer :: INFO
 	integer, dimension(:), allocatable :: IPIV
-	logical :: override
-	if(present(override_A)) then
-		override = override_A
-	else
-		override = .true.
-	endif
+	logical :: overwrite
 	call new(errmsg,myname)
+	if(present(overwrite_A)) then
+		overwrite = overwrite_A
+	else
+		overwrite = .true.
+	endif
+	if(overwrite) then
+		call add(errmsg,0,"this routine will overwrite the system matrix in oder to "//&
+		   "reduce the memory requirements",myname)
+	else
+		call add(errmsg,0,"this routine will NOT overwrite the system matrix, "//&
+		   "hence twice as much memory for the matrix required",myname)		
+	endif
+!
 	if(this%nrow/=this%ncol) then
 		call add(errmsg,2,'nrow must equal ncol!',myname)
 		return
@@ -243,7 +290,7 @@ contains
 	endif
 	allocate(x(this%nrow,this%nrhs))
 	x = this%b
-	if(override) then
+	if(overwrite) then
 		A_tmp => this%A
 	else
 		allocate(A_tmp(this%nrow,this%ncol))
@@ -256,7 +303,7 @@ contains
 		call add(errmsg,2,trim(errstr),myname)
 	endif
 	deallocate(IPIV)
-	if(.not.override) deallocate(A_tmp)
+	if(.not.overwrite) deallocate(A_tmp)
 	end function solveGeneralSerialLinearSystem
 !-----------------------------------------------------------------
 !> \brief solve packed symmetric linear system serially
@@ -265,29 +312,37 @@ contains
 !! \param this serial_linear_system object
 !! \param A columnwise packed triangular matrix of linear system
 !! \param uplo one charcter indicating if A contains columnwisely the 'U'pper or 'L'ower triangular matrix
-!! \param x solution array (argument "B" of LAPACK routine "SGESV")
-!! \param override logical to indicate whether system matrix A should be overwritten or not
+!! \param x solution array (argument "B" of LAPACK routine "SSPSV")
+!! \param overwrite logical to indicate whether system matrix A should be overwritten or not
 !! \param errmsg error_message object
 !! \return error message
-!! \pre You need LAPACK libraries. Routine "SGESV" is called here.
+!! \pre You need LAPACK libraries. Routine "SSPSV" is called here.
 !
-	function solvePackedSymmetricSerialLinearSystem(this,x,override_A) result(errmsg)
+	function solvePackedSymmetricSerialLinearSystem(this,x,overwrite_A) result(errmsg)
 	type (serial_linear_system) :: this
 	real, dimension(:,:), pointer :: x
-	logical, optional :: override_A
+	logical, optional :: overwrite_A
 	type (error_message) :: errmsg
 	character (len=38) :: myname = 'solvePackedSymmetricSerialLinearSystem'
 	character (len=400) :: errstr
 	real, dimension(:), pointer :: A_tmp
 	integer, dimension(:), allocatable :: IPIV
 	integer :: INFO
-	logical :: override
-	if(present(override_A)) then
-		override = override_A
-	else
-		override = .true.
-	endif
+	logical :: overwrite
 	call new(errmsg,myname)
+	if(present(overwrite_A)) then
+		overwrite = overwrite_A
+	else
+		overwrite = .true.
+	endif
+	if(overwrite) then
+		call add(errmsg,0,"this routine will overwrite the system matrix in oder to "//&
+		   "reduce the memory requirements",myname)
+	else
+		call add(errmsg,0,"this routine will NOT overwrite the system matrix, "//&
+		   "hence twice as much memory for the matrix required",myname)		
+	endif
+!
 	if(this%nrow/=this%ncol) then
 		call add(errmsg,2,'nrow must equal ncol!',myname)
 		return
@@ -296,7 +351,7 @@ contains
 		call add(errmsg,2,'the packed system matrix, or right hand side(s) are not defined',myname)
 		return
 	endif
-	if(size(this%A_packed) /= this%nrow*(this%nrow+1)/2) then
+	if(size(this%A_packed) /= (this%nrow*(this%nrow+1))/2) then
 		write(errstr,"(a,i15,a,i7,a)") "the size of packed system matrix ( = ",size(this%A_packed), &
 		  " ) does not equal N*(N+1)/2, where N is the number of rows ( = number of columns = ", &
 		  this%nrow," )"
@@ -305,7 +360,7 @@ contains
 	endif
 	allocate(x(this%nrow,this%nrhs))
 	x = this%b
-	if(override) then
+	if(overwrite) then
 		A_tmp => this%A_packed
 	else
 		allocate(A_tmp(size(this%A_packed)))
@@ -320,7 +375,7 @@ contains
 		call add(errmsg,2,trim(errstr),myname)
 	endif
 	deallocate(IPIV)
-	if(.not.override) deallocate(A_tmp)
+	if(.not.overwrite) deallocate(A_tmp)
 	end function solvePackedSymmetricSerialLinearSystem
 !-----------------------------------------------------------------
 !> \brief get pointer to system matrix

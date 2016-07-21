@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief module for discrete Fourier transform
 !!
@@ -39,6 +39,10 @@ module discreteFourierTransform
 !
   private :: computeEfactorsDFT
 !
+  interface initiateForwardDFT
+     module procedure initiateRealFreqForwardDFT
+     module procedure initiateComplexFreqForwardDFT
+  end interface initiateForwardDFT
   interface transformForwardDFT
      module procedure transformTracesForwardDFT
      module procedure transformOneTraceForwardDFT
@@ -64,7 +68,7 @@ module discreteFourierTransform
      integer :: nf1 !< first frequency index defining starting frequency f1 = nf1*df of spectra (positive, and nf2 > nf1)
      integer :: nf2 !< second frequency index defining end frequency f2 = nf2*df of spectra (positive, and nf2 > nf1)
      integer :: nf !< number of frequencies (lengt of f, number of rows of efactors), nf = nf2-nf1+1 for inverse transform
-     double precision, dimension(:), pointer :: f => null() !< frequencies for which (rows of) efactors are computed (order related to order of rows of efactors)
+     double complex, dimension(:), pointer :: f => null() !< frequencies for which (rows of) efactors are computed (order related to order of rows of efactors)
      !
      ! time domain specifications
      ! dt,nt1,nt2 are only used for forward transform!
@@ -82,6 +86,31 @@ module discreteFourierTransform
 contains
 !
 !------------------------------------------------------------------------
+!> \brief initiate complex exponential coefficients for direct forward Fourier transform, real frequencies
+!! \details simply calls subroutine initiateComplexFreqForwardDFT with argument cmplx(f)
+!! \param this DFT object
+!! \param dt time step of the time series which will be transformed
+!! \param nt1 first time index defining starting time t1 = nt1*dt of the time series which will be transformed
+!! \param nt2 second time index defining end time t2 = nt2*dt of the time series which will be transformed
+!! \param f vector of real frequency values, at which the spectrum of the Fourier transform should be evaluated
+!! \param errmsg error message
+!! \param hanning_taper value between 0. and 1., defining a tail portion of the timeseries which are tapered by a cos hanning taper
+!
+  subroutine initiateRealFreqForwardDFT(this,dt,nt1,nt2,f,errmsg,hanning_taper)
+    type (discrete_fourier_transform) :: this
+    real :: dt
+    integer :: nt1,nt2
+    real, dimension(:) :: f
+    type (error_message) :: errmsg
+    real, optional :: hanning_taper
+    ! local
+    character(len=26) :: myname = 'initiateRealFreqForwardDFT'
+!
+    call addTrace(errmsg,myname)
+!
+    call initiateComplexFreqForwardDFT(this,dt,nt1,nt2,cmplx(f),errmsg,hanning_taper)
+  end subroutine initiateRealFreqForwardDFT
+!------------------------------------------------------------------------
 !> \brief initiate complex exponential coefficients for direct forward Fourier transform
 !! \details Explicitely compute coefficients of the form exp(-i*omega*t)*dt for numeric
 !!  integration of  time_series(t)*exp(-i*omega*t) over all t. These coefficients are computed
@@ -94,15 +123,15 @@ contains
 !! \param errmsg error message
 !! \param hanning_taper value between 0. and 1., defining a tail portion of the timeseries which are tapered by a cos hanning taper
 !
-  subroutine initiateForwardDFT(this,dt,nt1,nt2,f,errmsg,hanning_taper)
+  subroutine initiateComplexFreqForwardDFT(this,dt,nt1,nt2,f,errmsg,hanning_taper)
     type (discrete_fourier_transform) :: this
     real :: dt
     integer :: nt1,nt2
-    real, dimension(:) :: f
+    complex, dimension(:) :: f
     type (error_message) :: errmsg
     real, optional :: hanning_taper
     ! local
-    character(len=18) :: myname = 'initiateForwardDFT'
+    character(len=29) :: myname = 'initiateComplexFreqForwardDFT'
     character(len=400) :: errstr
     logical :: return_after_check,apply_taper
     double precision :: wtaper
@@ -161,7 +190,7 @@ contains
 !
     this%nf = size(f)
     allocate(this%f(this%nf))
-    this%f = dble(f)
+    this%f = dcmplx(f)
 !
     this%forward = .true.
     allocate(this%efactors(this%nf,this%nt))
@@ -189,7 +218,7 @@ contains
 !
     this%is_defined = .true.
 !    
-  end subroutine initiateForwardDFT
+  end subroutine initiateComplexFreqForwardDFT
 !------------------------------------------------------------------------
 !> \brief initiate complex exponential coefficients for direct inverse Fourier transform
 !! \details Explicitely compute coefficients of the form exp(i*omega*t)*dt for numeric
@@ -311,6 +340,7 @@ contains
     character(len=25) :: myname = 'transformTracesForwardDFT'
     character(len=400) :: errstr
     integer :: ntrace,nt_in,nf_in
+!!$integer :: itrace,it,ifreq
 !
     call addTrace(errmsg,myname)
 !
@@ -354,6 +384,14 @@ contains
     ! the type and kind of the result of matmul follow the usual type and kind promotion rules, as for the * operator,
     ! says http://gcc.gnu.org/onlinedocs/gfortran/MATMUL.html
     spectra = matmul(this%efactors,traces)
+!!$    do itrace = 1,ntrace
+!!$       do ifreq = 1,this%nf
+!!$          spectra(ifreq,itrace) = (0.,0.)
+!!$          do it = 1,this%nt
+!!$             spectra(ifreq,itrace) = spectra(ifreq,itrace) + cmplx(this%efactors(ifreq,it))*traces(it,itrace)
+!!$          end do ! it
+!!$       end do ! ifreq
+!!$    end do ! itrace
   end subroutine transformTracesForwardDFT
 !------------------------------------------------------------------------
 !> \brief transform exactly one time series to frequency domain

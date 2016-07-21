@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief module to write data living on invgrids to vkt output
 !!
@@ -27,7 +27,7 @@
 !!  Paraview as a sequence of data.
 !!
 !! \author Florian Schumacher
-!! \date June 2012
+!! \date Nov 2015
 !
 module invgridVtkFile
 !
@@ -56,16 +56,25 @@ module invgridVtkFile
 !> \brief general file, geometry and cell information of vtk file
   type invgrid_vtk_file
      private
+     ! general file information
      character (len=300) :: filename = '' !< (base) file name of vtk file (WITHOUT '.vtk')
      logical is_ascii !< indicating ascii (true) or binary (false) format of vtk file
      character (len=200) :: title = '' !< second line of vtk file
-     integer :: npoints !< number of points
+     !
+     ! other general information
+     integer :: geometry_type = -1 !< type of vtk geometry:  0 = volumetric cells , 1 = cell center points
+     integer :: ntot_invgrid = 0 !< total number of cells in inversion grid
+     integer :: ndata = 0 !< number of data handled in this vtk file (i.e. number of vtk cells or cell center points)
+     integer, dimension(:), pointer :: invgrid_cell_indx => null() !< mapping of size(ndata): for each datum i, invgrid_cell_indx(i) is the corresponding invgrid cell index
+     !
+     ! vtk points
+     integer :: npoints = 0 !< number of points in vtk file
      real, dimension(:,:), pointer :: points => null() !< POINTS geometry for UNSTRUCTURED_GRID
-     integer :: ntot_invgrid !< total number of cells in inversion grid
-     integer :: ncells !< number of cells in vtk file
+     !
+     ! vtk cells
+     integer :: ncells = 0 !< number of inversion grid cells handled in this vtk file
      integer, dimension(:), pointer :: cell_connectivity => null() !< array of point indices defining the vtk cells
      integer, dimension(:), pointer :: cell_type => null() !< vtk cell type for each cell (usually all equal)
-     integer, dimension(:), pointer :: invgrid_cell_indx => null() !< for each vtk cell, the corresponding invgrid cell index
      !
      ! we need the additional index mapping "req_indx" here for the case of present(cell_indx_req), as routine 
      ! getGeometryVtkInversionGrid may throw away invalid and duplicate invgrid cell indices. in order to be able to 
@@ -122,37 +131,59 @@ contains
     else
        this%filename = trim(filename)
     endif
-    if(present(vtk_title)) then
-       this%title = trim(vtk_title)
-    else
-       this%title = 'data on inversion grid'
-    endif
     if(present(cell_indx_req)) then 
        num_cell_indx_req = size(cell_indx_req)
        if(num_cell_indx_req .le. 0) then
           write(errstr,*) "number of incoming requested invgrid cells (",num_cell_indx_req,&
                ") must be positive"
           call add(errmsg,2,trim(errstr),myname)
-          return       
+          return
        end if
     end if
     nullify(this%points,this%cell_connectivity,this%cell_type,this%invgrid_cell_indx,this%req_indx)
-    call getGeometryVtkInversionGrid(invgrid,this%points,this%cell_connectivity,this%cell_type,&
-         this%invgrid_cell_indx,errmsg,cell_indx_req,this%req_indx)
+    this%geometry_type = -1
+    call getGeometryVtkInversionGrid(invgrid,this%geometry_type,this%points,this%cell_connectivity,&
+         this%cell_type,this%invgrid_cell_indx,errmsg,cell_indx_req,this%req_indx)
     if(.level.errmsg == 2) return
-    if(associated(this%points)) then
+    
+    select case (this%geometry_type)
+    case(0) ! VOLUMETRIC CELLS
+       if(.not.(associated(this%points).and.associated(this%cell_connectivity).and.associated(this%cell_type).and.&
+            associated(this%invgrid_cell_indx))) then
+          call add(errmsg,2,"although a volumetric cell geometry should be created, not all required components "//&
+               "are returned by routine getGeometryVtkInversionGrid",myname)
+       end if
        this%npoints = size(this%points,2)
-    else
-       this%npoints = 0
-    endif
-    if(associated(this%cell_type)) then
        this%ncells = size(this%cell_type)
-    else
+       this%ndata = this%ncells
+       if(present(vtk_title)) then
+          this%title = trim(vtk_title)
+       else
+          this%title = 'data on inversion grid cells'
+       endif
+    case(1) ! CELL CENTER POINTS
+       if(.not.(associated(this%points).and.associated(this%invgrid_cell_indx))) then
+          call add(errmsg,2,"although a point geometry (cell centers) should be created, not all required components "//&
+               "are returned by routine getGeometryVtkInversionGrid",myname)
+       end if
+       this%npoints = size(this%points,2)
        this%ncells = 0
-    endif
+       this%ndata = this%npoints
+       if(present(vtk_title)) then
+          this%title = trim(vtk_title)
+       else
+          this%title = 'data on inversion grid cell center points'
+       endif
+    case default
+       write(errstr,*) "geometry type ",this%geometry_type," returned by routine getGeometryVtkInversionGrid is not ",&
+            "supported. supported types are: 0 (cells), 1 (cell center points)"
+       call add(errmsg,2,trim(errstr),myname)
+       return
+    end select
+
     if(present(cell_indx_req)) then
-       if(this%ncells/=num_cell_indx_req) then
-          write(errstr,*) "num of vtk cells returned by getGeometryVtkInversionGrid (",this%ncells,&
+       if(this%ndata/=num_cell_indx_req) then
+          write(errstr,*) "num of vtk cells / cell centers returned by getGeometryVtkInversionGrid (",this%ndata,&
                ") not equal to num of invgrid cells originally requested to be used (",num_cell_indx_req,&
                ") => there were duplicate or invalid indices in requested index array cell_indx_req, "//&
                "which may indicate inconsistencies of files"
@@ -238,12 +269,19 @@ contains
     ! local
     integer :: ios
     character(len=33) :: myname = 'writeHeaderGeometryInvgridVtkFile'
-    character (len=500) :: string
+    character(len=25) :: vtk_dataset_type
     character (len=1), parameter :: eol_char = char(10)
     logical :: err
-    !
+!
     call addTrace(errmsg,myname)
-    !
+!
+    select case(this%geometry_type)
+    case(0) ! VOLUMETRIC CELLS
+       vtk_dataset_type = 'DATASET UNSTRUCTURED_GRID'
+    case(1) ! CELL CENTER POINTS
+       vtk_dataset_type = 'DATASET POLYDATA'
+    end select
+!
     ! remember with err if there was an error somewhere
     err = .false.
     if(this%is_ascii) then
@@ -251,29 +289,9 @@ contains
        write(unit=lu,fmt='(a)',iostat=ios) '# vtk DataFile Version 3.1'  ; err = err.or.(ios/=0)
        write(unit=lu,fmt='(a)',iostat=ios) trim(this%title)              ; err = err.or.(ios/=0)
        write(unit=lu,fmt='(a)',iostat=ios) 'ASCII'                       ; err = err.or.(ios/=0)
-       write(unit=lu,fmt='(a)',iostat=ios) 'DATASET UNSTRUCTURED_GRID'   ; err = err.or.(ios/=0)
+       write(unit=lu,fmt='(a)',iostat=ios) trim(vtk_dataset_type)        ; err = err.or.(ios/=0)
        if(err) then ! if any of the above ios were /= 0
           call add(errmsg,2,'there was an error writing vtk Header',myname)
-          return
-       endif
-       ! POINTS
-       write(unit=lu,fmt='(a,i12,a)',iostat=ios) 'POINTS ',this%npoints,' float'  ; err = err.or.(ios/=0)
-       write(unit=lu,fmt='(3e14.6e2)',iostat=ios) this%points                     ; err = err.or.(ios/=0)
-       if(err) then ! if any of the above ios were /= 0
-          call add(errmsg,2,'there was an error writing POINTS',myname)
-          return
-       endif
-       ! CELL CONNECTIVITY
-       write(unit=lu,fmt='(a,2i12)',iostat=ios)'CELLS ',this%ncells,size(this%cell_connectivity)  ; err = err.or.(ios/=0)
-       write(unit=lu,fmt='(i12)',iostat=ios) this%cell_connectivity                               ; err = err.or.(ios/=0)
-       if(err) then ! if any of the above ios were /= 0
-          call add(errmsg,2,'there was an error writing CELLS',myname)
-          return
-       endif
-       write(unit=lu,fmt='(a,i12)',iostat=ios) 'CELL_TYPES ',this%ncells  ; err = err.or.(ios/=0)
-       write(unit=lu,fmt='(i12)',iostat=ios) this%cell_type               ; err = err.or.(ios/=0)
-       if(err) then ! if any of the above ios were /= 0
-          call add(errmsg,2,'there was an error writing CELL_TYPES',myname)
           return
        endif
     else ! this%is_ascii
@@ -281,11 +299,44 @@ contains
        write(unit=lu,iostat=ios) '# vtk DataFile Version 3.1'//eol_char  ; err = err.or.(ios/=0)
        write(unit=lu,iostat=ios) trim(this%title)//eol_char              ; err = err.or.(ios/=0)
        write(unit=lu,iostat=ios) 'BINARY'//eol_char                      ; err = err.or.(ios/=0)
-       write(unit=lu,iostat=ios) 'DATASET UNSTRUCTURED_GRID'//eol_char   ; err = err.or.(ios/=0)
+       write(unit=lu,iostat=ios) trim(vtk_dataset_type)//eol_char        ; err = err.or.(ios/=0)
        if(err) then ! if any of the above ios were /= 0
           call add(errmsg,2,'there was an error writing vtk Header',myname)
           return
        endif
+    endif ! this%is_ascii
+
+    select case(this%geometry_type)
+    case(0) ! VOLUMETRIC CELLS
+       call writePointsGeometryInvgridVtkFile(this,lu,errmsg,myname)
+       call writeCellsGeometryInvgridVtkFile(this,lu,errmsg,myname)
+    case(1) ! CELL CENTER POINTS
+       call writePointsGeometryInvgridVtkFile(this,lu,errmsg,myname)
+       call writeVerticesGeometryInvgridVtkFile(this,lu,errmsg,myname)
+    end select
+  end subroutine writeHeaderGeometryInvgridVtkFile
+!------------------------------------------------------------------------
+  subroutine writePointsGeometryInvgridVtkFile(this,lu,errmsg,myname)
+    type (invgrid_vtk_file) :: this
+    integer :: lu
+    type(error_message) :: errmsg
+    character(len=*) :: myname
+    ! logical
+    integer :: ios
+    character (len=500) :: string
+    logical :: err
+    character (len=1), parameter :: eol_char = char(10)
+!
+    err = .false.
+    if(this%is_ascii) then
+       ! POINTS
+       write(unit=lu,fmt='(a,i12,a)',iostat=ios) 'POINTS ',this%npoints,' float'  ; err = err.or.(ios/=0)
+       write(unit=lu,fmt='(3e14.6e2)',iostat=ios) this%points                     ; err = err.or.(ios/=0)
+       if(err) then ! if any of the above ios were /= 0
+          call add(errmsg,2,'there was an error writing POINTS',myname)
+          return
+       endif
+    else ! this%is_ascii
        ! POINTS
        write(string,'(a,i12,a)',iostat=ios) 'POINTS ',this%npoints,' float'
        write(unit=lu,iostat=ios) trim(string)//eol_char                  ; err = err.or.(ios/=0)
@@ -295,6 +346,70 @@ contains
           call add(errmsg,2,'there was an error writing POINTS',myname)
           return
        endif
+    end if ! this%is_ascii
+  end subroutine writePointsGeometryInvgridVtkFile
+!------------------------------------------------------------------------
+  subroutine writeVerticesGeometryInvgridVtkFile(this,lu,errmsg,myname)
+    type (invgrid_vtk_file) :: this
+    integer :: lu
+    type(error_message) :: errmsg
+    character(len=*) :: myname
+    ! logical
+    integer :: ios,i
+    character (len=500) :: string
+    logical :: err
+    character (len=1), parameter :: eol_char = char(10)
+!
+    err = .false.
+    if(this%is_ascii) then
+       ! VERTICES
+       write(unit=lu,fmt='(a,2i12)',iostat=ios)'VERTICES ',this%npoints,2*this%npoints     ; err = err.or.(ios/=0)
+       write(unit=lu,fmt='(2i12)',iostat=ios) (/ ((/1,i-1/),i=1,this%npoints) /)            ; err = err.or.(ios/=0)
+       if(err) then ! if any of the above ios were /= 0
+          call add(errmsg,2,'there was an error writing VERTICES',myname)
+          return
+       endif
+    else ! this%is_ascii
+       ! VERTICES
+       write(string,'(a,2i12)',iostat=ios)'VERTICES ',this%npoints,2*this%npoints
+       write(unit=lu,iostat=ios) trim(string)//eol_char                      ; err = err.or.(ios/=0)
+       write(unit=lu,iostat=ios) (/ ((/1,i-1/),i=1,this%npoints) /)          ; err = err.or.(ios/=0)
+       write(unit=lu,iostat=ios) eol_char                                    ; err = err.or.(ios/=0)
+       if(err) then ! if any of the above ios were /= 0
+          call add(errmsg,2,'there was an error writing VERTICES',myname)
+          return
+       endif
+    end if ! this%is_ascii
+  end subroutine writeVerticesGeometryInvgridVtkFile
+!------------------------------------------------------------------------
+  subroutine writeCellsGeometryInvgridVtkFile(this,lu,errmsg,myname)
+    type (invgrid_vtk_file) :: this
+    integer :: lu
+    type(error_message) :: errmsg
+    character(len=*) :: myname
+    ! logical
+    integer :: ios
+    character (len=500) :: string
+    logical :: err
+    character (len=1), parameter :: eol_char = char(10)
+!
+    err = .false.
+    if(this%is_ascii) then
+       ! CELL CONNECTIVITY
+       write(unit=lu,fmt='(a,2i12)',iostat=ios)'CELLS ',this%ncells,size(this%cell_connectivity)  ; err = err.or.(ios/=0)
+       write(unit=lu,fmt='(i12)',iostat=ios) this%cell_connectivity                               ; err = err.or.(ios/=0)
+       if(err) then ! if any of the above ios were /= 0
+          call add(errmsg,2,'there was an error writing CELLS',myname)
+          return
+       endif
+       ! CELL TYPES
+       write(unit=lu,fmt='(a,i12)',iostat=ios) 'CELL_TYPES ',this%ncells  ; err = err.or.(ios/=0)
+       write(unit=lu,fmt='(i12)',iostat=ios) this%cell_type               ; err = err.or.(ios/=0)
+       if(err) then ! if any of the above ios were /= 0
+          call add(errmsg,2,'there was an error writing CELL_TYPES',myname)
+          return
+       endif
+    else ! this%is_ascii
        ! CELL CONNECTIVITY
        write(string,'(a,2i12)',iostat=ios)'CELLS ',this%ncells,size(this%cell_connectivity)
        write(unit=lu,iostat=ios) trim(string)//eol_char                  ; err = err.or.(ios/=0)
@@ -304,6 +419,7 @@ contains
           call add(errmsg,2,'there was an error writing CELLS',myname)
           return
        endif
+       ! CELL TYPES
        write(string,'(a,i12)',iostat=ios)'CELL_TYPES ',this%ncells
        write(unit=lu,iostat=ios) trim(string)//eol_char                  ; err = err.or.(ios/=0)
        write(unit=lu,iostat=ios) this%cell_type                          ; err = err.or.(ios/=0)
@@ -312,13 +428,14 @@ contains
           call add(errmsg,2,'there was an error writing CELL_TYPES',myname)
           return
        endif
-    endif ! this%is_ascii
-  end subroutine writeHeaderGeometryInvgridVtkFile
+    end if ! this%is_ascii
+  end subroutine writeCellsGeometryInvgridVtkFile
 !------------------------------------------------------------------------
 !> \brief open file, write header and geometry and one component float scalar valued cell data to vtk file
-!! \details The number of incoming real data values must match the number of cells this%ncells
-!!  of this invgrid_vtk_file object, because here scalar CELL_DATA (i.e. one scalar value per cell)
-!!  is added to the vtk file. 
+!! \details The number of incoming real data values must match the number this%ndata
+!!  of this invgrid_vtk_file object, because here scalar CELL_DATA (i.e. one scalar value per cell in case 
+!!  this%geometry_type == 0) or scalar POINT_DATA (one value per inversion grid cell center point in case 
+!!  this%geometry_type == 1) is added to the vtk file. 
 !!  First a file is opened calling openInvgridVtkFile and header and point and cell 
 !!  geometry information is written to that file calling writeHeaderGeometryInvgridVtkFile.
 !!  Then the incoming data values are added to the vtk file as scalar valued float cell data.
@@ -333,10 +450,12 @@ contains
 !! \param file_index optional index of file (will be appended to filename base)
 !! \param data_indx_is_invgrid optional logical indicating if there are incoming data for ALL invgrid cells or not
 !! \param overwrite_in optional logical to indicate behaviour in case file exists. By default, no overwrite
+!! \param fname_extension optional character string as file name extension IN FRONT OF file index: this%filename//fname_extension//file_indx
 !! \param errmsg error message
 !! \return error message
 !
-  subroutine writeRealDataInvgridVtkFile(this,lu,data,errmsg,data_name,file_index,data_indx_is_invgrid,overwrite)
+  subroutine writeRealDataInvgridVtkFile(this,lu,data,errmsg,data_name,file_index,data_indx_is_invgrid,overwrite,&
+       fname_extension)
     ! incoming
     type (invgrid_vtk_file) :: this
     integer :: lu
@@ -344,43 +463,63 @@ contains
     character (len=*), optional :: data_name
     integer, optional :: file_index
     logical, optional :: data_indx_is_invgrid,overwrite
+    character (len=*), optional :: fname_extension
     ! outgoing
     type (error_message) :: errmsg
     ! local
     character (len=400) :: errstr
     character(len=27) :: myname = 'writeRealDataInvgridVtkFile'
+    character(len=10) :: vtk_data_type
     character (len=500) :: string
-    character (len=100) :: filename_extension
+    character (len=500) :: filename_extension
     character (len=1), parameter :: eol_char = char(10)
     integer :: ios,ndata_expect
     logical :: err,map_indx_all
-    !
+!
     call addTrace(errmsg,myname)
-    !
+!
     ! check if object is initiated already
     if(this%filename== '') then
        call add(errmsg,2,'it appears that this invgrid_vtk_file object is not initiated yet',myname)
        return
     endif
-    ! check if number of data is correct (writing cell data here)
-    ndata_expect = this%ncells; map_indx_all = .false.
+!
+    select case(this%geometry_type)
+    case(0) ! VOLUMETRIC CELLS
+       ! set variables for the vtk file line defining the type of data
+       vtk_data_type = 'CELL_DATA'
+    case(1) ! CELL CENTER POINTS
+       ! set variables for the vtk file line defining the type of data
+       vtk_data_type = 'POINT_DATA'
+    end select
+!
+    ! by default, expect as many data as cells are handled in this vtk file
+    ndata_expect = this%ndata
+    map_indx_all = .false.
+!
+    ! check if optionally data for ALL cells are to be maped to those defined in this vtk file (can be substet)
     if(present(data_indx_is_invgrid)) then
        if(data_indx_is_invgrid) then
           ndata_expect = this%ntot_invgrid
           map_indx_all = .true.
        end if
     end if
+!
+    ! check size of incoming data
     if(size(data) /= ndata_expect) then
        write(errstr,*) 'number of incoming data ( =',size(data),&
             ') does not match number of expected values ( =',ndata_expect,')'
        call add(errmsg,2,trim(errstr),myname)
        return
     endif
-    !
+!
+    filename_extension = ''
+    if(present(fname_extension)) then
+       filename_extension = trim(filename_extension)//trim(fname_extension)
+    end if
     if(present(file_index)) then
-       write(filename_extension,"('_',i6.6)") file_index
-    else
-       filename_extension = ''
+       write(string,"('_',i6.6)") file_index
+       filename_extension = trim(filename_extension)//trim(string)
     endif
     ! open vtk file to write
     call openInvgridVtkFile(this,lu,trim(filename_extension),errmsg,overwrite)
@@ -388,18 +527,18 @@ contains
        close(lu)
        return
     endif
-    !
+!
     ! write header and geometry information to file
     call writeHeaderGeometryInvgridVtkFile(this,lu,errmsg)
     if(.level.errmsg == 2) then
        close(lu)
        return
     endif
-    !
+!
     ! write data to file
     err = .false.
     if(this%is_ascii) then
-       write(unit=lu,fmt='(a,i12)',iostat=ios) 'CELL_DATA ',this%ncells        ; err = err.or.(ios/=0)
+       write(unit=lu,fmt='(a,i12)',iostat=ios) trim(vtk_data_type)//' ',this%ndata    ; err = err.or.(ios/=0)
        if(present(data_name)) then 
           string = 'SCALARS '//trim(data_name)//' float 1'
        else
@@ -413,12 +552,12 @@ contains
           write(unit=lu,fmt='(e14.6e2)', iostat=ios) data(this%req_indx)          ; err = err.or.(ios/=0)
        end if
        if(err) then ! if any of the above ios were /= 0
-          call add(errmsg,2,'there was an error writing CELL_DATA',myname)
+          call add(errmsg,2,'there was an error writing '//trim(vtk_data_type),myname)
           close(lu)
           return
        endif
     else
-       write(string,fmt='(a,i12)',iostat=ios) 'CELL_DATA ',this%ncells
+       write(string,fmt='(a,i12)',iostat=ios) trim(vtk_data_type)//' ',this%ndata
        write(unit=lu,iostat=ios) trim(string)//eol_char                      ; err = err.or.(ios/=0)
        if(present(data_name)) then 
           string = 'SCALARS '//trim(data_name)//' float 1'
@@ -434,7 +573,7 @@ contains
        end if
        write(unit=lu,iostat=ios) eol_char                                    ; err = err.or.(ios/=0)
        if(err) then ! if any of the above ios were /= 0
-          call add(errmsg,2,'there was an error writing CELL_DATA',myname)
+          call add(errmsg,2,'there was an error writing '//trim(vtk_data_type),myname)
           close(lu)
           return
        endif
@@ -445,9 +584,10 @@ contains
   end subroutine writeRealDataInvgridVtkFile
 !------------------------------------------------------------------------
 !> \brief open file, write header and geometry and two component float scalar valued cell data to vtk file
-!! \details The number of incoming complex data values must match the number of cells this%ncells
-!!  of this invgrid_vtk_file object, because here two component scalar CELL_DATA (i.e. one scalar 
-!!  value per cell) is added to the vtk file. 
+!! \details The number of incoming complex data values must match the number this%ndata
+!!  of this invgrid_vtk_file object, because here two component scalar CELL_DATA (i.e. one complex scalar value per 
+!!  cell in case this%geometry_type == 0) or two component scalar POINT_DATA (one complex value per inversion grid 
+!!  cell center point in case this%geometry_type == 1) is added to the vtk file. 
 !!  First a file is opened calling openInvgridVtkFile and header and point and cell 
 !!  geometry information is written to that file calling writeHeaderGeometryInvgridVtkFile.
 !!  Then the incoming data values are added to the vtk file as two component scalar valued float cell data.
@@ -462,10 +602,12 @@ contains
 !! \param file_index optional index of file (will be appended to filename base)
 !! \param data_indx_is_invgrid optional logical indicating if there are incoming data for ALL invgrid cells or not
 !! \param overwrite_in optional logical to indicate behaviour in case file exists. By default, no overwrite
+!! \param fname_extension optional character string as file name extension IN FRONT OF file index: this%filename//fname_extension//file_indx
 !! \param errmsg error message
 !! \return error message
 !
-  subroutine writeComplexDataInvgridVtkFile(this,lu,data,errmsg,data_name,file_index,data_indx_is_invgrid,overwrite)
+  subroutine writeComplexDataInvgridVtkFile(this,lu,data,errmsg,data_name,file_index,data_indx_is_invgrid,overwrite,&
+       fname_extension)
     ! incoming
     type (invgrid_vtk_file) :: this
     integer :: lu
@@ -473,43 +615,63 @@ contains
     character (len=*), optional :: data_name
     integer, optional :: file_index
     logical, optional :: data_indx_is_invgrid,overwrite
+    character (len=*), optional :: fname_extension
     ! outgoing
     type (error_message) :: errmsg
     ! local
     character (len=400) :: errstr
     character(len=30) :: myname = 'writeComplexDataInvgridVtkFile'
+    character(len=10) :: vtk_data_type
     character (len=500) :: string
-    character (len=100) :: filename_extension
+    character (len=500) :: filename_extension
     character (len=1), parameter :: eol_char = char(10)
     integer :: ios,ndata_expect
     logical :: err,map_indx_all
-    !
+!
     call addTrace(errmsg,myname)
-    !
+!
     ! check if object is initiated already
     if(this%filename== '') then
        call add(errmsg,2,'it appears that this invgrid_vtk_file object is not initiated yet',myname)
        return
     endif
-    ! check if number of data is correct (writing cell data here)
-    ndata_expect = this%ncells; map_indx_all = .false.
+!
+    select case(this%geometry_type)
+    case(0) ! VOLUMETRIC CELLS
+       ! set variables for the vtk file line defining the type of data
+       vtk_data_type = 'CELL_DATA'
+    case(1) ! CELL CENTER POINTS
+       ! set variables for the vtk file line defining the type of data
+       vtk_data_type = 'POINT_DATA'
+    end select
+
+    ! by default, expect as many data as cells are handled in this vtk file
+    ndata_expect = this%ndata
+    map_indx_all = .false.
+!
+    ! check if optionally data for ALL cells are to be maped to those defined in this vtk file (can be substet)
     if(present(data_indx_is_invgrid)) then
        if(data_indx_is_invgrid) then
           ndata_expect = this%ntot_invgrid
           map_indx_all = .true.
        end if
     end if
+!
+    ! check size of incoming data
     if(size(data) /= ndata_expect) then
        write(errstr,*) 'number of incoming data ( =',size(data),&
             ') does not match number of expected values ( =',ndata_expect,')'
        call add(errmsg,2,trim(errstr),myname)
        return
     endif
-    !
+!
+    filename_extension = ''
+    if(present(fname_extension)) then
+       filename_extension = trim(filename_extension)//trim(fname_extension)
+    end if
     if(present(file_index)) then
-       write(filename_extension,"('_',i6.6)") file_index
-    else
-       filename_extension = ''
+       write(string,"('_',i6.6)") file_index
+       filename_extension = trim(filename_extension)//trim(string)
     endif
     ! open vtk file to write
     call openInvgridVtkFile(this,lu,trim(filename_extension),errmsg,overwrite)
@@ -524,11 +686,11 @@ contains
        close(lu)
        return
     endif
-    !
+!
     ! write data to file
     err = .false.
     if(this%is_ascii) then
-       write(unit=lu,fmt='(a,i12)',iostat=ios) 'CELL_DATA ',this%ncells            ; err = err.or.(ios/=0)
+       write(unit=lu,fmt='(a,i12)',iostat=ios) trim(vtk_data_type)//' ',this%ndata         ; err = err.or.(ios/=0)
        if(present(data_name)) then 
           string = 'SCALARS '//trim(data_name)//' float 2'
        else
@@ -547,7 +709,7 @@ contains
           return
        endif
     else
-       write(string,fmt='(a,i12)',iostat=ios) 'CELL_DATA ',this%ncells
+       write(string,fmt='(a,i12)',iostat=ios) trim(vtk_data_type)//' ',this%ndata
        write(unit=lu,iostat=ios) trim(string)//eol_char                      ; err = err.or.(ios/=0)
        if(present(data_name)) then 
           string = 'SCALARS '//trim(data_name)//' float 2'
@@ -623,9 +785,15 @@ contains
   subroutine deallocateInvgridVtkFile(this)
     type (invgrid_vtk_file) :: this
     this%filename = ''
+    this%title = ''
+    this%geometry_type = -1
+    this%ntot_invgrid = 0
+    this%ndata = 0
     if(associated(this%points)) deallocate(this%points)
+    this%npoints = 0
     if(associated(this%cell_connectivity)) deallocate(this%cell_connectivity)
     if(associated(this%cell_type)) deallocate(this%cell_type)
+    this%ncells = 0
     if(associated(this%invgrid_cell_indx)) deallocate(this%invgrid_cell_indx)
     if(associated(this%req_indx)) deallocate(this%req_indx)
   end subroutine deallocateInvgridVtkFile

@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief this module manages the inverted Earth model on the inversion grid
 !!
@@ -25,7 +25,7 @@
 !!  be in general difficult to extend ASKI to other parametrizations. 
 !!
 !! \author Florian Schumacher
-!! \date February 2013
+!! \date Nov 2015
 !
 module kernelInvertedModel
 !
@@ -36,6 +36,7 @@ module kernelInvertedModel
   use integrationWeights
   use kernelReferenceModel
   use invgridVtkFile
+  use dataModelSpaceInfo
   use errorMessage
 !
   implicit none
@@ -234,7 +235,7 @@ contains
     real :: max
     integer :: iparam
     real, dimension(:), pointer :: p
-    max = -1.e24 ! initiate to invalid value
+    max = -huge(1.0) ! initiate to invalid value
     if(trim(this%parametrization)=='') return
     if(.not.validParamModelParametrization(this%parametrization,param)) return
     iparam = indexOfParamModelParametrization(this%parametrization,param)
@@ -249,7 +250,7 @@ contains
     real :: min
     integer :: iparam
     real, dimension(:), pointer :: p
-    min = 1.e24 ! initiate to invalid value
+    min = huge(1.0) ! initiate to invalid value
     if(trim(this%parametrization)=='') return
     if(.not.validParamModelParametrization(this%parametrization,param)) return
     iparam = indexOfParamModelParametrization(this%parametrization,param)
@@ -517,6 +518,7 @@ contains
     real, dimension(:), allocatable :: model_values_invgrid
     integer, dimension(:), allocatable :: indx_invgrid
     integer, dimension(:), pointer :: wp_idx
+    real, dimension(:), pointer :: weights
     integer :: icell,ncell,ntot_invgrid
 !
     call addTrace(errmsg,myname)
@@ -524,7 +526,7 @@ contains
     call initiateKernelInvertedModel(this,parametrization,errmsg)
     if(.level.errmsg == 2) then
        call deallocateKernelInvertedModel(this)
-       return
+       goto 1
     endif
     !
     ntot_invgrid = .ncell.invgrid
@@ -552,23 +554,44 @@ contains
                   " is not associated, which usually means that invgrid index is out of range. This could "//&
                   "mean your integration weights are corrupted or not compatible with this inversion grid"
              call add(errmsg,2,trim(errstr),myname)
-             deallocate(model_values_invgrid,indx_invgrid)
-             return
+             goto 1
           endif
+          !
+          ! get weights for this cell
+          weights => intw.weight.icell
+          if(.not.associated(weights)) then
+             write(errstr,*) "pointer to array of weights for invgrid cell ",icell,&
+                  " is not associated, which usually means that invgrid index is out of range. This could "//&
+                  "mean your integration weights are corrupted or not compatible with this inversion grid"
+             call add(errmsg,2,trim(errstr),myname)
+             goto 1
+          endif
+          !
+          if(size(wp_idx) /= size(weights)) then
+             write(errstr,*) "there are ",size(wp_idx)," wavefield point indices but ",size(weights),&
+                  " weights for invgrid cell ",icell,"; this means your integration weights are corrupted"
+             call add(errmsg,2,trim(errstr),myname)
+             goto 1
+          end if
           !
           ! append averaged model value to array model_values_invgrid and memorize this invgrid cell index
           ncell = ncell + 1
-          model_values_invgrid(ncell) = sum(model_values_wp(wp_idx))/size(wp_idx)
+          !model_values_invgrid(ncell) = sum(model_values_wp(wp_idx))/size(wp_idx) ! OLD IMPLEMENTATION: JUST AVERAGE (depreciated, better use integration weights)
+          model_values_invgrid(ncell) = sum(weights*model_values_wp(wp_idx))/sum(weights)
           indx_invgrid(ncell) = icell
        enddo ! icell
        !
        ! now add all valid model values found (and respective invgrid indices) as model values of current parameter to this object
        call addValuesKernelInvertedModel(this,param_name,indx_invgrid(1:ncell),model_values_invgrid(1:ncell),errmsg)
        deallocate(model_values_invgrid,indx_invgrid)
-       if(.level.errmsg == 2) return
+       if(.level.errmsg == 2) goto 1
        !
+       if(associated(model_values_wp)) deallocate(model_values_wp)
     end do ! while (nextParam)
     !
+1   if(associated(model_values_wp)) deallocate(model_values_wp)
+    if(allocated(model_values_invgrid)) deallocate(model_values_invgrid)
+    if(allocated(indx_invgrid)) deallocate(indx_invgrid)
   end subroutine interpolateKernelReferenceToKernelInvertedModel
 !------------------------------------------------------------------------
 !> \brief read kernel inverted model from file
@@ -769,5 +792,193 @@ contains
     enddo ! while (nextParam)
     !
   end subroutine writeVtkKernelInvertedModel
+!------------------------------------------------------------------------
+!> \brief create kernel inverted model object as a copy of another object
+  subroutine copyKernelInvertedModel(this,that)!,param,icell) ! in the future: introduce optional variables defining a subset of model parameters or a subset of inversion grid cells (or anything sensible)
+    type (kernel_inverted_model) :: this,that
+    ! local
+    integer :: size_that,i
+    real, dimension(:), pointer :: rpthis,rpthat
+    integer, dimension(:), pointer :: ipthis,ipthat
+!
+    if(this%parametrization /= '') call deallocateKernelInvertedModel(this)
+    if(that%parametrization == '') return
+!
+    ! parametrization
+    this%parametrization = that%parametrization
+!
+    ! model_values
+    if(associated(that%model_values)) then
+       size_that = size(that%model_values)
+       allocate(this%model_values(size_that))
+       do i = 1,size_that
+          rpthat => getVectorPointer(that%model_values(i))
+          if(associated(rpthat)) then
+             allocate(rpthis(size(rpthat)))
+             rpthis = rpthat
+             call associateVectorPointer(this%model_values(i),rpthis)
+             nullify(rpthis)
+          end if ! associated(rpthat)
+       end do ! i
+    end if ! associated(that%model_values)
+!
+    ! indx
+    if(associated(that%indx)) then
+       size_that = size(that%indx)
+       allocate(this%indx(size_that))
+       do i = 1,size_that
+          ipthat => getVectorPointer(that%indx(i))
+          if(associated(ipthat)) then
+             allocate(ipthis(size(ipthat)))
+             ipthis = ipthat
+             call associateVectorPointer(this%indx(i),ipthis)
+             nullify(ipthis)
+          end if ! associated(ipthat)
+       end do ! i
+    end if ! associated(that%indx)
+  end subroutine copyKernelInvertedModel
+!------------------------------------------------------------------------
+!> \brief pack a given vector of model values to a kernel_inverted_model object according to a given model space info object
+  subroutine packVectorToKernelInvertedModel(this,model_vector,mspace,errmsg)
+    type (kernel_inverted_model) :: this
+    real, dimension(:) :: model_vector
+    type (data_model_space_info) :: mspace
+    type (error_message) :: errmsg
+    ! local
+    character(len=31) :: myname = 'packVectorToKernelInvertedModel'
+    character(len=400) :: errstr
+    character(len=character_length_param) :: param_name
+    character(len=character_length_param), dimension(:), pointer :: pparam
+    integer, dimension(:), pointer :: idx_mspace,pcell
+!
+    call addTrace(errmsg,myname)
+!
+    call init(this,.pmtrz.mspace,errmsg)
+    if (.level.errmsg == 2) return
+!
+    if(size(model_vector) /= .nmval.mspace) then
+       write(errstr,*) "size of incoming vector of model values = ",size(model_vector),&
+            " differs from number of model parameters contained in incoming model space info object = ",&
+            .nmval.mspace,", hence cannot interpret the model vector"
+       call add(errmsg,2,errstr,myname)
+       return       
+    end if
+!
+    if(size(model_vector) == 0) then
+       call add(errmsg,1,"incoming vector of model values is empty, hence created empty model object",myname)
+       return
+    end if
+!
+    nullify(pparam,pcell,idx_mspace)
+    do while(nextParamModelParametrization(.pmtrz.mspace,param_name))
+       if(associated(pparam)) deallocate(pparam); nullify(pparam)
+       if(associated(pcell)) deallocate(pcell); nullify(pcell)
+       if(associated(idx_mspace)) deallocate(idx_mspace)
+       allocate(pparam(1)); pparam(1) = param_name
+       idx_mspace => getIndxModelValues(mspace,param=pparam,cell=pcell)
+       if(associated(idx_mspace)) then
+          write(errstr,*) "there are ",size(idx_mspace)," '"//trim(param_name)//"' values in the model vector"
+          call add(errmsg,0,errstr,myname)
+          call addValuesKernelInvertedModel(this,param_name,pcell,model_vector(idx_mspace),errmsg)
+          if (.level.errmsg == 2) goto 1
+          deallocate(idx_mspace)
+       else
+          write(errstr,*) "there are no '"//trim(param_name)//"' values in the model vector"
+          call add(errmsg,0,errstr,myname)
+       end if
+    end do ! while next param
+!
+    ! clean up
+1   if(associated(pparam)) deallocate(pparam)
+    if(associated(pcell)) deallocate(pcell)
+    if(associated(idx_mspace)) deallocate(idx_mspace)
+  end subroutine packVectorToKernelInvertedModel
+!------------------------------------------------------------------------
+!> \brief unpack a given kernel_inverted_model object to a vector of model values according to a given model space info object
+  subroutine unpackToVectorKernelInvertedModel(model_vector,this,mspace,errmsg)
+    type (kernel_inverted_model) :: this
+    real, dimension(:), pointer :: model_vector
+    type (data_model_space_info) :: mspace
+    type (error_message) :: errmsg
+    ! local
+    character(len=33) :: myname = 'unpackToVectorKernelInvertedModel'
+    character(len=400) :: errstr
+    logical, dimension(:), allocatable :: initiated
+    character(len=character_length_param) :: param_name
+    integer, dimension(:), pointer :: pcell,idx_mspace,idx_kim
+    real, dimension(:), pointer :: pval
+!
+    call addTrace(errmsg,myname)
+    nullify(model_vector)
+!
+    if(.nmval.mspace == 0) then
+       call add(errmsg,1,"no model parameters defined in the incoming model space, hence returning empty model vector",myname)
+       return
+    end if
+    if(.pmtrz.mspace == '') then
+       call add(errmsg,1,"incoming model space undefined, hence returning empty model vector",myname)
+       return
+    end if
+    if(trim(this%parametrization) == '') then
+       call add(errmsg,2,"this kernel_inverted_model object is not initiated yet and does not contain any values",myname)
+       return
+    end if
+    if(trim(this%parametrization) /= trim(.pmtrz.mspace)) then
+       write(errstr,*) "parametrization '"//trim(.pmtrz.mspace)//"' of incoming model space differs from parametrization '"&
+            //trim(this%parametrization)//"' of this kernel_inverted_model object"
+       call add(errmsg,2,errstr,myname)
+       return
+    end if
+!
+    ! allocate return vector and vector for checks for the requested number of values
+    allocate(model_vector(.nmval.mspace),initiated(.nmval.mspace))
+    initiated(:) = .false.
+!
+     do while (nextParamModelParametrization(this%parametrization,param_name))
+        pcell => getIndicesKernelInvertedModel(this,param_name)
+        pval => getValuesKernelInvertedModel(this,param_name)
+!
+        if(.not.(associated(pcell) .and. associated(pval))) cycle
+!
+        if(associated(idx_kim)) deallocate(idx_kim)
+        if(associated(idx_mspace)) deallocate(idx_mspace)
+        call mapCellIndicesDataModelSpaceInfo(mspace,param_name,pcell,idx_kim,idx_mspace)
+!
+        if(.not.(associated(idx_kim).and.associated(idx_mspace))) cycle
+!
+        if(any(initiated(idx_mspace))) then
+           write(errstr,*) count(initiated(idx_mspace))," values already initiated when trying to set '"//trim(param_name)//&
+                "' values: THIS ERROR SHOULD NOT HAPPEN!"
+           call add(errmsg,2,errstr,myname)
+           goto 2
+        end if
+!
+        ! idx_mspace should contain index values from 1 to .nmval.mspace, i.e. the next assignment should work 
+        ! (otherwise module dataModelSpaceInfo, or its routine mapCellIndicesDataModelSpaceInfo is inconsistent)
+        model_vector(idx_mspace) = pval(idx_kim)
+!
+        ! remember that these indices have been set
+        initiated(idx_mspace) = .true.
+     end do ! while nextParam
+     if(associated(idx_kim)) deallocate(idx_kim)
+     if(associated(idx_mspace)) deallocate(idx_mspace)
+!
+     if(any(.not.initiated)) then
+        write(errstr,*) count(.not.initiated)," of the requested values in the model vector could not be defined, this "//&
+             "means that there are model values in the model space which are not contained in this kernel_inverted_model_object"
+        call add(errmsg,2,errstr,myname)
+        goto 2
+     end if
+!
+    ! clean up and return
+1   if(allocated(initiated)) deallocate(initiated)
+    return
+!
+    ! If the code comes here, there was an error after allocating the return variable, hence deallocate it before cleaning up and returning
+2   deallocate(model_vector); nullify(model_vector)
+    if(associated(idx_kim)) deallocate(idx_kim)
+    if(associated(idx_mspace)) deallocate(idx_mspace)
+    goto 1
+  end subroutine unpackToVectorKernelInvertedModel
 !	
 end module kernelInvertedModel

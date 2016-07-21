@@ -1,22 +1,22 @@
 !--------------------------------------------------------------------------
-!   Copyright 2013 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
 !
 !   This file is part of Gemini II.
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   Gemini II and ASKI version 0.3 are free software: you can
+!   Gemini II and ASKI version 1.0 are free software: you can
 !   redistribute it and/or modify it under the terms of the GNU
 !   General Public License as published by the Free Software
 !   Foundation, either version 2 of the License, or (at your option) 
 !   any later version.
 !
-!   Gemini II and ASKI version 0.3 are distributed in the hope that they
+!   Gemini II and ASKI version 1.0 are distributed in the hope that they
 !   will be useful, but WITHOUT ANY WARRANTY; without even the implied
 !   warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 !   See the GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with Gemini II and ASKI version 0.3.
+!   along with Gemini II and ASKI version 1.0.
 !   If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !--------------------------------------------------------------
@@ -29,6 +29,7 @@
 		module procedure reallocate_complex
 		module procedure reallocate_char
 		module procedure reallocate_int
+		module procedure reallocate_logical
 		module procedure reallocate_double_precision_2d
 		module procedure reallocate_integer_2d
 		module procedure reallocate_real_2d
@@ -97,6 +98,18 @@
 	reallocate_int(1:nold) = p(1:nold)
 	deallocate(p)
 	end function reallocate_int
+!---------------------------------------------------------------------------
+	function reallocate_logical(p, n)               ! reallocate logical
+	logical, pointer, dimension(:) :: p, reallocate_logical
+	integer, intent(in) :: n
+	integer :: nold, ierr
+	allocate(reallocate_logical(1:n), stat=ierr)
+	if(ierr /= 0) stop "allocate error"
+	if(.not. associated(p)) return
+	nold = min(size(p), n)
+	reallocate_logical(1:nold) = p(1:nold)
+	deallocate(p)
+	end function reallocate_logical
 !--------------------------------------------------------------------
 !     2D
 !--------------------------------------------------------------------

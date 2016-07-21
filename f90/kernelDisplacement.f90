@@ -1,32 +1,32 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
 !   and Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   and Christian Ullisch (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief Wrapper module for kernel displacement
 !!
 !! \details Generic module which forks to forward-method specific subroutines.
-!!  The interfaces to method GEMINI still need to be adapted to the new ASKI version,
-!!  so far only method SPECFEM3D is supported. 
-!!  Displacement and strain arrays ordered consistently with ordering of wavefield points.
+!!  Displacement and strain arrays are assumed to be ordered consistently with ordering of wavefield points.
 !
 module kernelDisplacement
-!!$  use geminiKernelDisplacement
+  use geminiKernelDisplacement
   use specfem3dKernelDisplacement
+  use nexdKernelDisplacement
   use errorMessage
   use fileUnitHandler
   implicit none
@@ -35,13 +35,12 @@ module kernelDisplacement
   interface operator (.df.); module procedure getDfKernelDisplacement; end interface
   interface operator (.nf.); module procedure getNfKernelDisplacement; end interface
   interface operator (.jfcur.); module procedure getJfcurKernelDisplacement; end interface
-  interface operator (.disp.); module procedure getKernelDisplacement; end interface
-  interface operator (.strain.); module procedure getStrainsKernelDisplacement; end interface
 !< fork here to specific method by associating some pointer (only ONE!)
   type kernel_displacement
      private
-!!$     type (gemini_kernel_displacement), pointer :: gemini_kd => null()         ! gemini specific kernel displacement object
-     type (specfem3d_kernel_displacement), pointer :: specfem_kd => null()       ! Specfem specific kernel displacement object
+     type (gemini_kernel_displacement), pointer :: gemini_kd => null()         ! gemini specific kernel displacement object
+     type (specfem3d_kernel_displacement), pointer :: specfem3d_kd => null()       ! Specfem specific kernel displacement object
+     type (nexd_kernel_displacement), pointer :: nexd_kd => null()       ! NEXD specific kernel displacement object
   end type kernel_displacement
 !
   integer, parameter :: length_ID_kernel_displacement = 13 !< change this number CONSISTENTLY with respective numbers in submodules (specfem3d,gemini,etc) 
@@ -60,15 +59,19 @@ contains
 !
     call addTrace(errmsg,myname)
     select case (method)
-!!$    case('GEMINI')
-!!$       allocate(this%gemini_kd)
-!!$       errmsg = initialReadGeminiKernelDisplacement(this%gemini_kd,fuh,filename)
-!!$       if (.level.errmsg == 2) then
-!!$          call addTrace(errmsg,myname); return
-!!$       endif
+    case('GEMINI')
+       allocate(this%gemini_kd)
+       call initialReadGeminiKernelDisplacement(this%gemini_kd,fuh,filename,errmsg)
+       if (.level.errmsg == 2) then
+          call addTrace(errmsg,myname); return
+       endif
     case('SPECFEM3D')
-       allocate(this%specfem_kd)
-       call initialReadSpecfem3dKernelDisplacement(this%specfem_kd,fuh,filename,errmsg)
+       allocate(this%specfem3d_kd)
+       call initialReadSpecfem3dKernelDisplacement(this%specfem3d_kd,fuh,filename,errmsg)
+       if (.level.errmsg == 2) return
+    case('NEXD')
+       allocate(this%nexd_kd)
+       call initialReadNexdKernelDisplacement(this%nexd_kd,fuh,filename,errmsg)
        if (.level.errmsg == 2) return
     case default
        call add(errmsg,2,"Invalid forward computation method '"//trim(method)//"'",myname)
@@ -82,11 +85,9 @@ contains
     type (kernel_displacement) :: this
     type (file_unit_handler) :: fuh
 !
-!!$    if (associated(this%gemini_kd)) then
-!!$       call deallocGeminiKernelDisplacement(this%gemini_kd,fuh)
-!!$    else if (associated(this%specfem_kd)) then
-       call dealloc(this%specfem_kd,fuh)
-!!$    endif
+    if (associated(this%gemini_kd)) call deallocGeminiKernelDisplacement(this%gemini_kd,fuh)
+    if (associated(this%specfem3d_kd)) call dealloc(this%specfem3d_kd,fuh)
+    if (associated(this%nexd_kd)) call dealloc(this%nexd_kd,fuh)
   end subroutine deallocateKernelDisplacement
 !-------------------------------------------------------------------------
 !> \brief Read in kernel displacement for one frequency
@@ -98,15 +99,18 @@ contains
     character (len=31) :: myname = 'readFrequencyKernelDisplacement'
 !
     call addTrace(errmsg,myname)
-!!$    if (associated(this%gemini_kd)) then
-!!$       errmsg = readFrequencyGeminiKernelDisplacement(this%gemini_kd,jf)
-!!$       if (.level.errmsg == 2) then
-!!$          call addTrace(errmsg,myname); return
-!!$       endif
-!!$    else if (associated(this%specfem_kd)) then
-       call readFrequencySpecfem3dKernelDisplacement(this%specfem_kd,jf,errmsg)
+    if (associated(this%gemini_kd)) then
+       call readFrequencyGeminiKernelDisplacement(this%gemini_kd,jf,errmsg)
+       if (.level.errmsg == 2) then
+          call addTrace(errmsg,myname); return
+       endif
+    else if (associated(this%specfem3d_kd)) then
+       call readFrequencySpecfem3dKernelDisplacement(this%specfem3d_kd,jf,errmsg)
        if (.level.errmsg == 2) return
-!!$    endif
+    else if (associated(this%nexd_kd)) then
+       call readFrequencyNexdKernelDisplacement(this%nexd_kd,jf,errmsg)
+       if (.level.errmsg == 2) return
+    endif
   end subroutine readFrequencyKernelDisplacement
 !-------------------------------------------------------------------------
 !> \brief Get ID
@@ -116,11 +120,13 @@ contains
     character(len=length_ID_kernel_displacement) :: res
 !
     res = ''
-!!$    if (associated(this%gemini_kd)) then
-!!$       res = .id.(this%gemini_kd)
-!!$    else if (associated(this%specfem_kd)) then
-       res = .id.(this%specfem_kd)
-!!$    endif
+    if (associated(this%gemini_kd)) then
+       res = .id.(this%gemini_kd)
+    else if (associated(this%specfem3d_kd)) then
+       res = .id.(this%specfem3d_kd)
+    else if (associated(this%nexd_kd)) then
+       res = .id.(this%nexd_kd)
+    endif
   end function getIdKernelDisplacement
 !-------------------------------------------------------------------------
 !> \brief Get frequency step df
@@ -130,11 +136,13 @@ contains
     real :: res
 !
     res = 0.
-!!$    if (associated(this%gemini_kd)) then
-!!$       res = .df.(this%gemini_kd)
-!!$    else if (associated(this%specfem_kd)) then
-       res = .df.(this%specfem_kd)
-!!$    endif
+    if (associated(this%gemini_kd)) then
+       res = .df.(this%gemini_kd)
+    else if (associated(this%specfem3d_kd)) then
+       res = .df.(this%specfem3d_kd)
+    else if (associated(this%nexd_kd)) then
+       res = .df.(this%nexd_kd)
+    endif
   end function getDfKernelDisplacement
 !-------------------------------------------------------------------------
 !> \brief Get number of frequencies nf
@@ -144,11 +152,13 @@ contains
     integer :: res
 !
     res = 0
-!!$    if (associated(this%gemini_kd)) then
-!!$       res = .nf.(this%gemini_kd)
-!!$    else if (associated(this%specfem_kd)) then
-       res = .nf.(this%specfem_kd)
-!!$    endif
+    if (associated(this%gemini_kd)) then
+       res = .nf.(this%gemini_kd)
+    else if (associated(this%specfem3d_kd)) then
+       res = .nf.(this%specfem3d_kd)
+    else if (associated(this%nexd_kd)) then
+       res = .nf.(this%nexd_kd)
+    endif
   end function getNfKernelDisplacement
 !-------------------------------------------------------------------------
 !> \brief Get current frequency index jfcur
@@ -158,36 +168,118 @@ contains
     integer :: res
 !
     res = 0
-!!$    if (associated(this%gemini_kd)) then
-!!$       res = .jfcur.(this%gemini_kd)
-!!$    else if (associated(this%specfem_kd)) then
-       res = .jfcur.(this%specfem_kd)
-!!$    endif
+    if (associated(this%gemini_kd)) then
+       res = .jfcur.(this%gemini_kd)
+    else if (associated(this%specfem3d_kd)) then
+       res = .jfcur.(this%specfem3d_kd)
+    else if (associated(this%nexd_kd)) then
+       res = .jfcur.(this%nexd_kd)
+    endif
   end function getJfcurKernelDisplacement
 !-------------------------------------------------------------------------
 !> \brief Get pointer to strains
+!! \details Allocate here for the return array ustr (allocation can also be done in the
+!!  method-specific realization of kernelDisplacement). This is done in order to be most flexible,
+!!  not enforcing a method to store a pointer of for ustr inside its kernelDisplacement object. 
+!!  Routines calling getStrainsKernelDisplacement must care for deallocation of pointer ustr!
 !
-  function getStrainsKernelDisplacement(this) result(ustr)
-    type (kernel_displacement), intent(in) :: this
+  subroutine getStrainsKernelDisplacement(this,ustr,errmsg)
+    type (kernel_displacement) :: this
     complex, dimension(:,:), pointer :: ustr
-!!$    if (associated(this%gemini_kd)) then
-!!$       ustr => getStrainsGeminiKernelDisplacement(this%gemini_kd)
-!!$    else if (associated(this%specfem_kd)) then
-       ustr => .strain.(this%specfem_kd)
-!!$    endif
-  end function getStrainsKernelDisplacement
+    type (error_message) :: errmsg
+    character (len=28) :: myname = 'getStrainsKernelDisplacement'
+    ! local
+    complex, dimension(:,:), pointer :: ustr_local
+!
+    if (associated(this%gemini_kd)) then
+       ustr_local => getStrainsGeminiKernelDisplacement(this%gemini_kd)
+       if(.not.associated(ustr_local)) then
+          call add(errmsg,2,"no kernel displacement strains were returned by function getStrainsGeminiKernelDisplacement",myname)
+          return
+       end if
+    else if (associated(this%specfem3d_kd)) then
+       ustr_local => getStrainsSpecfem3dKernelDisplacement(this%specfem3d_kd)
+       if(.not.associated(ustr_local)) then
+          call add(errmsg,2,"no kernel displacement strains were returned by function getStrainsSpecfem3dKernelDisplacement",myname)
+          return
+       end if
+    else if (associated(this%nexd_kd)) then
+       ustr_local => getStrainsNexdKernelDisplacement(this%nexd_kd)
+       if(.not.associated(ustr_local)) then
+          call add(errmsg,2,"no kernel displacement strains were returned by function getStrainsNexdKernelDisplacement",myname)
+          return
+       end if
+    endif
+    allocate(ustr(size(ustr_local,1),size(ustr_local,2)))
+    ustr = ustr_local
+  end subroutine getStrainsKernelDisplacement
+!-------------------------------------------------------------------------
+!> \brief Get unit factor of strains
+!
+  subroutine getUnitFactorStrainsKernelDisplacement(this,uf_ustr,errmsg)
+    type (kernel_displacement) :: this
+    real :: uf_ustr
+    type (error_message) :: errmsg
+    if (associated(this%gemini_kd)) then
+       call getUnitFactorStrainsGeminiKernelDisplacement(this%gemini_kd,uf_ustr)
+    else if (associated(this%specfem3d_kd)) then
+       call getUnitFactorStrainsSpecfem3dKernelDisplacement(this%specfem3d_kd,uf_ustr,errmsg)
+    else if (associated(this%nexd_kd)) then
+       call getUnitFactorStrainsNexdKernelDisplacement(this%nexd_kd,uf_ustr)
+    end if
+  end subroutine getUnitFactorStrainsKernelDisplacement
 !-------------------------------------------------------------------------
 !> \brief Get pointer to displacements
+!! \details Allocate here for the return array u (allocation can also be done in the
+!!  method-specific realization of kernelDisplacement). This is done in order to be most flexible,
+!!  not enforcing a method to store a pointer of for u inside its kernelDisplacement object. 
+!!  Routines calling getKernelDisplacement must care for deallocation of pointer u!
 !
-  function getKernelDisplacement(this) result(u)
-    type (kernel_displacement), intent(in) :: this
+  subroutine getKernelDisplacement(this,u,errmsg)
+    type (kernel_displacement) :: this
     complex, dimension(:,:), pointer :: u
-!!$    if (associated(this%gemini_kd)) then
-!!$       u => getGeminiKernelDisplacement(this%gemini_kd)
-!!$    else if (associated(this%specfem_kd)) then
-       u => .disp.(this%specfem_kd)
-!!$    endif
-  end function getKernelDisplacement
+    type (error_message) :: errmsg
+    character (len=21) :: myname = 'getKernelDisplacement'
+    ! local
+    complex, dimension(:,:), pointer :: u_local
+!
+    if (associated(this%gemini_kd)) then
+       u_local => getGeminiKernelDisplacement(this%gemini_kd)
+       if(.not.associated(u_local)) then
+          call add(errmsg,2,"no kernel displacement values were returned by function getGeminiKernelDisplacement",myname)
+          return
+       end if
+    else if (associated(this%specfem3d_kd)) then
+       u_local => getSpecfem3dKernelDisplacement(this%specfem3d_kd)
+       if(.not.associated(u_local)) then
+          call add(errmsg,2,"no kernel displacement values were returned by function getSpecfem3dKernelDisplacement",myname)
+          return
+       end if
+    else if (associated(this%nexd_kd)) then
+       u_local => getNexdKernelDisplacement(this%nexd_kd)
+       if(.not.associated(u_local)) then
+          call add(errmsg,2,"no kernel displacement values were returned by function getNexdKernelDisplacement",myname)
+          return
+       end if
+    endif
+    allocate(u(size(u_local,1),size(u_local,2)))
+    u = u_local
+  end subroutine getKernelDisplacement
+!-------------------------------------------------------------------------
+!> \brief Get unit factor of displacements
+!
+  subroutine getUnitFactorKernelDisplacement(this,uf_u,errmsg)
+    type (kernel_displacement) :: this
+    real :: uf_u
+    type (error_message) :: errmsg
+    if (associated(this%gemini_kd)) then
+       call getUnitFactorGeminiKernelDisplacement(this%gemini_kd,uf_u)
+    else if (associated(this%specfem3d_kd)) then
+       call getUnitFactorSpecfem3dKernelDisplacement(this%specfem3d_kd,uf_u,errmsg)
+    else if (associated(this%nexd_kd)) then
+       call getUnitFactorNexdKernelDisplacement(this%nexd_kd,uf_u)
+    end if
+  end subroutine getUnitFactorKernelDisplacement
 !-------------------------------------------------------------------------
 !> \brief Iterator over frequencies
 !
@@ -195,11 +287,13 @@ contains
     type (kernel_displacement) :: this
     integer :: jf
     logical :: next
-!!$    if (associated(this%gemini_kd)) then
-!!$       next = nextFrequencyGeminiKernelDisplacement(this%gemini_kd,jf)
-!!$    else if (associated(this%specfem_kd)) then
-       next = nextFrequencySpecfem3dKernelDisplacement(this%specfem_kd,jf)
-!!$    endif
+    if (associated(this%gemini_kd)) then
+       next = nextFrequencyGeminiKernelDisplacement(this%gemini_kd,jf)
+    else if (associated(this%specfem3d_kd)) then
+       next = nextFrequencySpecfem3dKernelDisplacement(this%specfem3d_kd,jf)
+    else if (associated(this%nexd_kd)) then
+       next = nextFrequencyNexdKernelDisplacement(this%nexd_kd,jf)
+    endif
   end function nextFrequencyKernelDisplacement
 !
 end module kernelDisplacement

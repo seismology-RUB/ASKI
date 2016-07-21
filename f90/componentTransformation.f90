@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief Handles definition of and transformation between different components of orthogonal bases (e.g. directions of data components)
 !!
@@ -25,7 +25,7 @@
 !!  transforming C_in to global Cartesian coordinates CX,CY,CZ and then CX,CY,CZ to C_out
 !!
 !! \author Florian Schumacher
-!! \date August 2012
+!! \date Nov 2015
 !
 module componentTransformation
 !
@@ -34,7 +34,7 @@ module componentTransformation
 !
     implicit none
 !
-    private :: indxComponent,number_of_components
+    private :: indxComponent,componentByIndex,number_of_components
 !
     interface createComponentTransformation
        module procedure setCoefficientsCartesianComponentTransformation
@@ -90,13 +90,81 @@ contains
        i = 8
     case ('DOWN') ! local down
        i = 9
-       ! EXAMPLE
-       !	case ('HX') ! "half X" - defines the transformation CX <-> CX/2
-       !		i = 10
+    ! EXAMPLE
+    ! case ('HX') ! "half X" - defines the transformation CX <-> CX/2
+    !    i = 10
     case default
        i = -1
     end select
   end function indxComponent
+!------------------------------------------------------------------------
+!> \brief map internal index to component character MUST BE CONSISTENT WITH function indxComponent
+!! \param i index
+!! \param C component character
+!! \return character (will be '' if index out of range)
+!
+  function componentByIndex(i) result(C)
+    integer, intent(in) :: i
+    character(len=character_length_component) :: C
+    select case (i)
+    case (1) ! Cartesian X (X axis through equator and zero meridian)
+       C = 'CX'
+    case (2) ! Cartesian Y (Y axis through equator and 90 deg East meridian)
+       C ='CY' 
+    case (3) ! Cartesian Z (Z axis through north pole)
+       C ='CZ' 
+    case (4) ! local north
+       C ='N' 
+    case (5) ! local south
+       C = 'S'
+    case (6) ! local east
+       C = 'E'
+    case (7) ! local west
+       C = 'W'
+    case (8) ! local up
+       C = 'UP'
+    case (9) ! local down
+       C = 'DOWN'
+    ! EXAMPLE
+    ! case (10) ! "half X" - defines the transformation CX <-> CX/2
+    !    C = 'HX'
+    case default
+       C = ''
+    end select
+  end function componentByIndex
+!------------------------------------------------------------------------
+!> \brief iterator over all supported components
+  logical function nextComponent(C,reset)
+    character(len=character_length_component) :: C
+    logical, optional :: reset
+    ! local
+    integer :: call_count = 0
+    save :: call_count
+!
+    ! if this iterator is to be reset, do so
+    if(present(reset)) then
+       if(reset) goto 1
+    end if
+!
+    ! increase counter
+    call_count = call_count+1
+!
+    ! if the counter rises above the upper bound, reset this iterator
+    if(call_count > number_of_components) goto 1
+!
+    ! otherwise set the return variable and indicate success
+    C = componentByIndex(call_count)
+    nextComponent = .true.
+!
+    ! IF FUNCTION COMES HERE, RETURN NORMALLY
+    return
+!
+    ! RESET THE ITERATOR
+1   call_count = 0
+    C = ''
+    nextComponent = .false.
+    return
+  end function nextComponent
 !------------------------------------------------------------------------
 !> \brief create transformation coefficients for Cartesian case
 !! \param this component transformation object
@@ -121,7 +189,7 @@ contains
     this%C2XYZ(:,indxComponent('UP'),1) = (/ 0.d0,0.d0,1.d0 /)
     this%C2XYZ(:,indxComponent('DOWN'),1) = (/ 0.d0,0.d0,-1.d0 /)
     ! EXAMPLE
-    !	this%C2XYZ(:,indxComponent('HX'),1) = (/ 2.d0,0.d0,0.d0 /) ! the HX=CX/2-coordinate contributes with factor 2. to CX and  with factor 0. to CY and CZ
+    !    this%C2XYZ(:,indxComponent('HX'),1) = (/ 2.d0,0.d0,0.d0 /) ! the HX=CX/2-coordinate contributes with factor 2. to CX and  with factor 0. to CY and CZ
     !
     ! Set coefficients (i.e. entries of transformation matrices) to transform CX,CY,CZ to a specific (set of) component(s).
     ! Any specific collection of columns of array this%XYZ2C forms THE TRANSPOSE of a transformation matrix from CX,CY,CZ to 
@@ -144,7 +212,7 @@ contains
     this%XYZ2C(:,indxComponent('UP'),1) = (/ 0.d0,0.d0,1.d0 /)
     this%XYZ2C(:,indxComponent('DOWN'),1) = (/ 0.d0,0.d0,-1.d0 /)
     ! EXAMPLE
-    !	this%XYZ2C(:,indxComponent('HX'),1) = (/ 0.5d0,0.d0,0.d0 /) ! X/2 = 0.5*X + 0.*Y + 0.*Z
+    !    this%XYZ2C(:,indxComponent('HX'),1) = (/ 0.5d0,0.d0,0.d0 /) ! X/2 = 0.5*X + 0.*Y + 0.*Z
 !
     this%nstat = 1
   end subroutine setCoefficientsCartesianComponentTransformation
@@ -200,7 +268,7 @@ contains
        this%C2XYZ(:,indxComponent('UP'),istat) = (/ coslat*coslon,coslat*sinlon,sinlat /)
        this%C2XYZ(:,indxComponent('DOWN'),istat) = (/- coslat*coslon,-coslat*sinlon,-sinlat /)
        ! EXAMPLE
-       !		this%C2XYZ(:,indxComponent('HX'),istat) = (/ 2.d0,0.d0,0.d0 /)
+       !    this%C2XYZ(:,indxComponent('HX'),istat) = (/ 2.d0,0.d0,0.d0 /)
        !
        ! Set coefficients (i.e. entries of transformation matrices) to transform CX,CY,CZ to a specific (set of) component(s).
        ! Any specific collection of columns of array this%XYZ2C forms THE TRANSPOSE of a transformation matrix from CX,CY,CZ to 
@@ -223,7 +291,7 @@ contains
        this%XYZ2C(:,indxComponent('UP'),istat) = this%C2XYZ(:,indxComponent('UP'),istat) !(/ coslat*coslon,coslat*sinlon,sinlat /)
        this%XYZ2C(:,indxComponent('DOWN'),istat) = this%C2XYZ(:,indxComponent('DOWN'),istat) !(/ -coslat*coslon,-coslat*sinlon,-sinlat /)
        ! EXAMPLE
-       !		this%XYZ2C(:,indxComponent('HX'),istat) = (/ 0.5d0,0.d0,0.d0 /)
+       !    this%XYZ2C(:,indxComponent('HX'),istat) = (/ 0.5d0,0.d0,0.d0 /)
     enddo ! istat
     this%nstat = nstat
   end subroutine setCoefficientsSphericalComponentTransformation
@@ -376,14 +444,89 @@ contains
 !------------------------------------------------------------------------
 !> \brief check if component character is supported by this module
 !! \param C component character
-!! \param b logical value if C is supported by this module
+!! \param l logical value if C is supported by this module
 !! \return logical value if C is supported by this module
 !
-  function validComponent(C) result(b)
+  function validComponent(C) result(l)
     character(len=*) :: C
-    logical :: b
-    b = indxComponent(C)>0
+    logical :: l
+    l = indxComponent(C)>0
   end function validComponent
+!------------------------------------------------------------------------
+!> \brief check if all of the component names are supported by this module
+!! \param C vector of component names
+!! \param i_invalid optional integer, returns the smmallest index for which a component in C is invalid
+!! \param l logical value if all entries in C are supported by this module
+!! \return logical value if all entries in C are supported by this module
+!
+  function allValidComponents(C,i_invalid) result(l)
+    character(len=*), dimension(:) :: C
+    integer, optional :: i_invalid
+    logical :: l
+    ! local
+    integer :: icomp
+!
+    ! initiate negative result
+    l = .false.
+    if(present(i_invalid)) i_invalid = -1
+!
+    ! technically, if no component is present, then all present components are valid
+    ! however, this might not be intended by the program calling this routine, so return .false.
+    if(size(C)<=0) return
+!
+    do icomp=1,size(C)
+        if(indxComponent(C(icomp))==-1) then
+           if(present(i_invalid)) i_invalid = icomp
+           return
+        end if ! indxComponent(C(icomp))==-1 , i.e. C(icomp) is not valid
+     end do ! icomp
+!
+     ! if function comes here, all components are valid, so return .true.
+     l = .true.
+  end function allValidComponents
+!------------------------------------------------------------------------
+!> \brief check if all of the incoming component names are contained in given components list
+!! \param C_in vector of component names to be checked
+!! \param C_list vector of components
+!! \param indx_map optional mapping: indx_map(indx_in_C_in) = indx_in_C_list
+!! \param l logical value if all entries in C_in are contained in given list of components C_list
+!! \return logical value if all entries in C_in are contained in given list of components C_list
+!
+  function allComponentsContained(C_in,C_list,indx_map) result(l)
+    character(len=*), dimension(:) :: C_in,C_list
+    integer, dimension(:), pointer, optional :: indx_map
+    logical :: l
+    ! local
+    integer :: icomp,jcomp
+!
+    ! initiate negative result
+    l = .false.
+    if(present(indx_map)) nullify(indx_map)
+!
+    ! technically, if no component is present, then all present components are contained in the test list.
+    ! however, this might not be intended by the program calling this routine, so return .false. .
+    ! also return false, if the test list holds no components
+    if(size(C_in)<=0 .or. size(C_list)<=0) return
+!
+    do icomp=1,size(C_in)
+        if(.not.any(C_list==C_in(icomp))) return
+     end do ! icomp
+!
+     ! if function comes here, all components in C_in are contained in given list of components C_list, so return .true.
+     l = .true.
+!
+     if(present(indx_map)) then
+        allocate(indx_map(size(C_in)))
+        do icomp = 1,size(C_in)
+           do jcomp = 1,size(C_list)
+              if(C_in(icomp)==C_list(jcomp)) then
+                 indx_map(icomp) = jcomp
+                 exit
+              end if
+           end do ! jcomp
+        end do ! icomp
+     end if
+  end function allComponentsContained
 !------------------------------------------------------------------------
 ! TODO 
 ! routines to add here:

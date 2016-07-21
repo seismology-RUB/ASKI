@@ -1,21 +1,33 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
+!
+!#########################################################################################
+!#########################################################################################
+!##    W  A  R  N  I  N  G 
+!## 
+!## SUBROUTINE createFaceNeighbourEcartInversionGrid DOES NOT YET WORK CORRECTLY, EVEN 
+!## FOR TET4 CELLS! THERE WERE SOME TEST SETUPS, WHERE THE NEIGHBOUR SEARCH WORKED OUT 
+!## FINE, FOR OTHER SETUPS IT DID NOT WORK OUT (in general, too few neighbours were found,
+!## so maybe a matter of threashold epsilon stuff in the decision processes?!)
+!#########################################################################################
+!#########################################################################################
+!
 !> \brief external Cartesian inversion grid
 !!
 !! \details An inverison grid of type ecartInversionGrid consists of a collection of an arbitrary number of
@@ -42,17 +54,6 @@
 !!
 !! \author Florian Schumacher
 !! \date Jul 2013
-!
-!#########################################################################################
-!#########################################################################################
-!##    W  A  R  N  I  N  G 
-!## 
-!## SUBROUTINE createFaceNeighbourEcartInversionGrid DOES NOT YET WORK CORRECTLY, EVEN 
-!## FOR TET4 CELLS! THERE WERE SOME TEST SETUPS, WHERE THE NEIGHBOUR SEARCH WORKED OUT 
-!## FINE, FOR OTHER SETUPS IT DID NOT WORK OUT (in general, too few neighbours were found,
-!## so maybe a matter of threashold epsilon stuff in the decision processes?!)
-!#########################################################################################
-!#########################################################################################
 !
 module ecartInversionGrid
 !
@@ -98,12 +99,63 @@ module ecartInversionGrid
      ! COORDINATES SPECIFICATION FOR VTK OUTPUT
      logical :: apply_vtk_coords_scaling_factor
      real :: vtk_coords_scaling_factor
+     integer :: vtk_geometry_type_int = -1 !< type of vtk geometry:  0 = volumetric cells , 1 = cell center points
      ! in the future: there could be flags in parameter file like: DONT_SMOOTH_LAYER_BOUNDARIES, 
      ! or SMOOTHING_BOUNDARY_CONDITIONS which could be taken into account here, and memorized for better handling 
      ! of smoothing conditions in calls to certain routines below
   end type ecart_inversion_grid
 !
 contains
+!------------------------------------------------------------------------
+!> \brief logical return whether this ecart_inversion_grid is able to transform points (of given coords type) to vtk plot projection
+!
+  function canTransformToVtkPointsOutsideEcartInversionGrid(this,coords_type) result(l)
+    type(ecart_inversion_grid) :: this
+    character(len=*) :: coords_type
+    logical :: l
+    ! the ecart_inversion_grid has capability to transform any points to vtk,
+    ! provided the object is defined
+    l = this%is_defined
+  end function canTransformToVtkPointsOutsideEcartInversionGrid
+!------------------------------------------------------------------------
+!> \brief get unit factor of the volume element
+!! \param this ecart inversion grid
+!! \param uf_wp unit factor of wavefield points
+!! \param uf_vol unit factor of volume element (return value of this subroutine)
+!! \param errmsg error message
+!
+  subroutine getUnitFactorOfVolumeElementEcartInversionGrid(this,uf_wp,uf_vol,errmsg)
+    type (ecart_inversion_grid) :: this
+    real :: uf_wp,uf_vol
+    type (error_message) :: errmsg
+    character (len=46) :: myname = 'getUnitFactorOfVolumeElementEcartInversionGrid'
+!
+    call addTrace(errmsg,myname)
+!
+    if(.not.this%is_defined) call add(errmsg,1,"be aware that the inversion grid not yet defined; "//&
+         "however, the unit factor of the volume element can be correctly computed at this point",myname)
+!
+    ! The ecart inversion grid does not assume specific units for its spatial extension but simply 
+    ! assumes that they are the same as for the wavefield point coordinates (which are located inside the
+    ! inversion grid cells only according to their pure numerical values). Hence, for this 3D volumetric
+    ! inversion grid, the volume element has a unit which is the cube of the unit of the wavefield points.
+    uf_vol = uf_wp*uf_wp*uf_wp
+  end subroutine getUnitFactorOfVolumeElementEcartInversionGrid
+!------------------------------------------------------------------------
+!> \brief map vtk geometry type names to integers
+!
+  function intGeometryTypeEcartInversionGrid(vtk_geometry_type_str) result(vtk_geometry_type_int)
+    character(len=*), intent(in) :: vtk_geometry_type_str
+    integer :: vtk_geometry_type_int
+    select case(trim(vtk_geometry_type_str))
+    case('CELLS')
+       vtk_geometry_type_int = 0
+    case('CELL_CENTERS')
+       vtk_geometry_type_int = 1
+    case default
+       vtk_geometry_type_int = -1
+    end select
+  end function intGeometryTypeEcartInversionGrid
 !------------------------------------------------------------------------
 !> \brief create external Cartesian inversion grid
 !! \details the parameter file given, must contain all necessary parameters to define
@@ -126,11 +178,11 @@ contains
     integer :: ios
     ! parfile
     type (input_parameter) :: inpar
-    character (len=80), dimension(10) :: inpar_keys
+    character (len=80), dimension(11) :: inpar_keys
     data inpar_keys/'ECART_INVGRID_FILE_NODES_HEX8', 'SCALE_VTK_COORDS', 'ECART_INVGRID_FILE_NODES_TET4', &
          'ECART_INVGRID_USE_NODES_COMMON', 'ECART_INVGRID_FILE_CELLS_TET4', &
          'ECART_INVGRID_FILE_NEIGHBOURS_IS_BINARY', 'ECART_INVGRID_FILE_NEIGHBOURS', 'ECART_INVGRID_FILE_NODES_COMMON', &
-         'VTK_COORDS_SCALING_FACTOR', 'ECART_INVGRID_FILE_CELLS_HEX8'/
+         'VTK_COORDS_SCALING_FACTOR', 'VTK_GEOMETRY_TYPE', 'ECART_INVGRID_FILE_CELLS_HEX8'/
 !
     call addTrace(errmsg,myname)
     if(this%is_defined) then
@@ -155,6 +207,12 @@ contains
                trim(inpar.sval.'VTK_COORDS_SCALING_FACTOR')//"'",myname)
           goto 1
        end if
+    end if
+!
+    this%vtk_geometry_type_int = intGeometryTypeEcartInversionGrid(inpar.sval.'VTK_GEOMETRY_TYPE')
+    if(this%vtk_geometry_type_int < 0) then
+       call add(errmsg,2,"vtk geometry type '"//trim(inpar.sval.'VTK_GEOMETRY_TYPE')//"' is invalid",myname)
+       goto 1
     end if
 !
     is_binary = lval(inpar,'ECART_INVGRID_FILE_NEIGHBOURS_IS_BINARY',iostat=ios)
@@ -549,6 +607,14 @@ contains
     real, dimension(3) :: p1,p2,p3,p4
     integer, dimension(:), pointer :: idx
     integer, dimension(:), allocatable :: idx_add
+!!$    ! LAPACK SGESVD
+!!$    real, dimension(5,6) :: A_tet4
+!!$    real, dimension(5,7) :: Ab_tet4
+!!$    integer :: LWORK_SGESVD_A_tet4,LWORK_SGESVD_Ab_tet4,INFO
+!!$    integer :: rank_A_tet4,rank_Ab_tet4
+!!$    real, dimension(:),allocatable :: WORK_SGESVD_A_tet4,WORK_SGESVD_Ab_tet4
+!!$    real, dimension(5) :: S_A_tet4,S_Ab_tet4
+!!$    real, dimension(1,1) :: U,VT
     ! Triangle Triangle Test TTT
     real, dimension(3) :: p1_TTT,q1_TTT,r1_TTT,p2_TTT,q2_TTT,r2_TTT,n_TTT
 !
@@ -564,6 +630,7 @@ contains
     allocate(this%face_neighbour(this%ncell))
 !
     eps = epsilon(1.0)
+!!$print *, "eps = ",eps
 !
     ! for all tet4 cells check if the nodes are correctly oriented and the tet is not degenerate
     ! and compute all outward normal vectors of all 4 faces
@@ -614,6 +681,41 @@ contains
 !
 ! prepare values for search below
 !
+!##################################################################################
+!##################################################################################
+! THE FOLLOWING DOES  N O T  WORK!!, (see below
+!!$    ! conduct a workspace query for SGESVD operations on A_tet4
+!!$    A_tet4 = 0.
+!!$    allocate(WORK_SGESVD_A_tet4(1)); LWORK_SGESVD_A_tet4 = -1
+!!$    !SYNTAX: call SGESVD( JOBU, JOBVT, M, N, A, LDA, S, U, LDU, VT, LDVT, WORK, LWORK, INFO )
+!!$    call SGESVD( 'N', 'N', 5 , 6, A_tet4, 5, S_A_tet4, U, 1, VT, 1, WORK_SGESVD_A_tet4, LWORK_SGESVD_A_tet4, INFO )
+!!$    if(INFO/=0) then
+!!$       write(errstr,*) 'workspace query failed: LAPACK routine SGESVD applied to A returned INFO = ',INFO
+!!$       call add(errmsg,2,errstr,myname)
+!!$       goto 1
+!!$    endif ! INFO/=0
+!!$    LWORK_SGESVD_A_tet4 = WORK_SGESVD_A_tet4(1)
+!!$    write(errstr,*) 'optimal size of WORK array for LAPACK routine SGESVD applied to A_tet4 is ',LWORK_SGESVD_A_tet4
+!!$    call add(errmsg,0,errstr,myname)
+!!$    deallocate(WORK_SGESVD_A_tet4); allocate(WORK_SGESVD_A_tet4(LWORK_SGESVD_A_tet4))
+!!$!
+!!$    ! conduct a workspace query for SGESVD operations on Ab_tet4
+!!$    Ab_tet4 = 0.
+!!$    allocate(WORK_SGESVD_Ab_tet4(1)); LWORK_SGESVD_Ab_tet4 = -1
+!!$    !SYNTAX: call SGESVD( JOBU, JOBVT, M, N, A, LDA, S, U, LDU, VT, LDVT, WORK, LWORK, INFO )
+!!$    call SGESVD( 'N', 'N', 5 , 7, Ab_tet4, 5, S_A_tet4, U, 1, VT, 1, WORK_SGESVD_Ab_tet4, LWORK_SGESVD_Ab_tet4, INFO )
+!!$    if(INFO/=0) then
+!!$       write(errstr,*) 'workspace query failed: LAPACK routine SGESVD applied to Ab_tet4 returned INFO = ',INFO
+!!$       call add(errmsg,2,errstr,myname)
+!!$       goto 1
+!!$    endif ! INFO/=0
+!!$    LWORK_SGESVD_Ab_tet4 = WORK_SGESVD_Ab_tet4(1)
+!!$    write(errstr,*) 'optimal size of WORK array for LAPACK routine SGESVD applied to Ab_tet4 is ',LWORK_SGESVD_A_tet4
+!!$    call add(errmsg,0,errstr,myname)
+!!$    deallocate(WORK_SGESVD_Ab_tet4); allocate(WORK_SGESVD_Ab_tet4(LWORK_SGESVD_Ab_tet4))
+!##################################################################################
+!##################################################################################
+!
     allocate(dot(4*this%ncell_tet4),is_potential_neighbour_face(4*this%ncell_tet4))
 !
     ! now loop on all cells and chech each face
@@ -646,14 +748,218 @@ contains
              call SGEMV('N',4*this%ncell_tet4,3,1.,outward_normal_tet4,4*this%ncell_tet4,&
                   outward_normal_tet4((icell_tet4-1)*4+iface,:),1,0.,dot,1)
 !
+!!$if(icell==3) then
+!!$print *, "cell 1, face = ",iface,", dot product with cell 6 faces:"
+!!$print *, "   cell 6 face 1: ",dot(21)
+!!$print *, "   cell 6 face 2: ",dot(22)
+!!$print *, "   cell 6 face 3: ",dot(23)
+!!$print *, "   cell 6 face 4: ",dot(24)
+!!$print *, "cell 3, face = ",iface,", dot product with cell 5 faces:"
+!!$print *, "   cell 5 face 1: ",dot(17)
+!!$print *, "   cell 5 face 2: ",dot(18)
+!!$print *, "   cell 5 face 3: ",dot(19)
+!!$print *, "   cell 5 face 4: ",dot(20)
+!!$print *, "cell 3, face = ",iface,", dot product with cell 12 faces:"
+!!$print *, "   cell 12 face 1: ",dot(45)
+!!$print *, "   cell 12 face 2: ",dot(46)
+!!$print *, "   cell 12 face 3: ",dot(47)
+!!$print *, "   cell 12 face 4: ",dot(48)
+!!$end if
+!
              ! is_potential_neighbour_face = dot == - 1. .and. origin_distance_tet4_test == -origin_distance_tet4((icell_tet4-1)*4+iface)
              ! use 3* machine-epsilon as treshold here, as dot product included 3 multiplications
              is_potential_neighbour_face = abs(dot + 1.) < 3*eps .and. &
                   abs(origin_distance_tet4 + origin_distance_tet4_test) < 3*eps
              nnb_potential = count(is_potential_neighbour_face)
+!print *, "cell ",icell_tet4,", face ",iface,", potential neighbours ",nnb_potential
              if(nnb_potential == 0) cycle
 !
+!
 !##################################################################################
+!##################################################################################
+! THE FOLLOWING DOES  N O T  WORK!!,
+! as the set of points under consideration is actually NOT the 2D-convex hulls
+! since it cannot be assured that the solution vectors contain strictly positive
+! values. For triangles in the same plane, there can be a neighbour detection
+! even if the triangles do not overlap (in this case the linear system Ax=b might
+! have solutions, but negative ones!)
+!##################################################################################
+!##################################################################################
+!
+!!$             ! now select from potential neighbours the real neighbours by removing those, which are no neighbours
+!!$             ! do this by investigating, if the linear system Ax=b has a solution, whereby
+!!$             ! 
+!!$             !     ( p1 | p2 | p3 | -q1 | -q2 | -q3 )
+!!$             ! A = ( 1. | 1. | 1. |  0. |  0. |  0. ) , b = ( 0. , 0., 0., 1., 1.) , 
+!!$             !     ( 0. | 0. | 0. |  1. |  1. |  1. )
+!!$             !
+!!$             ! p1,p2,p3 are column vectors of corners of this current face, q1,q2,q3 are column vectors of corners of potential neighbour face
+!!$             !
+!!$             ! IF SYSTEM Ax=b HAS A SOLUTION, IT MEANS THAT THE 2D-CONVEX HULLS CREATED BY THE CORNERS OF BOTH FACES (i.e. the face surfaces)
+!!$             ! HAVE COMMON POINTS, i.e. OVERLAP, HENCE THE TWO FACES ARE NEIGHBOURING FACES
+!!$             !
+!!$             ! use the following criterion: Ax=b has a solution if and oly if rank(A)==rank(A,b), where A,b is the matrix A with additional column b
+!!$!
+!!$             allocate(idx_add(nnb_potential))
+!!$             idx_add = pack( (/ (j,j=1,4*this%ncell_tet4) /) , is_potential_neighbour_face )
+!!$             nnb_add = nnb_potential
+!!$             do inb = 1,nnb_potential
+!!$                ! initiate values for A_tet4, Ab_tet4 which are independent of any points
+!!$                A_tet4(4,:) = (/ 1., 1., 1., 0., 0., 0. /)
+!!$                A_tet4(5,:) = (/ 0., 0., 0., 1., 1., 1. /)
+!!$                Ab_tet4(4,1:6) = (/ 1., 1., 1., 0., 0., 0. /) ! 4th,5th row of A
+!!$                Ab_tet4(5,1:6) = (/ 0., 0., 0., 1., 1., 1. /)
+!!$                Ab_tet4(:,7) = (/ 0., 0., 0., 1., 1. /) ! rhs-vector b in column 7 of Ab_tet4
+!!$                ! put corner points of the current face into matrices A and Ab, rows 1,2,3 / columns 1,2,3
+!!$                select case(iface)
+!!$                case(1)
+!!$                   A_tet4(1:3,1) = p2; Ab_tet4(1:3,1) = p2
+!!$                   A_tet4(1:3,2) = p4; Ab_tet4(1:3,2) = p4
+!!$                   A_tet4(1:3,3) = p3; Ab_tet4(1:3,3) = p3
+!!$                case(2)
+!!$                   A_tet4(1:3,1) = p1; Ab_tet4(1:3,1) = p1
+!!$                   A_tet4(1:3,2) = p3; Ab_tet4(1:3,2) = p3
+!!$                   A_tet4(1:3,3) = p4; Ab_tet4(1:3,3) = p4
+!!$                case(3)
+!!$                   A_tet4(1:3,1) = p1; Ab_tet4(1:3,1) = p1
+!!$                   A_tet4(1:3,2) = p4; Ab_tet4(1:3,2) = p4
+!!$                   A_tet4(1:3,3) = p2; Ab_tet4(1:3,3) = p2
+!!$                case(4)
+!!$                   A_tet4(1:3,1) = p1; Ab_tet4(1:3,1) = p1
+!!$                   A_tet4(1:3,2) = p2; Ab_tet4(1:3,2) = p2
+!!$                   A_tet4(1:3,3) = p3; Ab_tet4(1:3,3) = p3
+!!$                end select ! case iface
+!!$                ! put corner points of this potential neighbour face into matrices A and Ab, rows 1,2,3 / columns 4,5,6
+!!$                select case(mod(idx_add(inb),4))
+!!$                case(1) ! means face 1
+!!$                   jcell_tet4 = idx_add(inb)/4 + 1 ! tet4 cell index of cell, to which this face belongs
+!!$                   A_tet4(1:3,4) = - this%point(:,this%cell_tet4(2,jcell_tet4))
+!!$                   A_tet4(1:3,5) = - this%point(:,this%cell_tet4(4,jcell_tet4))
+!!$                   A_tet4(1:3,6) = - this%point(:,this%cell_tet4(3,jcell_tet4))
+!!$                   Ab_tet4(1:3,4) = A_tet4(1:3,4)
+!!$                   Ab_tet4(1:3,5) = A_tet4(1:3,5)
+!!$                   Ab_tet4(1:3,6) = A_tet4(1:3,6)
+!!$                case(2) ! means face 2
+!!$                   jcell_tet4 = idx_add(inb)/4 + 1 ! tet4 cell index of cell, to which this face belongs
+!!$                   A_tet4(1:3,4) = - this%point(:,this%cell_tet4(1,jcell_tet4))
+!!$                   A_tet4(1:3,5) = - this%point(:,this%cell_tet4(3,jcell_tet4))
+!!$                   A_tet4(1:3,6) = - this%point(:,this%cell_tet4(4,jcell_tet4))
+!!$                   Ab_tet4(1:3,4) = A_tet4(1:3,4)
+!!$                   Ab_tet4(1:3,5) = A_tet4(1:3,5)
+!!$                   Ab_tet4(1:3,6) = A_tet4(1:3,6)
+!!$                case(3) ! means face 3
+!!$                   jcell_tet4 = idx_add(inb)/4 + 1 ! tet4 cell index of cell, to which this face belongs
+!!$                   A_tet4(1:3,4) = - this%point(:,this%cell_tet4(1,jcell_tet4))
+!!$                   A_tet4(1:3,5) = - this%point(:,this%cell_tet4(4,jcell_tet4))
+!!$                   A_tet4(1:3,6) = - this%point(:,this%cell_tet4(2,jcell_tet4))
+!!$                   Ab_tet4(1:3,4) = A_tet4(1:3,4)
+!!$                   Ab_tet4(1:3,5) = A_tet4(1:3,5)
+!!$                   Ab_tet4(1:3,6) = A_tet4(1:3,6)
+!!$                case(0) ! means face 4, as in that case the index on all faces is a multiple of 4
+!!$                   jcell_tet4 = idx_add(inb)/4 ! tet4 cell index of cell, to which this face belongs
+!!$                   A_tet4(1:3,4) = - this%point(:,this%cell_tet4(1,jcell_tet4))
+!!$                   A_tet4(1:3,5) = - this%point(:,this%cell_tet4(2,jcell_tet4))
+!!$                   A_tet4(1:3,6) = - this%point(:,this%cell_tet4(3,jcell_tet4))
+!!$                   Ab_tet4(1:3,4) = A_tet4(1:3,4)
+!!$                   Ab_tet4(1:3,5) = A_tet4(1:3,5)
+!!$                   Ab_tet4(1:3,6) = A_tet4(1:3,6)
+!!$                end select
+!!$!
+!!$                ! compute rank of A_tet4
+!!$                call SGESVD( 'N', 'N', 5 , 6, A_tet4, 5, S_A_tet4, U, 1, VT, 1, WORK_SGESVD_A_tet4, LWORK_SGESVD_A_tet4, INFO )
+!!$                if(INFO/=0) then
+!!$                   j = mod(idx_add(inb),4); if(j==0) j=4
+!!$                   write(errstr,*) "computation of singular values of A_tet4 failed comparing ",iface,"'th face of ",&
+!!$                        icell,"'th cell and ",j,"'th face of ",this%iglob_tet4(jcell_tet4),&
+!!$                        "'th cell: SGESVD returned INFO = ",INFO
+!!$                   call add(errmsg,2,errstr,myname)
+!!$                   goto 1
+!!$                endif ! INFO/=0
+!!$                ! apply the same criterion as matlab-2013-a does
+!!$                !rank_A_tet4 = count(S_A_tet4 >= S_A_tet4(1)*7.*eps)
+!!$                rank_A_tet4 = count(S_A_tet4 >= S_A_tet4(1)*7.e-5)
+!!$!
+!!$                ! compute rank of Ab_tet4
+!!$                call SGESVD( 'N', 'N', 5 , 7, Ab_tet4, 5, S_Ab_tet4, U, 1, VT, 1, WORK_SGESVD_Ab_tet4, LWORK_SGESVD_Ab_tet4, INFO )
+!!$                if(INFO/=0) then
+!!$                   j = mod(idx_add(inb),4); if(j==0) j=4
+!!$                   write(errstr,*) "computation of singular values of Ab_tet4 failed comparing ",iface,"'th face of ",&
+!!$                        icell,"'th cell and ",j,"'th face of ",this%iglob_tet4(jcell_tet4),&
+!!$                        "'th cell: SGESVD returned INFO = ",INFO
+!!$                   call add(errmsg,2,errstr,myname)
+!!$                   goto 1
+!!$                endif ! INFO/=0
+!!$                ! apply the same criterion as matlab-2013-a does:
+!!$                !rank_Ab_tet4 = count(S_Ab_tet4 >= S_Ab_tet4(1)*7.*eps)
+!!$                rank_Ab_tet4 = count(S_Ab_tet4 >= S_Ab_tet4(1)*7.e-5)
+!!$!
+!!$if(icell==3) then
+!!$if(idx_add(inb)==17) then
+!!$print *, "cell 3, face ",iface,", SVD with cell 5 face 1:"
+!!$print *, rank_A_tet4," S_A",S_A_tet4
+!!$print *, rank_Ab_tet4," S_Ab",S_Ab_tet4
+!!$end if
+!!$if(idx_add(inb)==18) then
+!!$print *, "cell 3, face ",iface,", SVD with cell 5 face 2:"
+!!$print *, rank_A_tet4," S_A",S_A_tet4
+!!$print *, rank_Ab_tet4," S_Ab",S_Ab_tet4
+!!$end if
+!!$if(idx_add(inb)==19) then
+!!$print *, "cell 3, face ",iface,", SVD with cell 5 face 3:"
+!!$print *, rank_A_tet4," S_A",S_A_tet4
+!!$print *, rank_Ab_tet4," S_Ab",S_Ab_tet4
+!!$end if
+!!$if(idx_add(inb)==20) then
+!!$print *, "cell 3, face ",iface,", SVD with cell 5 face 4:"
+!!$print *, rank_A_tet4," S_A",S_A_tet4
+!!$print *, rank_Ab_tet4," S_Ab",S_Ab_tet4
+!!$end if
+!!$if(idx_add(inb)==45) then
+!!$print *, "cell 3, face ",iface,", SVD with cell 12 face 1:"
+!!$print *, rank_A_tet4," S_A",S_A_tet4
+!!$print *, rank_Ab_tet4," S_Ab",S_Ab_tet4
+!!$end if
+!!$if(idx_add(inb)==46) then
+!!$print *, "cell 3, face ",iface,", SVD with cell 12 face 2:"
+!!$print *, rank_A_tet4," S_A",S_A_tet4
+!!$print *, rank_Ab_tet4," S_Ab",S_Ab_tet4
+!!$end if
+!!$if(idx_add(inb)==47) then
+!!$print *, "cell 3, face ",iface,", SVD with cell 12 face 3:"
+!!$print *, rank_A_tet4," S_A",S_A_tet4
+!!$print *, rank_Ab_tet4," S_Ab",S_Ab_tet4
+!!$end if
+!!$if(idx_add(inb)==48) then
+!!$print *, "cell 3, face ",iface,", SVD with cell 12 face 4:"
+!!$print *, rank_A_tet4," S_A",S_A_tet4
+!!$print *, rank_Ab_tet4," S_Ab",S_Ab_tet4
+!!$end if
+!!$endif ! icell== 3
+!!$!print *, "S_A",S_A_tet4
+!!$!print *, "S_Ab",S_Ab_tet4
+!!$                if(rank_A_tet4 == rank_Ab_tet4 .and. rank_A_tet4 > 0 .and. rank_A_tet4 <=4) then
+!!$                   idx_add(inb) = this%iglob_tet4(jcell_tet4)
+!!$                   ! check if this neighbour cell was already found (might happen, if edge neighbours are detected)
+!!$                   if(associated(idx)) then
+!!$                      if(any(idx == idx_add(inb))) then
+!!$                         idx_add(inb) = -1
+!!$                         nnb_add = nnb_add - 1
+!!$                      end if
+!!$                   end if
+!!$                else
+!!$                   idx_add(inb) = -1
+!!$                   nnb_add = nnb_add - 1
+!!$                end if
+!!$             end do ! inb
+!##################################################################################
+!##################################################################################
+! THE ABOVE DOES  N O T  WORK!!, see above
+!##################################################################################
+!##################################################################################
+!
+!
+!##################################################################################
+! INSTEAD
 ! follow the approach of testing signed areas of triangles which are spanned by 
 ! one point of the first tri face and an edge of the other tri face
 ! as described in section 4 of paper
@@ -691,11 +997,21 @@ contains
              allocate(idx_add(nnb_potential))
              idx_add = pack( (/ (j,j=1,4*this%ncell_tet4) /) , is_potential_neighbour_face )
              nnb_add = nnb_potential
+!!$if(icell==56 .and. iface==3) then
+!!$print *, "##########################################################################"
+!!$print *, "##########################################################################"
+!!$print *,"icell==56, iface ",iface,"; n_TT = ",n_TTT,", idx_add = ",idx_add
+!!$print *, "p1 = ",p1_TTT
+!!$print *, "q1 = ",q1_TTT
+!!$print *, "r1 = ",r1_TTT
+!!$end if
 !
              ! loop on all potential neighbour tri faces (for which already was assured that they are 
              ! in the same plane and have the correct "outside" direction") and check if the potential triangle (tri2)
              ! overlaps with triangle p1_TTT,q1_TTT,r1_TTT (tri1)
              do inb = 1,nnb_potential
+!!$             do inb = 1,1!nnb_potential,nnb_potential !! FS FS
+!!$             do inb = nnb_potential,nnb_potential !! FS FS
 !
                 ! select the respective corners of tri2, BUT with changed orientation:
                 ! for the algorithm in the paper, we need an anticlockwise orientation in the SAME
@@ -709,11 +1025,23 @@ contains
                    p2_TTT = this%point(:,this%cell_tet4(2,jcell_tet4))
                    q2_TTT = this%point(:,this%cell_tet4(3,jcell_tet4)) !, note the different orientation compared with tri1, interchange two indices
                    r2_TTT = this%point(:,this%cell_tet4(4,jcell_tet4))
+!!$if(icell==56 .and. iface==1) then
+!!$print *, "   inb = ",inb," is face 1"
+!!$print *, "   p2 = ",p2_TTT
+!!$print *, "   q2 = ",q2_TTT
+!!$print *, "   r2 = ",r2_TTT
+!!$endif
                 case(2) ! means face 2
                    jcell_tet4 = idx_add(inb)/4 + 1 ! tet4 cell index of cell, to which this face belongs
                    p2_TTT = this%point(:,this%cell_tet4(1,jcell_tet4))
                    q2_TTT = this%point(:,this%cell_tet4(4,jcell_tet4))
                    r2_TTT = this%point(:,this%cell_tet4(3,jcell_tet4))
+!!$if(icell==56 .and. iface==1 .and.idx_add(inb)==170) then
+!!$print *, "   inb = ",inb," is face 2"
+!!$print *, "   p2 = ",p2_TTT
+!!$print *, "   q2 = ",q2_TTT
+!!$print *, "   r2 = ",r2_TTT
+!!$endif
                 case(3) ! means face 3
                    jcell_tet4 = idx_add(inb)/4 + 1 ! tet4 cell index of cell, to which this face belongs
                    p2_TTT = this%point(:,this%cell_tet4(1,jcell_tet4))
@@ -724,6 +1052,12 @@ contains
                    p2_TTT = this%point(:,this%cell_tet4(1,jcell_tet4))
                    q2_TTT = this%point(:,this%cell_tet4(3,jcell_tet4))
                    r2_TTT = this%point(:,this%cell_tet4(2,jcell_tet4))
+!!$if(icell==56 .and. iface==3 .and.idx_add(inb)==172) then
+!!$print *, "   inb = ",inb," is face 4"
+!!$print *, "   p2 = ",p2_TTT
+!!$print *, "   q2 = ",q2_TTT
+!!$print *, "   r2 = ",r2_TTT
+!!$endif
                 end select
 !
              select case(locateP1TTTEcartInversionGrid(p1_TTT,p2_TTT,q2_TTT,r2_TTT,n_TTT))
@@ -739,6 +1073,13 @@ contains
                 call add(errmsg,2,errstr,myname)
                 goto 1
              case(0)
+!!$if(icell==56 .and. iface==3 .and.idx_add(inb)==172) then
+!!$print *, "locate P1 TTT is 0 and"
+!!$print *, "new p1 = ",p1_TTT
+!!$print *, "new p2 = ",p2_TTT
+!!$print *, "new q2 = ",q2_TTT
+!!$print *, "new r2 = ",r2_TTT
+!!$endif
                 ! locate = 0 means that p1_TTT is strictly inside tri2, hence tri1 and tri2 overlap, so are truely neighbours
                 ! so mark it as a neighbour
                 idx_add(inb) = this%iglob_tet4(jcell_tet4)
@@ -749,8 +1090,16 @@ contains
                    end if
                 end if
              case(1)
+!!$if(icell==56 .and. iface==3 .and.idx_add(inb)==172) then
+!!$print *, "locate P1 TTT is 1 and"
+!!$print *, "new p1 = ",p1_TTT
+!!$print *, "new p2 = ",p2_TTT
+!!$print *, "new q2 = ",q2_TTT
+!!$print *, "new r2 = ",r2_TTT
+!!$endif
                 ! use decision tree "p1_TTT in R1" (confer paper, Figure 9) to evaluate if tris overlap
                 if(overlapR1TTTEcartInversionGrid(p1_TTT,q1_TTT,r1_TTT,p2_TTT,r2_TTT,n_TTT)) then
+!print *, "and overlap R1 is true"
                    idx_add(inb) = this%iglob_tet4(jcell_tet4)
                    if(associated(idx)) then
                       if(any(idx == idx_add(inb))) then
@@ -759,13 +1108,22 @@ contains
                       end if
                    end if
                 else
+!print *, "and overlap R1 is false"
                    ! if not, remove this neighbour tri face from list of potential neighbours
                    idx_add(inb) = -1    
                    nnb_add = nnb_add - 1
                 end if
              case(2)
+!!$if(icell==56 .and. iface==3 .and.idx_add(inb)==172) then
+!!$print *, "locate P1 TTT is 2 and"
+!!$print *, "new p1 = ",p1_TTT
+!!$print *, "new p2 = ",p2_TTT
+!!$print *, "new q2 = ",q2_TTT
+!!$print *, "new r2 = ",r2_TTT
+!!$endif
                 ! use decision tree "p1_TTT in in R2" (confer paper, Figure 10) to evaluate if tris overlap
                 if(overlapR2TTTEcartInversionGrid(p1_TTT,q1_TTT,r1_TTT,p2_TTT,q2_TTT,r2_TTT,n_TTT)) then
+!print *, "and overlap R2 is true"
                    idx_add(inb) = this%iglob_tet4(jcell_tet4)
                    if(associated(idx)) then
                       if(any(idx == idx_add(inb))) then
@@ -774,14 +1132,17 @@ contains
                       end if
                    end if
                 else
+!print *, "and overlap R2 is false"
                    ! if not, remove this neighbour tri face from list of potential neighbours
                    idx_add(inb) = -1    
                    nnb_add = nnb_add - 1
                 end if
              end select
 !
+!if(icell==56 .and. iface==3.and.inb==2) stop
           end do ! inb
 !
+!print *, "nnb_add = ",nnb_add
           if(nnb_add>0) then
                 idx => reallocate(idx,nnb+nnb_add)
                 if(nnb_add<nnb_potential) then
@@ -792,6 +1153,7 @@ contains
                 nnb = nnb + nnb_add
              end if
              deallocate(idx_add)
+!if(icell==56 .and. iface==3) stop
           end do ! iface
           call associateVectorPointer(this%face_neighbour(icell),idx); nullify(idx)
        case(8); cycle
@@ -802,6 +1164,8 @@ contains
     if(allocated(origin_distance_tet4)) deallocate(origin_distance_tet4)
     if(allocated(dot)) deallocate(dot)
     if(allocated(is_potential_neighbour_face)) deallocate(is_potential_neighbour_face)
+!!$    if(allocated(WORK_SGESVD_A_tet4)) deallocate(WORK_SGESVD_A_tet4)
+!!$    if(allocated(WORK_SGESVD_Ab_tet4)) deallocate(WORK_SGESVD_Ab_tet4)
     if(allocated(idx_add)) deallocate(idx_add)
   end subroutine createFaceNeighbourEcartInversionGrid
 !------------------------------------------------------------------------
@@ -1219,6 +1583,7 @@ contains
     this%ncell_hex8 = 0
     if(associated(this%cell_hex8)) deallocate(this%cell_hex8)
     if(associated(this%iglob_hex8)) deallocate(this%iglob_hex8)
+    this%vtk_geometry_type_int = -1
     this%is_defined = .false.
   end subroutine deallocateEcartInversionGrid
 !------------------------------------------------------------------------
@@ -1263,9 +1628,10 @@ contains
 !------------------------------------------------------------------------
 !> \brief return geometry information on cells for vtk output
 !
-  subroutine getGeometryVtkEcartInversionGrid(this,points,cell_connectivity,cell_type,cell_indx_out,errmsg,&
-       cell_indx_req,indx_map_out)
+  subroutine getGeometryVtkEcartInversionGrid(this,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,&
+       errmsg,cell_indx_req,indx_map_out)
     type (ecart_inversion_grid) :: this
+    integer :: geometry_type
     integer, dimension(:), optional :: cell_indx_req
     ! outgoing
     real, dimension(:,:), pointer :: points
@@ -1277,6 +1643,7 @@ contains
     character(len=400) :: errstr
     integer :: size_cell_indx_req,i,ncell_return,icell,jcell,ncell_con
     logical, dimension(:), allocatable :: valid_non_duplicate_cell_indx_req
+    real :: xc,yc,zc
 !
     call addTrace(errmsg,myname)
 !
@@ -1338,42 +1705,57 @@ contains
 !
     end if ! present(cell_indx_req)
 !
-    ! return all points, regardless of cell_idx_req
-    allocate(points(3,this%npoint)); points = this%point
+    select case(this%vtk_geometry_type_int)
+    case(0) ! CELLS
+       ! return all points, regardless of cell_idx_req
+       allocate(points(3,this%npoint)); points = this%point
 !
-    ! define cell_type array
-    allocate(cell_type(ncell_return))
-    where(this%ctype(cell_indx_out) == 4)
-       cell_type = 10
-    end where
-    where(this%ctype(cell_indx_out) == 8)
-       cell_type = 12
-    end where
+       ! define cell_type array
+       allocate(cell_type(ncell_return))
+       where(this%ctype(cell_indx_out) == 4)
+          cell_type = 10
+       end where
+       where(this%ctype(cell_indx_out) == 8)
+          cell_type = 12
+       end where
 !
-    ! define cell_connectivity by looping over cell_indx_out and adding respective point indices
-    ncell_con = ncell_return + 4*count(cell_type == 10) + 8*count(cell_type == 12)
-    allocate(cell_connectivity(ncell_con))
+       ! define cell_connectivity by looping over cell_indx_out and adding respective point indices
+       ncell_con = ncell_return + 4*count(cell_type == 10) + 8*count(cell_type == 12)
+       allocate(cell_connectivity(ncell_con))
 !
-    ! loop on cell_indx_out
-    ncell_con = 0 ! reset counter on entries in connectivity array
-    do icell = 1,ncell_return; jcell = cell_indx_out(icell)
-       select case(this%ctype(jcell))
-       case(4)
-          ! first store number of point indices to come for this cell
-          ncell_con=ncell_con+1; cell_connectivity(ncell_con) = 4
-          ! define the required points for the cell type of this cell (4-node tetrahedron)
-          ! indices in vtk files have offset 0, so always store ipoint -1
-          cell_connectivity(ncell_con+1:ncell_con+4) = this%cell_tet4(:,this%icell_type(jcell)) - 1
-          ncell_con = ncell_con + 4
-       case(8)
-          ! first store number of point indices to come for this cell
-          ncell_con=ncell_con+1; cell_connectivity(ncell_con) = 8
-          ! define the required points for the cell type of this cell (8-node hexahedron)
-          ! indices in vtk files have offset 0, so always store ipoint -1
-          cell_connectivity(ncell_con+1:ncell_con+8) = this%cell_hex8(:,this%icell_type(jcell)) - 1
-          ncell_con = ncell_con + 8
-       end select
-    end do ! icell
+       ! loop on cell_indx_out
+       ncell_con = 0 ! reset counter on entries in connectivity array
+       do icell = 1,ncell_return; jcell = cell_indx_out(icell)
+          select case(this%ctype(jcell))
+          case(4)
+             ! first store number of point indices to come for this cell
+             ncell_con=ncell_con+1; cell_connectivity(ncell_con) = 4
+             ! define the required points for the cell type of this cell (4-node tetrahedron)
+             ! indices in vtk files have offset 0, so always store ipoint -1
+             cell_connectivity(ncell_con+1:ncell_con+4) = this%cell_tet4(:,this%icell_type(jcell)) - 1
+             ncell_con = ncell_con + 4
+          case(8)
+             ! first store number of point indices to come for this cell
+             ncell_con=ncell_con+1; cell_connectivity(ncell_con) = 8
+             ! define the required points for the cell type of this cell (8-node hexahedron)
+             ! indices in vtk files have offset 0, so always store ipoint -1
+             cell_connectivity(ncell_con+1:ncell_con+8) = this%cell_hex8(:,this%icell_type(jcell)) - 1
+             ncell_con = ncell_con + 8
+          end select
+       end do ! icell
+       geometry_type = 0
+!
+    case(1) ! CELL CENTERS
+       ! do not define arrays cell_connectivity and cell_type in this case. Only return points as cell centers
+       allocate(points(3,ncell_return))
+       do icell = 1,ncell_return
+          call getCenterCellEcartInversionGrid(this,cell_indx_out(icell),xc,yc,zc)
+          points(1,icell) = xc
+          points(2,icell) = yc
+          points(3,icell) = zc
+       end do ! icell
+       geometry_type = 1
+    end select ! this%vtk_geometry_type
 !
     if(this%apply_vtk_coords_scaling_factor) then
        points = points*this%vtk_coords_scaling_factor
@@ -1523,6 +1905,12 @@ contains
     allocate(idx_wp_inside(nwp_inside),dot(nwp_inside))
     idx_wp_inside = (/ (i,i=1,nwp_inside) /)
 !
+!!$print *, "tet4 cell ",icell_tet4," p1,p2,p3,p4 = "
+!!$print *, p1
+!!$print *, p2
+!!$print *, p3
+!!$print *, p4
+!
     ! FOR ALL FACES DO:
     !
     !   * SELECT ALL THOSE INDICES, FOR WHICH WAVEFIELD POINTS LIE ON THE "INSIDE"-SIDE OF THE FACE:
@@ -1545,31 +1933,39 @@ contains
           outward_direction = vectorProductEcartInversionGrid(p3-p2,p4-p2)
           ! dot_correction = dot(n,p), p2 is on the face (see comment above do loop)
           dot_correction = sum(outward_direction*p2)
+!!$print *, "face 1: outward_direction = ",outward_direction," dot_correction = ",dot_correction
        case(2)
           ! second face (opposite node p2, outward normal is vector product of vectors p4-p1 and p3-p1)
           outward_direction = vectorProductEcartInversionGrid(p4-p1,p3-p1)
           ! dot_correction = dot(n,p), p1 is on the face (see comment above do loop)
           dot_correction = sum(outward_direction*p1)
+!!$print *, "face 2: outward_direction = ",outward_direction," dot_correction = ",dot_correction
        case(3)
           ! third face (opposite node p3, outward normal is vector product of vectors p2-p1 and p4-p1)
           outward_direction = vectorProductEcartInversionGrid(p2-p1,p4-p1)
           ! dot_correction = dot(n,p), p1 is on the face (see comment above do loop)
           dot_correction = sum(outward_direction*p1)
+!!$print *, "face 3: outward_direction = ",outward_direction," dot_correction = ",dot_correction
        case(4)
           ! fourth face (opposite node p4, outward normal is vector product of vectors p3-p1 and p2-p1)
           outward_direction = vectorProductEcartInversionGrid(p3-p1,p2-p1)
           ! dot_correction = dot(n,p), p1 is on the face (see comment above do loop)
           dot_correction = sum(outward_direction*p1)
+!!$print *, "face 4: outward_direction = ",outward_direction," dot_correction = ",dot_correction
        end select
 !
        ! compute dot products of outward_direction with all (remaining) wavefield point vectors by a general matrix-vector product
 !
+!!$do i = 1,size(idx_wp_inside)
+!!$   print *, "wp_coords(idx_wp_inside(i),:) = ",wp_coords(idx_wp_inside(i),:)
+!!$end do
        ! SUBROUTINE SGEMV(TRANS,M,N,ALPHA,A,LDA,X,INCX,BETA,Y,INCY)
        call SGEMV('N',nwp_inside,3,1.,wp_coords(idx_wp_inside,:),nwp_inside,outward_direction,1,0.,dot,1)
        !dot = matmul(wp_coords(idx_wp_inside,:),outward_direction)
 !
        ! dot(n,x') = dot(n,x) - dot(n,p), see comment above do loop
        dot = dot - dot_correction
+!!$print *, "dot = ",dot
 !
        ! throw away all indices for which dot>0 (the respective points are located strictly outside the tet)
        nwp_inside = count(dot<=0)
@@ -1586,9 +1982,11 @@ contains
     ! if program comes here, nwp_inside>0 (as otherwise there was a call to goto 1 above)
     ! and idx_wp_inside contains all indices to be returned 
     idx => idx_wp_inside; nullify(idx_wp_inside)
+!!$print *, "idx = ",idx
 !
 1   if(associated(idx_wp_inside)) deallocate(idx_wp_inside)
     if(allocated(dot)) deallocate(dot)
+!!$print *, ""
   end function locateWpInsideTet4CellEcartInversionGrid
 !------------------------------------------------------------------------
 !> \brief return the vector product of two vectors in R^3
@@ -1650,6 +2048,9 @@ contains
             "This functionality is not supported by inversion grids of type ecartInversionGrid",myname)
        return
     end if
+!
+    ! in routine transformToStandardCellInversionGrid of module inversionGrid it was already assured
+    ! that this%is_defined, icell is valid and that x,y,z contain values and are all of same length!
 !
     select case (this%ctype(icell))
     case(4)
@@ -1958,23 +2359,24 @@ contains
 !! \param xc first coordinate of center of cell icell
 !! \param yc second coordinate of center of cell icell
 !! \param zc third coordinate of center of cell icell
-!! \param errmsg error message
 !
-  subroutine getCenterCellEcartInversionGrid(this,icell,xc,yc,zc,errmsg)
+  subroutine getCenterCellEcartInversionGrid(this,icell,xc,yc,zc)
     type (ecart_inversion_grid) :: this
     integer, intent(in) :: icell
     real :: xc,yc,zc
-    type (error_message) :: errmsg
-    ! local
-    character (len=31) :: myname = 'getCenterCellEcartInversionGrid'
+    ! in routine getCenterCellInversionGrid of module inversionGrid it was already assured
+    ! icell is valid
 !
-    call addTrace(errmsg,myname)
+    ! no need of selecting coords_type: 
+    ! always do the same, since in case of using the 
+    ! ecart inversion grid the wavefield points as well as event and station coordinates
+    ! are expected as x,y,z coordinates (in that order)
 !
     select case (this%ctype(icell))
     case(4)
-       call getCenterTet4EcartInversionGrid(this,icell,xc,yc,zc,errmsg)
+       call getCenterTet4EcartInversionGrid(this,icell,xc,yc,zc)
     case(8)
-       call getCenterHex8EcartInversionGrid(this,icell,xc,yc,zc,errmsg)
+       call getCenterHex8EcartInversionGrid(this,icell,xc,yc,zc)
     end select
   end subroutine getCenterCellEcartInversionGrid
 !------------------------------------------------------------------------
@@ -1984,18 +2386,14 @@ contains
 !! \param xc first coordinate of center of cell icell
 !! \param yc second coordinate of center of cell icell
 !! \param zc third coordinate of center of cell icell
-!! \param errmsg error message
 !
-  subroutine getCenterTet4EcartInversionGrid(this,icell,xc,yc,zc,errmsg)
+  subroutine getCenterTet4EcartInversionGrid(this,icell,xc,yc,zc)
     type (ecart_inversion_grid) :: this
     integer, intent(in) :: icell
     real :: xc,yc,zc
-    type (error_message) :: errmsg
     ! local
-    character (len=31) :: myname = 'getCenterTet4EcartInversionGrid'
     real, dimension(3) :: p1,p2,p3,p4
 !
-    call addTrace(errmsg,myname)
     ! in routine getCenterCellInversionGrid of module inversionGrid it was already assured
     ! icell is valid
 !
@@ -2017,18 +2415,14 @@ contains
 !! \param xc first coordinate of center of cell icell
 !! \param yc second coordinate of center of cell icell
 !! \param zc third coordinate of center of cell icell
-!! \param errmsg error message
 !
-  subroutine getCenterHex8EcartInversionGrid(this,icell,xc,yc,zc,errmsg)
+  subroutine getCenterHex8EcartInversionGrid(this,icell,xc,yc,zc)
     type (ecart_inversion_grid) :: this
     integer, intent(in) :: icell
     real :: xc,yc,zc
-    type (error_message) :: errmsg
     ! local
-    character (len=31) :: myname = 'getCenterHex8EcartInversionGrid'
     real, dimension(3) :: p1,p2,p3,p4,p5,p6,p7,p8
 !
-    call addTrace(errmsg,myname)
     ! in routine getCenterCellInversionGrid of module inversionGrid it was already assured
     ! icell is valid
 !
@@ -2052,23 +2446,17 @@ contains
 !! \param this inversion grid
 !! \param icell index of inversion grid for which radius should be returned
 !! \param radius radius of cell icell
-!! \param errmsg error message
 !
-  subroutine getRadiusCellEcartInversionGrid(this,icell,radius,errmsg)
+  subroutine getRadiusCellEcartInversionGrid(this,icell,radius)
     type (ecart_inversion_grid) :: this
     integer, intent(in) :: icell
     real :: radius
-    type (error_message) :: errmsg
-    ! local
-    character (len=31) :: myname = 'getRadiusCellEcartInversionGrid'
-!
-    call addTrace(errmsg,myname)
 !
     select case (this%ctype(icell))
     case(4)
-       call getRadiusTet4EcartInversionGrid(this,icell,radius,errmsg)
+       call getRadiusTet4EcartInversionGrid(this,icell,radius)
     case(8)
-       call getRadiusHex8EcartInversionGrid(this,icell,radius,errmsg)
+       call getRadiusHex8EcartInversionGrid(this,icell,radius)
     end select
   end subroutine getRadiusCellEcartInversionGrid
 !------------------------------------------------------------------------
@@ -2076,19 +2464,15 @@ contains
 !! \param this inversion grid
 !! \param icell global index of inversion grid cell for which radius should be returned
 !! \param radius radius of tet4 cell icell
-!! \param errmsg error message
 !
-  subroutine getRadiusTet4EcartInversionGrid(this,icell,radius,errmsg)
+  subroutine getRadiusTet4EcartInversionGrid(this,icell,radius)
     type (ecart_inversion_grid) :: this
     integer, intent(in) :: icell
     real :: radius
-    type (error_message) :: errmsg
     ! local
-    character (len=31) :: myname = 'getRadiusTet4EcartInversionGrid'
     real, dimension(3) :: p1,p2,p3,p4
     real :: xc,yc,zc
 !
-    call addTrace(errmsg,myname)
     ! in routine getRadiusCellInversionGrid of module inversionGrid it was already assured
     ! icell is valid
 !
@@ -2115,19 +2499,14 @@ contains
 !! \param this inversion grid
 !! \param icell global index of inversion grid cell for which radius should be returned
 !! \param radius radius of hex8 cell icell
-!! \param errmsg error message
 !
-  subroutine getRadiusHex8EcartInversionGrid(this,icell,radius,errmsg)
+  subroutine getRadiusHex8EcartInversionGrid(this,icell,radius)
     type (ecart_inversion_grid) :: this
     integer, intent(in) :: icell
     real :: radius
-    type (error_message) :: errmsg
     ! local
-    character (len=31) :: myname = 'getRadiusHex8EcartInversionGrid'
     real, dimension(3) :: p1,p2,p3,p4,p5,p6,p7,p8
     real :: xc,yc,zc
-!
-    call addTrace(errmsg,myname)
 !
     ! in routine getCenterCellInversionGrid of module inversionGrid it was already assured
     ! icell is valid

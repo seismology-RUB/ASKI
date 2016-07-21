@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief module to write data on event,station coordinates or pahts to vkt output
 !!
@@ -27,7 +27,7 @@
 !!  file base name followed by an index, in order to be considered by Paraview as a sequence of data.
 !!
 !! \author Florian Schumacher
-!! \date March 2013
+!! \date Nov 2015
 !
 module eventStationVtkFile
 !
@@ -72,6 +72,7 @@ module eventStationVtkFile
      integer :: nstat = 0 !< number of stations
      integer :: nev = 0 !< number of events
      integer :: npath = 0 !< number of paths
+     integer :: npoint = 0 !< number of points (size of second dimension of array points)
      real, dimension(:,:), pointer :: points => null() !< POINTS geometry for POLYDATA VERTICES, coordinates of stations or events according to type_of_file
      integer, dimension(:,:), pointer :: lines => null() !< LINES geometry for POLYDATA LINES, array of point indices defining the paths
   end type event_station_vtk_file
@@ -146,7 +147,8 @@ contains
     call transformToVtkInversionGrid(invgrid,c1,c2,c3,'event',errmsg)
     if(.level.errmsg==2) goto 1
 !
-    allocate(this%points(3,this%nev))
+    this%npoint = this%nev
+    allocate(this%points(3,this%npoint))
     this%points(1,:) = c1
     this%points(2,:) = c2
     this%points(3,:) = c3
@@ -224,7 +226,8 @@ contains
     call transformToVtkInversionGrid(invgrid,c1,c2,c3,'station',errmsg)
     if(.level.errmsg==2) goto 1
 !
-    allocate(this%points(3,this%nstat))
+    this%npoint = this%nstat
+    allocate(this%points(3,this%npoint))
     this%points(1,:) = c1
     this%points(2,:) = c2
     this%points(3,:) = c3
@@ -267,6 +270,8 @@ contains
     type (seismic_station) :: station
     integer :: ipoint,ipath,nev,iev,nstat,istat
     real, dimension(:), allocatable :: ev_c1,ev_c2,ev_c3,stat_c1,stat_c2,stat_c3
+    integer, dimension(:), allocatable :: ipoint_of_station,ipoint_of_event
+    real, dimension(:,:), pointer :: points_tmp
 !
     call addTrace(errmsg,myname)
     if(trim(this%filename) /= '') call deallocateEventStationVtkFile(this)
@@ -310,6 +315,8 @@ contains
        return
     end if
 !
+    ! FIRST TRANSFORM ALL STATION AND EVENT COORDINATE TO VTK FRAME BY INVERSION GRID MODULE
+!
     allocate(stat_c1(nstat),stat_c2(nstat),stat_c3(nstat))
     ipoint = 0
     do while (nextStationSeismicNetwork(stations,station))
@@ -334,11 +341,60 @@ contains
     call transformToVtkInversionGrid(invgrid,ev_c1,ev_c2,ev_c3,'event',errmsg)
     if(.level.errmsg==2) goto 1
 !
-    allocate(this%points(3,2*this%npath),this%lines(3,this%npath))
-    this%lines(1,:) = 2 ! always have 2 point indices following defining a line
+    ! SECONDLY, SELECT THOSE STATIONS AND EVENTS THAT ARE CONTAINED IN THE PATHS AT ALL
+    ! AND STORE THEIR COORDINATES IN ARRAY THIS%POINTS. REMEMBER THEIR POINT INDICES 
+    ! IN ORDER TO CORRECTLY CONNECT THE LINES GEOMETRY BELOW
+!
+    allocate(points_tmp(3,nstat+nev))
     ipoint = 0
+!
+    ! first iterate through the events
+    allocate(ipoint_of_event(nev)); ipoint_of_event = -1
+    iev = 0
+    do while (nextEventSeismicEventList(events,event))
+       iev = iev + 1
+       if(any(paths(1,:)==.evid.event)) then
+          ipoint = ipoint + 1
+          ! add the event coordinates to the (temporary) point array
+          points_tmp(:,ipoint) = (/ ev_c1(iev),ev_c2(iev),ev_c3(iev) /)
+          ! connect this point to the event index in the event list
+          ipoint_of_event(iev) = ipoint
+       end if
+    end do
+
+    ! then iterate through the stations, keep the value of ipoint!! (simply continue)
+    allocate(ipoint_of_station(nstat)); ipoint_of_station = -1
+    istat = 0
+    do while (nextStationSeismicNetwork(stations,station))
+       istat = istat + 1
+       if(any(paths(2,:)==.staname.station)) then
+          ipoint = ipoint + 1
+          ! add the station coordinates to the (temporary) point array
+          points_tmp(:,ipoint) = (/ stat_c1(istat),stat_c2(istat),stat_c3(istat) /)
+          ! connect this point to the event index in the event list
+          ipoint_of_station(istat) = ipoint
+       end if
+    end do
+
+    ! finally define the actual points array this%points
+    if(ipoint == nstat+nev) then
+       this%npoint = nstat+nev
+       this%points => points_tmp
+       nullify(points_tmp)
+    else
+       this%npoint = ipoint
+       allocate(this%points(3,this%npoint))
+       this%points = points_tmp(:,1:ipoint)
+       deallocate(points_tmp)
+    end if
+!
+    ! THIRDLY, DEFINE THE LINES GEOMETRY: FOR EACH GIVEN PATH CONNECT THE TWO POINTS CORRESPONDING TO 
+    ! THE RESPECTIVE STATION AND EVENT
+!
+    allocate(this%lines(3,this%npath))
+    this%lines(1,:) = 2 ! always have 2 point indices following defining a line
     do ipath = 1,this%npath
-       ! first add event of this path to points array
+       ! first search for the event index of this event in the incoming event list
        errmsg2 = searchEventidSeismicEventList(events,paths(1,ipath),iev=iev)
        if(.level.errmsg2 == 2) then
           write(errstr,*) "event ID '"//trim(paths(1,ipath))//"' of ",ipath,"'th path was not found in event list "//&
@@ -349,12 +405,10 @@ contains
        end if
        call dealloc(errmsg2)
 !
-       ipoint = ipoint + 1
-       this%points(:,ipoint) = (/ ev_c1(iev),ev_c2(iev),ev_c3(iev) /)
        ! define geometry connectivity array LINE for this path, event coordinates are first point
-       this%lines(2,ipath) = ipoint-1
+       this%lines(2,ipath) = ipoint_of_event(iev)-1
 !
-       ! then add station of this path to points array
+       ! then search for the station index of this station in the incoming station list
        errmsg2 =  searchStationNameSeismicNetwork(stations,paths(2,ipath),istat=istat)
        if(.level.errmsg2 == 2) then
           write(errstr,*) "station name '"//trim(paths(2,ipath))//"' of ",ipath,"'th path was not found in station list"//&
@@ -365,10 +419,8 @@ contains
        end if
        call dealloc(errmsg2)
 !
-       ipoint = ipoint + 1
-       this%points(:,ipoint) = (/ stat_c1(istat),stat_c2(istat),stat_c3(istat) /)
        ! define geometry connectivity array LINE for this path, station coordinates are second point
-       this%lines(3,ipath) = ipoint-1
+       this%lines(3,ipath) = ipoint_of_station(istat)-1
     end do ! ipath
 !
 1   if(allocated(ev_c1)) deallocate(ev_c1)
@@ -377,6 +429,8 @@ contains
     if(allocated(stat_c1)) deallocate(stat_c1)
     if(allocated(stat_c2)) deallocate(stat_c2)
     if(allocated(stat_c3)) deallocate(stat_c3)
+    if(allocated(ipoint_of_station)) deallocate(ipoint_of_station)
+    if(allocated(ipoint_of_event)) deallocate(ipoint_of_event)
   end subroutine initiatePathsVtkFile
 !------------------------------------------------------------------------
 !> \brief open vtk file to write
@@ -457,14 +511,8 @@ contains
     character (len=500) :: string
     character (len=1), parameter :: eol_char = char(10)
     logical :: err
-    integer :: npoints
     !
     call addTrace(errmsg,myname)
-    select case(this%type_of_file)
-    case(1); npoints = this%nev
-    case(2); npoints = this%nstat
-    case(3); npoints = 2*this%npath
-    end select
     !
     ! remember with err if there was an error somewhere
     err = .false.
@@ -479,7 +527,7 @@ contains
           return
        endif
        ! POINTS
-       write(unit=lu,fmt='(a,i12,a)',iostat=ios) 'POINTS ',npoints,' float'  ; err = err.or.(ios/=0)
+       write(unit=lu,fmt='(a,i12,a)',iostat=ios) 'POINTS ',this%npoint,' float'  ; err = err.or.(ios/=0)
        write(unit=lu,fmt='(3e14.6e2)',iostat=ios) this%points                     ; err = err.or.(ios/=0)
        if(err) then ! if any of the above ios were /= 0
           call add(errmsg,2,'there was an error writing POINTS',myname)
@@ -496,7 +544,7 @@ contains
           return
        endif
        ! POINTS
-       write(string,'(a,i12,a)',iostat=ios) 'POINTS ',npoints,' float'
+       write(string,'(a,i12,a)',iostat=ios) 'POINTS ',this%npoint,' float'
        write(unit=lu,iostat=ios) trim(string)//eol_char                  ; err = err.or.(ios/=0)
        write(unit=lu,iostat=ios) this%points                             ; err = err.or.(ios/=0)
        write(unit=lu,iostat=ios) eol_char                                ; err = err.or.(ios/=0)
@@ -523,30 +571,24 @@ contains
     character (len=500) :: string
     character (len=1), parameter :: eol_char = char(10)
     logical :: err
-    integer :: nvert
     !
     call addTrace(errmsg,myname)
-    select case(this%type_of_file)
-    case(1); nvert = this%nev
-    case(2); nvert = this%nstat
-    case(3); nvert = 2*this%npath
-    end select
     !
     ! remember with err if there was an error somewhere
     err = .false.
     if(this%is_ascii) then
        ! VERTICES
-       write(unit=lu,fmt='(a,2i12)',iostat=ios)'VERTICES ',nvert,2*nvert     ; err = err.or.(ios/=0)
-       write(unit=lu,fmt='(i12)',iostat=ios) (/ ((/1,i-1/),i=1,nvert) /)            ; err = err.or.(ios/=0)
+       write(unit=lu,fmt='(a,2i12)',iostat=ios)'VERTICES ',this%npoint,2*this%npoint     ; err = err.or.(ios/=0)
+       write(unit=lu,fmt='(i12)',iostat=ios) (/ ((/1,i-1/),i=1,this%npoint) /)            ; err = err.or.(ios/=0)
        if(err) then ! if any of the above ios were /= 0
           call add(errmsg,2,'there was an error writing VERTICES',myname)
           return
        endif
     else ! this%is_ascii
        ! VERTICES
-       write(string,'(a,2i12)',iostat=ios)'VERTICES ',nvert,2*nvert
+       write(string,'(a,2i12)',iostat=ios)'VERTICES ',this%npoint,2*this%npoint
        write(unit=lu,iostat=ios) trim(string)//eol_char                      ; err = err.or.(ios/=0)
-       write(unit=lu,iostat=ios) (/ ((/1,i-1/),i=1,nvert) /)          ; err = err.or.(ios/=0)
+       write(unit=lu,iostat=ios) (/ ((/1,i-1/),i=1,this%npoint) /)          ; err = err.or.(ios/=0)
        write(unit=lu,iostat=ios) eol_char                                    ; err = err.or.(ios/=0)
        if(err) then ! if any of the above ios were /= 0
           call add(errmsg,2,'there was an error writing VERTICES',myname)
@@ -1053,6 +1095,7 @@ contains
     this%nev = 0
     this%nstat = 0
     this%npath = 0
+    this%npoint = 0
     if(associated(this%points)) deallocate(this%points)
     if(associated(this%lines)) deallocate(this%lines)
   end subroutine deallocateEventStationVtkFile

@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief define (an)elastic material properties
 !!
@@ -23,16 +23,17 @@
 !!  whereby each parameter is assigned a specific index between 1 and n
 !!
 !! \author Florian Schumacher
-!! \date Mar 2013
+!! \date Nov 2015
 !
 module modelParametrization
 !
   implicit none
 !
-  integer, parameter :: character_length_pmtrz = 11 !< can be used outside module to declare character strings for parametrization
+  integer, parameter :: character_length_pmtrz = 15 !< can be used outside module to declare character strings for parametrization
   integer, parameter :: character_length_param = 6 !< can be used outside module to declare character strings for parameters
   ! ADD YOUR PARAMETRIZATION HERE
-  character(len=65) :: all_valid_pmtrz_param = "'isoLame' ('rho','lambda','mu') ; 'isoVelocity' ('rho','vp','vs')" !< for user/help output only
+  character(len=87) :: all_valid_pmtrz_param = &
+       "'isoLameSI' ('rho','lambda','mu') ; 'isoVelocitySI','isoVelocity1000' ('rho','vp','vs')" !< for user/help output only
 !
 contains
 !
@@ -40,6 +41,7 @@ contains
 !#  O N L Y  IN THE FOLLOWING TWO FUNCTIONS, 
 !#   - numberOfParamModelParametrization
 !#   - getParamFromIndexModelParametrization
+!#   - getUnitFactorOfParamModelParametrization
 !#  YOU NEED TO DEFINE NEW PARAMETRIZATIONS (or modify existing ones). Additionally 
 !#  you may want to modify info string all_valid_pmtrz_param
 !#  above (just used for user/help output). 
@@ -65,9 +67,11 @@ contains
     !               the number of parameters n must be strictly larger than zero: n > 0 !
     !
     select case(parametrization)
-    case('isoLame')
+    case('isoLameSI')
        n = 3
-    case('isoVelocity')
+    case('isoVelocitySI')
+       n = 3
+    case('isoVelocity1000')
        n = 3
        !case('your_new_parametrization')
        !	n = number_of_your_new_parameters
@@ -90,18 +94,18 @@ contains
     character(len=character_length_param):: param
     ! ADD YOUR PARAMETRIZATION HERE
     ! 
-    ! N O T I C E : names of parameters must NOT be empty character strings '' and should not contain any blanks!
+    ! N O T I C E : names of parameters must NOT be empty character strings '' and must not contain any blanks!
     !               the indexing of parameters MUST begin with idx=1 and end with idx=numberOfParamModelParametrization(parametrization)
     !
     select case(parametrization)
-    case('isoLame')
+    case('isoLameSI')
        select case(idx)
        case (1); param = 'rho'
        case (2); param = 'lambda'
        case (3); param = 'mu'
        case default; param = ''
        end select
-    case('isoVelocity')
+    case('isoVelocitySI','isoVelocity1000')
        select case(idx)
        case (1); param = 'rho'
        case (2); param = 'vp'
@@ -118,6 +122,87 @@ contains
     case default; param = ''
     end select
   end function getParamFromIndexModelParametrization
+!------------------------------------------------------------------------
+!> \brief for given parameter get its unit factor which brings its values to SI units
+!! \param parametrization model parametrization
+!! \param param model parameter
+!! \param ios optional status integer indicating whether the incoming parameter (of parametrization) is valid (then ios = 0 on return), i.e. whether the result can be trusted, or not  (then ios < 0 on return, has the same value as factor then.)
+!! \param factor unit factor of given parameter; has negative value if param is not a valid parameter of parametrization
+!! \return unit factor of given parameter. In case of an error return a negative value:
+!!    -1 if incoming parametrization is invalid
+!!    -2 if incoming parametrization is valid, but incoming parameter is not valid in the given parametrization
+!!    -3 if incoming parameter is an empty string (or contains blanks only)
+!
+  function getUnitFactorOfParamModelParametrization(parametrization,param,ios) result(factor)
+    character(len=*) :: parametrization,param
+    integer, optional :: ios
+    real :: factor
+    ! ADD YOUR PARAMETRIZATION HERE
+    ! 
+    ! N O T I C E : names of parameters must NOT be empty character strings '' and must not contain any blanks!
+    !               the indexing of parameters MUST begin with idx=1 and end with idx=numberOfParamModelParametrization(parametrization)
+    !
+    select case(parametrization)
+    case('isoLameSI')
+       ! parametrization 'isoLameSI' has SI units, i.e. all unit factors are 1.0
+       select case(param)
+       case ('rho'); factor = 1.0 ! unit of model values of 'rho' is kg/m^3
+       case ('lambda'); factor = 1.0 ! unit of model values of 'lambda' is Pa = N/m^2
+       case ('mu'); factor = 1.0 ! unit of model values of 'mu' is Pa = N/m^2
+       case (''); goto 3
+       case default; goto 2
+       end select
+    case('isoVelocitySI')
+       ! parametrization 'isoVelocitySI' has SI units, i.e. all unit factors are 1.0
+       select case(param)
+       case ('rho'); factor = 1.0 ! unit of model values of 'rho' is kg/m^3
+       case ('vp'); factor = 1.0 ! unit of model values of 'vp' is m/s
+       case ('vs'); factor = 1.0 ! unit of model values of 'vs' is m/s
+       case (''); goto 3
+       case default; goto 2
+       end select
+    case('isoVelocity1000')
+       ! parametrization 'isoVelocitySI' has units with a unit factor of 1000, 
+       ! i.e. the actual model values must be multiplied by a factor of 1000 to get values w.r.t. SI units
+       select case(param)
+       case ('rho'); factor = 1.0e3 ! unit of model values of 'rho' is g/cm^3
+       case ('vp'); factor = 1.0e3 ! unit of model values of 'vp' is km/s
+       case ('vs'); factor = 1.0e3  ! unit of model values of 'vs' is km/s
+       case (''); goto 3
+       case default; goto 2
+       end select
+    !case('your_new_parametrization')
+       !select case(param)
+       !case ('name_of_first_new_parameter'); factor = ...
+       ! ...
+       !case ('name_of_last_new_parameter'); factor = ...
+       !case (''); goto 3
+       !case default; goto 2
+       !end select
+    case default; goto 1
+    end select
+!
+    ! if code comes here, eveything went OK, so return
+    if(present(ios)) ios = 0
+    return
+!
+    ! if incoming parametrization is invalid, return factor = -1
+1   factor = -1.0; goto 4
+!
+    ! if incoming parametrization is valid, but the given parameter is invalid in this parametrization AND IS NO EMPTY STRING , return factor = -2
+2   factor = -2.0; goto 4
+!
+    ! if incoming parametrization is valid, but the given parameter is an empty string, return factor = -3
+    !   we can check this here, because the emtpy string '' is a possible return value of function 
+    !   getParamFromIndexModelParametrization (for invalid indices) that a user could have called before giving it to this function
+3   factor = -3.0; goto 4
+!
+    ! in case of any error, finally set ios to factor (if ios is present) and return
+4   if(present(ios)) then
+       ios = int(factor)
+    end if
+    return
+  end function getUnitFactorOfParamModelParametrization
 !
 !###############################################################################################
 !#  END OF FUNCTIONS, which need to be modified in case of adding new parameters to this module
@@ -182,26 +267,46 @@ contains
   end function validParamModelParametrization
 !------------------------------------------------------------------------
 !> \brief iterate over parameters of a given model parametrization
+!! \details the order of iteration MUST be consistent with function indexOfParamModelParametrization
+!!  which actually is the case by construction, since in fucntion indexOfParamModelParametrization
+!!  there is a loop on all parameters from 1 to numberOfParam
 !! \param parametrization model parametrization
 !! \param param model parameter
 !! \return logical value which is false if there is no next model parameter
 !
-  logical function nextParamModelParametrization(parametrization,param,iparam)
+  logical function nextParamModelParametrization(parametrization,param,iparam,reset)
     character(len=*), intent(in) :: parametrization
     character(len=character_length_param), optional :: param
     integer, optional :: iparam
+    logical, optional :: reset
     integer :: call_count = 0
     save :: call_count
+!
+    ! if this iterator is to be reset, do so
+    if(present(reset)) then
+       if(reset) goto 1
+    end if
+!
+    ! increase counter
     call_count = call_count+1
-    if(call_count > numberOfParamModelParametrization(parametrization)) then
-       call_count = 0
-       param = ''
-       nextParamModelParametrization = .false.
-       return
-    endif
+!
+    ! if the counter rises above the upper bound, reset this iterator
+    if(call_count > numberOfParamModelParametrization(parametrization)) goto 1
+!
+    ! otherwise set the optional variables, if present, and indicate success
     if(present(param)) param = getParamFromIndexModelParametrization(parametrization,call_count)
     if(present(iparam)) iparam = call_count
     nextParamModelParametrization = .true.
+! 
+    ! IF FUNCTION COMES HERE, RETURN NORMALLY
+    return
+!
+    ! RESET THE ITERATOR
+1   call_count = 0
+    if(present(param)) param = ''
+    if(present(iparam)) iparam = -1
+    nextParamModelParametrization = .false.
+    return
   end function nextParamModelParametrization
 !
 end module modelParametrization

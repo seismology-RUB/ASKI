@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !-------------------------------------------------------------
 !  Module describing a seismic network
@@ -146,13 +146,22 @@
 !> \param s go through events with step s
 !> \param f End with event index f
 !
-	function nextStationSeismicNetwork(this,si,f,s,l) result(next)
+	function nextStationSeismicNetwork(this,si,f,s,l,reset) result(next)
 	type (seismic_network), intent(in) :: this
 	type (seismic_station) :: si
 	integer, optional :: f,s,l
+	logical, optional :: reset
 	logical :: next
 	integer :: first,step,last,current,call_count = 0
 	save :: call_count
+!
+	if(present(reset)) then
+		if(reset) then
+			call_count = 0
+			next = .false.
+			return
+		end if
+	endif
 !
 	if (present(f)) then; first = f; else; first = 1; endif
 	if (present(s)) then; step = s; else; step = 1; endif

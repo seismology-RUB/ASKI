@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief simple layered Cartesian inversion grid
 !!
@@ -26,7 +26,7 @@
 !!   coordinate system (cuboid is centered ad x=y=zmay=0 and no rotation is applied)
 !!
 !! \author Florian Schumacher
-!! \date Jul 2013
+!! \date Okt 2015
 !
 module scartInversionGrid
 !
@@ -40,7 +40,7 @@ module scartInversionGrid
   private :: defineFaceNeighboursScartInversionGrid,getBoundariesCoveringCellsScartInversionGrid,&
        transformVectorGlobalToLocalScartInversionGrid,transformPointLocalToGlobalScartInversionGrid,&
        locatePointInCellScartInversionGrid,locateCoordinateScartInversionGrid,&
-       getCellBoundariesScartInversiongrid,inverseCellIndexScartInversionGrid
+       inverseCellIndexScartInversionGrid,intGeometryTypeScartInversionGrid !,getCellBoundariesScartInversiongrid
 !
   type scart_inversion_grid
      private
@@ -56,7 +56,7 @@ module scartInversionGrid
      ! REFINEMENT BLOCKS
      integer :: nblock !< number of refinement blocks with constant lateral resolution
      integer, dimension(:), pointer :: nlay_block => null() !< for each block, contains number of layers
-     integer, dimension(:), pointer :: iblock => null() !< for each layer, contains number of block (inverse mapping to nlay_block)
+     integer, dimension(:), pointer :: iblock => null() !< for each layer, contains index of block (inverse mapping to nlay_block)
      integer :: nlay !< total number of layers
 !
      ! CELLS
@@ -65,23 +65,229 @@ module scartInversionGrid
      ! layer definition
      real, dimension(:), pointer :: z => null() !< z values of layer boundaries in decreasing order (size = nlay+1)
      ! refinement block specific lateral definitions of cells in the layers
-     integer, dimension(:), pointer :: nx,ny => null() !< for each block, contains number of invgrid cells in x (y) direction
-     type (real_vector_pointer), dimension(:), pointer :: x,y => null() !< for each block, contains bounding coordinates of cells in increasing order
+     integer, dimension(:), pointer :: nx => null(), ny => null() !< for each block, contains number of invgrid cells in x (y) direction
+     type (real_vector_pointer), dimension(:), pointer :: x => null(), y => null() !< for each block, contains bounding coordinates of cells in increasing order
 !
      ! NEIGHBOURS
      integer, dimension(:,:), pointer :: face_neighbours_xy => null() !< dim(4,ncell), xmin,xmax,ymin,ymax neighb. indx for each cell (set -1 for no neighb)
      type (integer_vector_pointer), dimension(:,:), pointer :: face_neighbours_z => null() !< dim(2,ncell), zmin,zmax neighb. indices each cell
 !
-     ! COORDINATES SPECIFICATION FOR VTK OUTPUT
+     ! SPECIFICATION FOR VTK OUTPUT
      logical :: use_local_coords_for_vtk
      logical :: apply_vtk_coords_scaling_factor
      real :: vtk_coords_scaling_factor
+     integer :: vtk_geometry_type_int = -1 !< type of vtk geometry:  0 = volumetric cells , 1 = cell center points
      ! in the future: there could be flags in parameter file like: DONT_SMOOTH_LAYER_BOUNDARIES, 
      ! or SMOOTHING_BOUNDARY_CONDITIONS which could be taken into account here, and memorized for better handling 
      ! of smoothing conditions in calls to certain routines below
   end type scart_inversion_grid
 !
 contains
+!------------------------------------------------------------------------
+!> \brief logical return whether this scart_inversion_grid is able to transform points (of given coords type) to vtk plot projection
+!
+  function canTransformToVtkPointsOutsideScartInversionGrid(this,coords_type) result(l)
+    type(scart_inversion_grid) :: this
+    character(len=*) :: coords_type
+    logical :: l
+    ! the scart_inversion_grid has capability to transform any points to vtk,
+    ! provided the object is defined
+    l = this%is_defined
+  end function canTransformToVtkPointsOutsideScartInversionGrid
+!------------------------------------------------------------------------
+!> \brief get unit factor of the volume element
+!! \param this scart inversion grid
+!! \param uf_wp unit factor of wavefield points
+!! \param uf_vol unit factor of volume element (return value of this subroutine)
+!! \param errmsg error message
+!
+  subroutine getUnitFactorOfVolumeElementScartInversionGrid(this,uf_wp,uf_vol,errmsg)
+    type (scart_inversion_grid) :: this
+    real :: uf_wp,uf_vol
+    type (error_message) :: errmsg
+    character (len=46) :: myname = 'getUnitFactorOfVolumeElementScartInversionGrid'
+!
+    call addTrace(errmsg,myname)
+!
+    if(.not.this%is_defined) call add(errmsg,1,"be aware that the inversion grid not yet defined; "//&
+         "however, the unit factor of the volume element can be correctly computed at this point",myname)
+!
+    ! The scart inversion grid does not assume specific units for its spatial extension but simply 
+    ! assumes that they are the same as for the wavefield point coordinates (which are located inside the
+    ! inversion grid cells only according to their pure numerical values). Hence, for this 3D volumetric
+    ! inversion grid, the volume element has a unit which is the cube of the unit of the wavefield points.
+    uf_vol = uf_wp*uf_wp*uf_wp
+  end subroutine getUnitFactorOfVolumeElementScartInversionGrid
+!------------------------------------------------------------------------
+!> \brief map vtk geometry type names to integers
+!
+  function intGeometryTypeScartInversionGrid(vtk_geometry_type_str) result(vtk_geometry_type_int)
+    character(len=*), intent(in) :: vtk_geometry_type_str
+    integer :: vtk_geometry_type_int
+    select case(trim(vtk_geometry_type_str))
+    case('CELLS')
+       vtk_geometry_type_int = 0
+    case('CELL_CENTERS')
+       vtk_geometry_type_int = 1
+    case default
+       vtk_geometry_type_int = -1
+    end select
+  end function intGeometryTypeScartInversionGrid
+!------------------------------------------------------------------------
+!> \brief create simple Cartesian inversion grid
+!! \details construct by passing all necessary values
+!
+  subroutine createFromValuesScartInversionGrid(this,nx,ny,wx,wy,cx,cy,zmax,rot,nblock,nlay_block,z,&
+    & use_local_coords_for_vtk,apply_vtk_coords_scaling_factor,vtk_coords_scaling_factor,vtk_geometry_type,errmsg)
+    type (scart_inversion_grid) :: this
+    integer :: nblock
+    integer, dimension(:) :: nlay_block,nx,ny
+    real :: wx,wy,cx,cy,zmax,rot
+    real, dimension(:) :: z
+    logical :: use_local_coords_for_vtk
+    logical :: apply_vtk_coords_scaling_factor
+    real :: vtk_coords_scaling_factor
+    character(len=*) :: vtk_geometry_type
+    type (error_message) :: errmsg
+    integer :: ibl,ilay,ix,iy
+    real, dimension(:), pointer :: rp
+    character (len=400) :: errstr
+    character (len=34) :: myname = 'createFromValuesScartInversionGrid'
+!
+    call addTrace(errmsg,myname)
+    if(this%is_defined) then
+       call add(errmsg,1,"this object is already defined, deallocating it now before creating new one",myname)
+       call deallocateScartInversionGrid(this)
+    end if
+    this%cx = cx
+    this%cy = cy
+    this%zmax = zmax
+    if(wx <= 0) then
+       write(errstr,*) "SCART_INVGRID_WX = ",wx," must be positive"
+       call add(errmsg,2,errstr,myname)
+       goto 1
+    end if
+    if(wy <= 0) then
+       write(errstr,*) "SCART_INVGRID_WY = ",wy," must be positive"
+       call add(errmsg,2,errstr,myname)
+       goto 1
+    end if
+!
+    this%rotation_angle = rot
+    ! define Mrot from rotation_angle, which rotates CLOCKWISEly from real XY to reference coordinates 
+    ! (i.e. inverse rotation from rotated block back to non-rotated)
+    this%Mrot(1,1) = cos(this%rotation_angle*mc_deg2rad)
+    this%Mrot(1,2) = sin(this%rotation_angle*mc_deg2rad)
+    this%Mrot(2,1) = -sin(this%rotation_angle*mc_deg2rad)
+    this%Mrot(2,2) = cos(this%rotation_angle*mc_deg2rad)
+!
+    this%nblock = nblock
+    if(this%nblock<1) then
+       call add(errmsg,2,"'SCART_INVGRID_NREF_BLOCKS' must be greater than zero",myname)
+       goto 1
+    end if
+!
+    if (size(nlay_block) /= nblock) then
+       call add(errmsg,2,"size of nlay_block /= nblock",myname)
+       goto 1
+    endif
+    allocate(this%nlay_block(nblock))
+    this%nlay_block = nlay_block
+    if(any(this%nlay_block < 1)) then
+       call add(errmsg,2,"all values of SCART_INVGRID_NLAY must be greater than zero",myname)
+       goto 1
+    end if
+    this%nlay = sum(this%nlay_block)
+!
+    allocate(this%iblock(this%nlay))
+    ilay = 0
+    do ibl = 1,this%nblock
+       this%iblock((ilay+1):(ilay+this%nlay_block(ibl))) = ibl
+       ilay = ilay + this%nlay_block(ibl)
+    end do ! ibl
+!
+    if (size(z) /= this%nlay+1) then
+       call add(errmsg,2,"size of z inconsistent with nlay",myname)
+       goto 1
+    endif
+    allocate(this%z(this%nlay+1))
+    this%z = z
+ !
+    if (size(nx) /= nblock) then
+       call add(errmsg,2,"size of nx /= nblock",myname)
+       goto 1
+    endif
+    allocate(this%nx(nblock))
+    this%nx = nx
+    if(any(this%nx < 1)) then
+       call add(errmsg,2,"all values of SCART_INVGRID_NX must be greater than zero",myname)
+       goto 1
+    end if
+    allocate(this%x(this%nblock))
+    do ibl = 1,this%nblock
+       allocate(rp(this%nx(ibl)+1))
+       rp(1) = -0.5*wx
+       do ix = 2,this%nx(ibl)
+          rp(ix) = rp(1) + ((ix-1)*wx)/this%nx(ibl)
+       end do ! ix
+       rp(this%nx(ibl)+1) = 0.5*wx
+       call associateVectorPointer(this%x(ibl),rp)
+       nullify(rp)
+    end do ! ibl
+!
+    if (size(ny) /= nblock) then
+       call add(errmsg,2,"size of ny /= nblock",myname)
+       goto 1
+    endif
+    allocate(this%ny(nblock))
+    this%ny = ny
+    if(any(this%ny < 1)) then
+       call add(errmsg,2,"all values of SCART_INVGRID_NY must be greater than zero",myname)
+       goto 1
+    end if
+    allocate(this%y(this%nblock))
+    do ibl = 1,this%nblock
+       allocate(rp(this%ny(ibl)+1))
+       rp(1) = -0.5*wy
+       do iy = 2,this%ny(ibl)
+          rp(iy) = rp(1) + ((iy-1)*wy)/this%ny(ibl)
+       end do ! iy
+       rp(this%ny(ibl)+1) = 0.5*wy
+       call associateVectorPointer(this%y(ibl),rp)
+       nullify(rp)
+    end do ! ibl
+!
+    ! define number of inversion grid cells
+    allocate(this%ncell_layer_cum(this%nlay))
+    this%ncell_layer_cum(1) = 0
+    do ilay = 2,this%nlay
+       this%ncell_layer_cum(ilay) = this%ncell_layer_cum(ilay-1) + &
+            this%nx(this%iblock(ilay-1))*this%ny(this%iblock(ilay-1))
+    end do ! ilay
+    this%ncell = this%ncell_layer_cum(this%nlay) + &
+            this%nx(this%iblock(this%nlay))*this%ny(this%iblock(this%nlay))
+!
+    this%use_local_coords_for_vtk = use_local_coords_for_vtk
+    this%apply_vtk_coords_scaling_factor = apply_vtk_coords_scaling_factor
+    this%vtk_coords_scaling_factor = vtk_coords_scaling_factor
+    this%vtk_geometry_type_int = intGeometryTypeScartInversionGrid(vtk_geometry_type)
+    if(this%vtk_geometry_type_int < 0) then
+       call add(errmsg,2,"incoming vtk geometry type '"//trim(vtk_geometry_type)//"' is invalid",myname)
+       goto 1
+    end if
+!
+    ! define face neigbours for all cells
+    ! in the future: there could be flags in parameter file like: DONT_SMOOTH_LAYER_BOUNDARIES, 
+    ! or SMOOTHING_BOUNDARY_CONDITIONS which could be taken into account here, and memorized for better handling of smoothing conditions
+    call defineFaceNeighboursScartInversionGrid(this)
+!
+    ! if everything was ok, indicate so and return
+    this%is_defined = .true.
+    return
+!
+    ! if there went anything wrong (i.e. there was a goto here), destroy whatever was created so far
+1   call deallocateScartInversionGrid(this)
+  end subroutine createFromValuesScartInversionGrid
 !------------------------------------------------------------------------
 !> \brief create simple Cartesian inversion grid
 !! \details the parameter file given, must contain all necessary parameters to define
@@ -104,11 +310,11 @@ contains
     real, dimension(:), pointer :: thickness,rp
     ! parfile
     type (input_parameter) :: inpar
-    character (len=80), dimension(14) :: inpar_keys
+    character (len=80), dimension(15) :: inpar_keys
     data inpar_keys/'SCART_INVGRID_CX','SCART_INVGRID_CY','SCART_INVGRID_ZMAX','SCART_INVGRID_WX',&
          'SCART_INVGRID_WY','SCART_INVGRID_ROT','SCART_INVGRID_NREF_BLOCKS','SCART_INVGRID_NLAY',&
          'SCART_INVGRID_THICKNESS','SCART_INVGRID_NX','SCART_INVGRID_NY','USE_LOCAL_INVGRID_COORDS_FOR_VTK',&
-         'SCALE_VTK_COORDS','VTK_COORDS_SCALING_FACTOR'/
+         'SCALE_VTK_COORDS','VTK_COORDS_SCALING_FACTOR','VTK_GEOMETRY_TYPE'/
 !
     call addTrace(errmsg,myname)
     if(this%is_defined) then
@@ -319,6 +525,11 @@ contains
           goto 1
        end if
     end if
+    this%vtk_geometry_type_int = intGeometryTypeScartInversionGrid(inpar.sval.'VTK_GEOMETRY_TYPE')
+    if(this%vtk_geometry_type_int < 0) then
+       call add(errmsg,2,"vtk geometry type '"//trim(inpar.sval.'VTK_GEOMETRY_TYPE')//"' is invalid",myname)
+       goto 1
+    end if
 !
     ! define face neigbours for all cells
     ! in the future: there could be flags in parameter file like: DONT_SMOOTH_LAYER_BOUNDARIES, 
@@ -432,9 +643,9 @@ contains
                       end do ! jy
                       call associateVectorPointer(this%face_neighbours_z(1,icell),ip)
                       nullify(ip)
-                   end if
                    ! else, if this is the bottom layer of the bottom block, there are no zmin neighbours, 
                    ! so do nothing (as vector pointer is nullified already)
+                   end if
                 else
                    ! if this is not the bottom layer of the block, there is a layer below with same x,y-resolution
                    ! so there is only one zmin neighbour, directly below
@@ -504,6 +715,13 @@ contains
     real :: w
 !
     w = coords(ncoords) - coords(1)
+!! FS FS
+!!$print *, "ncoords,coords = ",ncoords,coords
+!!$print *, "w = ",w
+!!$print *, "min = ",min
+!!$print *, "(min - (-0.5*w)) / (w/(ncoords-1)) = ", (min - (-0.5*w)) / (w/(ncoords-1))
+!!$print *, " ncov1 = ",floor( (min - (-0.5*w)) / (w/(ncoords-1)) ) + 1
+!! FS FS
 !
     ! first guess of ncov1
     ncov1 = floor( (min - (-0.5*w)) / (w/(ncoords-1)) ) + 1
@@ -655,11 +873,12 @@ contains
 !------------------------------------------------------------------------
 !> \brief return geometry information on cells for vtk output
 !
-  subroutine getGeometryVtkScartInversionGrid(this,points,cell_connectivity,cell_type,cell_indx_out,errmsg,&
-       cell_indx_req,indx_map_out)
+  subroutine getGeometryVtkScartInversionGrid(this,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,&
+       errmsg,cell_indx_req,indx_map_out)
     type (scart_inversion_grid) :: this
     integer, dimension(:), optional :: cell_indx_req
     ! outgoing
+    integer :: geometry_type
     real, dimension(:,:), pointer :: points
     integer, dimension(:), pointer :: cell_connectivity,cell_type,cell_indx_out
     integer, dimension(:), pointer, optional :: indx_map_out
@@ -718,8 +937,15 @@ contains
     ! allocate for number of cells to be returned
     ! as all cells are hexahedra (for now), cell_connectivity((8+1)*ncell), 8 points + number of points
     ! for multiple cell types (e.g. hexa AND tets in invgrid), adjust here
-    allocate(points(3,8*ncell_return),cell_connectivity((8+1)*ncell_return),cell_type(ncell_return),&
-         cell_indx_out(ncell_return),indx_map(ncell_return))
+    select case(this%vtk_geometry_type_int)
+    case(0) ! CELLS
+       allocate(points(3,8*ncell_return),cell_connectivity((8+1)*ncell_return),cell_type(ncell_return),&
+            cell_indx_out(ncell_return),indx_map(ncell_return))
+       geometry_type = 0
+    case(1) ! CELL CENTERS
+       allocate(points(3,ncell_return),cell_indx_out(ncell_return),indx_map(ncell_return))
+       geometry_type = 1
+    end select
 !
     ncell = 0 ! counts the number of cells which will be returned (index of cell_type array)
     ipoints = 0 ! counts the number of points which will be returned (first index of points array)
@@ -745,36 +971,48 @@ contains
              endif
 !
              ncell=ncell+1
-             cell_type(ncell) = 12 ! cell type is Hexahedron (compare vtk source code file vtkCellType.h)
-             cell_indx_out(ncell) = global_cell_count ! store the corresponding inversion grid cell index for this cell
-             indx_map(ncell) = indx_map_tmp(global_cell_count) ! store the corresponding index in icoming array cell_indx_req (if present)
 !
-             icell_con=icell_con+1; cell_connectivity(icell_con) = 8 ! first store number of point indices to come for this cell
+             select case(this%vtk_geometry_type_int)
+             case(0) ! VOLUMETRIC CELLS
+                cell_indx_out(ncell) = global_cell_count ! store the corresponding inversion grid cell index for this cell
+                indx_map(ncell) = indx_map_tmp(global_cell_count) ! store the corresponding index in icoming array cell_indx_req (if present)
 !
-             ! define the required points for the cell type of this cell (Hexahedron)
-             ipoints=ipoints+1; points(:,ipoints) = (/ xmin,ymin,zmin /)
-             icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1 ! indices in vtk files have offset 0, so always store ipoints -1
+                cell_type(ncell) = 12 ! cell type is Hexahedron (compare vtk source code file vtkCellType.h)
+                icell_con=icell_con+1; cell_connectivity(icell_con) = 8 ! first store number of point indices to come for this cell
 !
-             ipoints=ipoints+1; points(:,ipoints) = (/ xmax,ymin,zmin /)
-             icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1
+                ! define the required points for the cell type of this cell (Hexahedron)
+                ipoints=ipoints+1; points(:,ipoints) = (/ xmin,ymin,zmin /)
+                icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1 ! indices in vtk files have offset 0, so always store ipoints -1
 !
-             ipoints=ipoints+1; points(:,ipoints) = (/ xmax,ymax,zmin /)
-             icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1
+                ipoints=ipoints+1; points(:,ipoints) = (/ xmax,ymin,zmin /)
+                icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1
 !
-             ipoints=ipoints+1; points(:,ipoints) = (/ xmin,ymax,zmin /)
-             icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1
+                ipoints=ipoints+1; points(:,ipoints) = (/ xmax,ymax,zmin /)
+                icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1
 !
-             ipoints=ipoints+1; points(:,ipoints) = (/ xmin,ymin,zmax /)
-             icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1
+                ipoints=ipoints+1; points(:,ipoints) = (/ xmin,ymax,zmin /)
+                icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1
 !
-             ipoints=ipoints+1; points(:,ipoints) = (/ xmax,ymin,zmax /)
-             icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1
+                ipoints=ipoints+1; points(:,ipoints) = (/ xmin,ymin,zmax /)
+                icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1
 !
-             ipoints=ipoints+1; points(:,ipoints) = (/ xmax,ymax,zmax /)
-             icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1
+                ipoints=ipoints+1; points(:,ipoints) = (/ xmax,ymin,zmax /)
+                icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1
 !
-             ipoints=ipoints+1; points(:,ipoints) = (/ xmin,ymax,zmax /)
-             icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1
+                ipoints=ipoints+1; points(:,ipoints) = (/ xmax,ymax,zmax /)
+                icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1
+!
+                ipoints=ipoints+1; points(:,ipoints) = (/ xmin,ymax,zmax /)
+                icell_con=icell_con+1; cell_connectivity(icell_con) = ipoints -1
+!
+             case(1) ! CELL CENTER POINTS
+                cell_indx_out(ncell) = global_cell_count ! store the corresponding inversion grid cell index for this cell
+                indx_map(ncell) = indx_map_tmp(global_cell_count) ! store the corresponding index in icoming array cell_indx_req (if present)
+!
+                ! store the center point of this cell
+                ipoints=ipoints+1; points(:,ipoints) = (/ 0.5*(xmax+xmin),0.5*(ymax+ymin),0.5*(zmax+zmin) /)
+             end select ! case(this%vtk_geometry_type_int)
+!
           end do ! ix
        end do ! iy
     end do ! ilay
@@ -799,20 +1037,52 @@ contains
   end subroutine getGeometryVtkScartInversionGrid
 !------------------------------------------------------------------------
 !> \brief return indices of all face neighbours for all (optionally only subset of) cells
+!!  \details If boundary_conditions is set, there should be a special form of nb_idx returned, which is used
+!!  e.g. to define special smoothing conditions:
+!!   'no_nb_inner_bnd': with some neighbours removed (which should not be smoothed with on internal invgrid 
+!!                      boundaries). FOR scartInversionGrid GRIDS, THERE IS NO POSSIBILITY YET TO DEFINE INTERNAL
+!!                      INVGRID BOUNDARIES!! SO IF THIS IS VALUE IS SET, NO NEIGHBOURS ARE RETURNED! 
+!!                      In the future might introduce this functionality here. It should
+!!                      be easy to realize this by introducing certain layers below which there should be an internal boundary.
+!!                      (might be even easier to define a set of refinement blocks via inidices, below which there should be 
+!!                      an internal boundary)
+!!   'extra_nbs_outer_bnd': additional fake neighbours (having cell index 0) in case of zero boundary conditions 
+!!                          on outer invgrid boundaries.
+!!   'extra_nbs_outer_bnd_except_free_surface': same as 'extra_nbs_outer_bnd', but not applied for cells on free surfaces.
+!!   '','standard': no special boundary handling, i.e. standard functionality (exactly the geometrical face neighbours are given)
 !! \param this scart inversion grid
-!! \param nb_idx pointer to array of length this%ncell which contains
+!! \param nb_idx pointer to array of length this%ncell which contains vector pointer to face neighbour indices
+!! \param boundary_conditions optional string indicating type of boundary conditions for which neighbours should be returned
 !
-  subroutine getIndicesFaceNeighboursScartInversionGrid(this,nb_idx)
+  subroutine getIndicesFaceNeighboursScartInversionGrid(this,nb_idx,boundary_conditions)
     type (scart_inversion_grid) :: this
     type (integer_vector_pointer), dimension(:), pointer :: nb_idx
+    character(len=*), optional :: boundary_conditions
     ! local
     integer :: icell,nnb,nnbzmin,nnbzmax,nnbxy,inb
     integer, dimension(:), pointer :: nb,nb_zmin,nb_zmax
+    character(len=39) :: bnd_cond
 !
     nullify(nb_idx)
     if(.not.this%is_defined) return
 !
+    if(present(boundary_conditions)) then
+       select case(boundary_conditions)
+       case('')
+          bnd_cond = 'standard'
+       case('extra_nbs_outer_bnd','extra_nbs_outer_bnd_except_free_surface','standard')
+          bnd_cond = boundary_conditions
+       case default
+          return
+       end select
+    else
+       ! By setting bnd_cond = 'standard' , any specific boundary handling is ignored below, i.e. 
+       ! exactly the geometrical neighbours are given. This is the standard functionality
+       bnd_cond = 'standard'
+    end if
+!
     allocate(nb_idx(this%ncell))
+    nullify(nb)
     do icell = 1,this%ncell
        nb_zmin => getVectorPointer(this%face_neighbours_z(1,icell))
        nb_zmax => getVectorPointer(this%face_neighbours_z(2,icell))
@@ -821,16 +1091,56 @@ contains
        if(associated(nb_zmin)) nnbzmin = size(nb_zmin)
        if(associated(nb_zmax)) nnbzmax = size(nb_zmax)
        nnbxy = count(this%face_neighbours_xy(:,icell) > 0)
-       nnb = nnbzmin + nnbzmax + nnbxy
 !
-       if(nnb > 0) then
+       ! Dependent on the type of boundary condition, define the neighbour index vector nb
+       select case(bnd_cond)
+       case ('standard')
+          ! give excatly the geometrical face neighbours of this cell
+          nnb = nnbzmin + nnbzmax + nnbxy
+          if(nnb > 0) then
+             allocate(nb(nnb))
+             inb = 0
+             if(nnbxy > 0) then
+                nb(inb+1:inb+nnbxy) = pack(this%face_neighbours_xy(:,icell),this%face_neighbours_xy(:,icell) > 0)
+                inb = inb+nnbxy
+             end if
+             if(nnbzmin > 0) then
+                nb(inb+1:inb+nnbzmin) = nb_zmin
+                inb = inb + nnbzmin
+             end if
+             if(nnbzmax > 0) then
+                nb(inb+1:inb+nnbzmax) = nb_zmax
+                inb = inb + nnbzmax
+             end if
+          end if ! nnb > 0
 !
-          allocate(nb(nnb))
-          inb = 0
-          if(nnbxy > 0) then
-             nb(inb+1:inb+nnbxy) = pack(this%face_neighbours_xy(:,icell),this%face_neighbours_xy(:,icell) > 0)
-             inb = inb+nnbxy
+       case ('extra_nbs_outer_bnd','extra_nbs_outer_bnd_except_free_surface')
+          ! always has 4 lateral neighbours, even if on an outer boundary
+          nnb = 4 
+          ! if has neighbours below, add those, otherwise add one artificial
+          if(nnbzmin > 0) then
+             nnb = nnb + nnbzmin
+          else
+             nnb = nnb + 1
           end if
+          ! If has neighbours above, add those, otherwise add one artificial.
+          if(nnbzmax > 0) then
+             nnb = nnb + nnbzmax
+          else
+             ! FOR NEIGHBOURS ABOVE THIS CELL, ONLY ADD ARTIFICIAL NEIGHBOUR FOR 'extra_nbs_outer_bnd'.
+             ! IN CASE OF 'extra_nbs_outer_bnd_except_free_surface', ONLY GEOMETRICAL NEIGHBOURS HERE!
+             if(bnd_cond=='extra_nbs_outer_bnd') nnb = nnb + 1
+          end if
+          allocate(nb(nnb))
+          ! initialize vector of neighbour indices by -1 indicating artificial neighbours
+          nb = -1
+          ! Then overwrite (partially) by all actual geometrical neighbours.
+          ! First add lateral face neighbours. As this%face_neighbours_xy is -1 for non existing neighbours, 
+          ! it is consistent with what we want here, so simply write to first 4 entries in vector nb.
+          nb(1:4) = this%face_neighbours_xy(:,icell)
+          inb = 4
+          ! Then add z neighbours. If there are no z neighbours (above, below), do nothing, the rest of the
+          ! vector nb keeps the value -1 then.
           if(nnbzmin > 0) then
              nb(inb+1:inb+nnbzmin) = nb_zmin
              inb = inb + nnbzmin
@@ -839,10 +1149,12 @@ contains
              nb(inb+1:inb+nnbzmax) = nb_zmax
              inb = inb + nnbzmax
           end if
+       end select ! case bnd_cond
 !
-          call associateVectorPointer(nb_idx(icell),nb)
-          nullify(nb)
-       end if ! nnb > 0
+       ! Finally associate the neighbour index vector pointer for this cell.
+       ! Even if nb was not allocated above, it works here (nothing happens).
+       call associateVectorPointer(nb_idx(icell),nb)
+       nullify(nb)
     end do ! icell
 !
   end subroutine getIndicesFaceNeighboursScartInversionGrid
@@ -1012,6 +1324,7 @@ contains
 !------------------------------------------------------------------------
 !> \brief transform given coordinates of points contained in cell icell to standard cell and compute their jacobian
 !! \param this scart inversion grid
+!! \param icell global inversion grid cell index
 !! \param x vector of global x coordinate (contains x-values in standard cell on exit)
 !! \param y vector of global y coordinate (contains y-values in standard cell on exit)
 !! \param z vector of global z coordinate (contains z-values in standard cell on exit)
@@ -1029,7 +1342,8 @@ contains
     character (len=41) :: myname = 'transformToStandardCellScartInversionGrid'
     character(len=400) :: errstr
     integer :: np
-    real :: xmin,xmax,ymin,ymax,zmin,zmax,dx,dy,dz
+    real :: xmin,xmax,ymin,ymax,zmin,zmax
+    double precision :: dx,dy,dz
 !
     call addTrace(errmsg,myname)
 !
@@ -1040,7 +1354,7 @@ contains
        return
     end if
 !
-    ! in routine transformVectorGlobalToLocalInversionGrid of module inversionGrid it was already assured
+    ! in routine transformToStandardCellInversionGrid of module inversionGrid it was already assured
     ! that this%is_defined, icell is valid and that x,y,z contain values and are all of same length!
 !
     np = size(x)
@@ -1048,15 +1362,18 @@ contains
 !
     call getCellBoundariesScartInversiongrid(this,icell,xmin,xmax,ymin,ymax,zmin,zmax)
 !
-    dx = xmax-xmin; dy = ymax-ymin; dz = zmax-zmin
+    dx = dble(xmax)-dble(xmin); dy = dble(ymax)-dble(ymin); dz = dble(zmax)-dble(zmin)
     ! transform x,y,z to hexahedral standard cell [-1,1]^3
-    x = (2.*x -xmax-xmin)/dx
-    y = (2.*y -ymax-ymin)/dy
-    z = (2.*z -zmax-zmin)/dz
+    x = real( (2.d0*x -dble(xmax)-dble(xmin))/dx )
+    y = real( (2.d0*y -dble(ymax)-dble(ymin))/dy )
+    z = real( (2.d0*z -dble(zmax)-dble(zmin))/dz )
 !
     if(any(x<-1.) .or. any(x>1.) .or. any(y<-1.) .or. any(y>1.) .or. any(z<-1.) .or. any(z>1.)) then
+       write(*,*) "ERROR in transformToStandardCellScartInversionGrid :  xmin, xmax, x(:)  =  ",xmin,xmax,x
+       write(*,*) "ERROR in transformToStandardCellScartInversionGrid :  ymin, ymax, y(:)  =  ",ymin,ymax,y
+       write(*,*) "ERROR in transformToStandardCellScartInversionGrid :  zmin, zmax, z(:)  =  ",zmin,zmax,z
        write(errstr,*) "these wavefield points (supposed to be contained in cell ",icell,&
-            ") transform to outside the hexahedreal standard cell [-1,1]^3"
+            ") transform to outside the hexahedral standard cell [-1,1]^3"
        call add(errmsg,2,errstr,myname)
        return
     end if
@@ -1130,18 +1447,13 @@ contains
 !! \param this inversion grid
 !! \param icell index of inversion grid for which volume should be returned
 !! \param volume volume of cell icell
-!! \param errmsg error message
 !
-  subroutine getVolumeCellScartInversionGrid(this,icell,volume,errmsg)
+  subroutine getVolumeCellScartInversionGrid(this,icell,volume)
     type (scart_inversion_grid) :: this
     integer, intent(in) :: icell
     real :: volume
-    type (error_message) :: errmsg
     ! local
-    character (len=31) :: myname = 'getVolumeCellScartInversionGrid'
     real :: xmin,xmax,ymin,ymax,zmin,zmax
-!
-    call addTrace(errmsg,myname)
 !
     ! in routine getVolumeCellInversionGrid of module inversionGrid it was already assured
     ! that this%is_defined and icell is valid
@@ -1157,18 +1469,18 @@ contains
 !! \param xc first coordinate of center of cell icell
 !! \param yc second coordinate of center of cell icell
 !! \param zc third coordinate of center of cell icell
-!! \param errmsg error message
 !
-  subroutine getCenterCellScartInversionGrid(this,icell,xc,yc,zc,errmsg)
+  subroutine getCenterCellScartInversionGrid(this,icell,xc,yc,zc)
     type (scart_inversion_grid) :: this
     integer, intent(in) :: icell
     real :: xc,yc,zc
-    type (error_message) :: errmsg
     ! local
-    character (len=31) :: myname = 'getCenterCellScartInversionGrid'
     real :: xmin,xmax,ymin,ymax,zmin,zmax
 !
-    call addTrace(errmsg,myname)
+    ! no need of selecting coords_type: 
+    ! always do the same, since in case of using the 
+    ! scart inversion grid the wavefield points as well as event and station coordinates
+    ! are expected as x,y,z coordinates (in that order)
 !
     ! in routine getCenterCellInversionGrid of module inversionGrid it was already assured
     ! that this%is_defined and icell is valid
@@ -1186,18 +1498,13 @@ contains
 !! \param this inversion grid
 !! \param icell index of inversion grid for which radius should be returned
 !! \param radius radius of cell icell
-!! \param errmsg error message
 !
-  subroutine getRadiusCellScartInversionGrid(this,icell,radius,errmsg)
+  subroutine getRadiusCellScartInversionGrid(this,icell,radius)
     type (scart_inversion_grid) :: this
     integer, intent(in) :: icell
     real :: radius
-    type (error_message) :: errmsg
     ! local
-    character (len=31) :: myname = 'getRadiusCellScartInversionGrid'
     real :: xmin,xmax,ymin,ymax,zmin,zmax
-!
-    call addTrace(errmsg,myname)
 !
     ! in routine getRadiusCellInversionGrid of module inversionGrid it was already assured
     ! that this%is_defined and icell is valid
@@ -1206,5 +1513,50 @@ contains
 !
     radius = 0.5*sqrt((xmax-xmin)*(xmax-xmin) + (ymax-ymin)*(ymax-ymin) + (zmax-zmin)*(zmax-zmin))
   end subroutine getRadiusCellScartInversionGrid
+!------------------------------------------------------------------------
+!> \brief function answers whether a given point inside the inversion grid domain
+!! \param c1 first coordinate
+!! \param c2 second coordinate
+!! \param c3 third coordinate
+!! \param coords_type 'wp','event','station'
+!
+  function pointInsideScartInversionGrid(this,c1,c2,c3,coords_type) result(l)
+    type (scart_inversion_grid) :: this
+    real, intent(in) :: c1,c2,c3
+    character(len=*) :: coords_type
+    logical :: l
+    real :: c1_copy,c2_copy,c3_copy
+    real, dimension(:), pointer :: cx,cy
+!
+    l = .false.
+!
+    if(.not.this%is_defined) return
+!
+    c1_copy = c1
+    c2_copy = c2
+    c3_copy = c3
+!
+    ! no need of selecting coords_type: always do the same, since in case of using the 
+    ! scart inversion grid the wavefield points as well as event and station coordinates
+    ! are expected as x,y,z coordinates (in that order)
+!
+    call transformVectorGlobalToLocalScartInversionGrid(this,(/c1_copy/),(/c2_copy/),(/c3_copy/),1)
+!
+    ! check depth (z) -cordinate first
+    if(c3_copy > this%z(1) .or. c3_copy < this%z(this%nlay+1)) return
+!
+    ! now check the first refinement block for lateral coordinates (actually this is sufficient, 
+    ! assuming all refinement blocks have the same lateral coverage
+    ! IF YOU ADD A CONSTRUCTOR TO THIS MODULE WHICH CREATES INVERSION GRID WITH DIFFERENT LATERAL EXTENT
+    ! IN THE REFINEMENT BLOCKS, YOU NEED TO LOOP ON ALL REFINEMENT BLOCKS HERE!!
+    cx => getVectorPointer(this%x(1))
+    if(c1_copy < cx(1) .or. c1_copy > cx(this%nx(1))) return
+!
+    cy => getVectorPointer(this%y(1))
+    if(c2_copy < cy(1) .or. c2_copy > cy(this%ny(1))) return
+
+    ! if the code comes here, all the checks above were successfull, so return true
+    l = .true.
+  end function pointInsideScartInversionGrid
 !
 end module scartInversionGrid

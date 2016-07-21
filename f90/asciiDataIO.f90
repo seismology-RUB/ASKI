@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief module containing routines to read/write data from/to ascii files
 !!
@@ -25,7 +25,7 @@
 !!  return that data vector to main program.
 !!
 !! \author Florian Schumacher
-!! \date August 2012
+!! \date Nov 2015
 !
 module asciiDataIO
 !
@@ -49,6 +49,8 @@ implicit none
 	interface writeAsciiData
 		module procedure writeComplexVectorAsciiDataIO
 		module procedure writeComplexMatrixAsciiDataIO
+		module procedure writeRealVectorAsciiDataIO
+		module procedure writeRealMatrixAsciiDataIO
 	end interface
 !
 contains
@@ -585,5 +587,107 @@ contains
 !
 	close(lu)
 	end function writeComplexMatrixAsciiDataIO
+!------------------------------------------------------------------------
+!> \brief write real values to ascii file (one value per line)
+!! \param filename ascii file name
+!! \param lu file unit
+!! \param val real data vector
+!! \return error message
+!
+! TODO: * add optional array of character strings, which contains arbitrary header lines
+!         which are written first before the data values are written
+!       * add sophisticated overwrite handling
+!
+	function writeRealVectorAsciiDataIO(filename,lu,val) result(errmsg)
+	! incoming
+	character(len=*) :: filename
+	integer :: lu
+	real, dimension(:) :: val
+	! outgoing
+	type (error_message) :: errmsg
+	! local
+	integer :: ios,idata,ndata
+	character(len=400) :: errstr
+	character(len=26) :: myname = 'writeRealVectorAsciiDataIO'
+!
+	call new(errmsg,0,"incoming filename: '"//trim(filename)//"'",myname)
+!
+	! open file
+	open(unit=lu,file=trim(filename),form='FORMATTED',status='UNKNOWN',action='WRITE',iostat=ios)
+	if(ios/=0) then
+		write(errstr,*) "could not open file, iostat = ",ios
+		call add(errmsg,2,trim(errstr),myname)
+		close(lu)
+		return
+	endif
+!
+	ndata = size(val)
+	write(errstr,*) "incoming data values = ",ndata
+	call new(errmsg,0,trim(errstr),myname)
+!
+	do idata = 1,size(val)
+		write(lu,*,iostat=ios) val(idata)
+		if(ios/=0) then
+			write(errstr,*) "could not write ",idata,"'th value; iostat = ",ios
+			call add(errmsg,2,trim(errstr),myname)
+			exit
+		endif
+	end do ! idata
+!
+	close(lu)
+	end function writeRealVectorAsciiDataIO
+!------------------------------------------------------------------------
+!> \brief write real values to ascii file (n values per line)
+!! \param filename ascii file name
+!! \param lu file unit
+!! \param val real data matrix
+!! \return error message
+!
+! TODO: * add optional array of character strings, which contains arbitrary header lines
+!         which are written first before the data values are written
+!       * add sophisticated overwrite handling
+!
+	function writeRealMatrixAsciiDataIO(filename,lu,val) result(errmsg)
+	! incoming
+	character(len=*) :: filename
+	integer :: lu
+	real, dimension(:,:) :: val
+	! outgoing
+	type (error_message) :: errmsg
+	! local
+	integer :: ios,idata,ndata,icol,ncol!,ios_line,idata,iline
+	!logical :: dont_read_all
+	character(len=400) :: errstr!,line
+	character(len=29) :: myname = 'writeRealMatrixAsciiDataIO'
+!
+	call new(errmsg,0,"incoming filename: '"//trim(filename)//"'",myname)
+!
+	! open file
+	open(unit=lu,file=trim(filename),form='FORMATTED',status='UNKNOWN',action='WRITE',iostat=ios)
+	if(ios/=0) then
+		write(errstr,*) "could not open file, iostat = ",ios
+		call add(errmsg,2,trim(errstr),myname)
+		close(lu)
+		return
+	endif
+!
+	ndata = size(val,1)
+	ncol = size(val,2)
+	write(errstr,*) "incoming data values = ",ndata
+	call new(errmsg,0,trim(errstr),myname)
+	write(errstr,*) "incoming number of traces = ",ncol
+	call new(errmsg,0,trim(errstr),myname)
+!
+	do idata = 1,ndata
+		write(lu,*,iostat=ios) (val(idata,icol),icol = 1,ncol)
+		if(ios /= 0) then
+			write(errstr,*) "could not write ",idata,"'th values; iostat = ",ios
+			call add(errmsg,2,trim(errstr),myname)
+			exit
+		endif
+	end do ! idata
+!
+	close(lu)
+	end function writeRealMatrixAsciiDataIO
 !
 end module asciiDataIO

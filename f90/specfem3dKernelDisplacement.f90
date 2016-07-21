@@ -1,27 +1,28 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief Module dealing with kernel displacements for methods SPECFEM3D (Cartesian and GLOBE)
 !!
 !! \author Florian Schumacher
-!! \date June 2013
+!! \date Nov 2015
 !
 module specfem3dKernelDisplacement
+  use specfem3dForASKIFiles
   use errorMessage
   use fileUnitHandler
   implicit none
@@ -30,16 +31,12 @@ module specfem3dKernelDisplacement
   interface operator (.df.); module procedure getDfSpecfem3dKernelDisplacement; end interface
   interface operator (.nf.); module procedure getNfSpecfem3dKernelDisplacement; end interface
   interface operator (.jfcur.); module procedure getJfcurSpecfem3dKernelDisplacement; end interface
-  interface operator (.disp.); module procedure getSpecfem3dKernelDisplacement; end interface
-  interface operator (.strain.); module procedure getStrainsSpecfem3dKernelDisplacement; end interface
-!
-  integer, parameter :: length_ID_specfem3d_kernel_displacement = 13 !< change this number CONSISTENTLY with length_ASKI_output_ID in SPECFEM codes
 !
 !> \brief type containing all information on the kernel displacement files
   type specfem3d_kernel_displacement
      private
      character (len=500) :: basename = '' !< file base for all files of this kernel displacement object
-     character (len=length_ID_specfem3d_kernel_displacement) :: eventid = ''  !< event id
+     character (len=length_ID_specfem3d_for_ASKI_files) :: eventid = ''  !< event id
      integer :: nproc = -1 !< number of parallel processors by which this file was created (safety feature, to check with the frequency files)
      integer :: specfem_version = -1 !< for safety reasons, remember this (check with other files)
      double precision :: df = -1.0d0   !< frequency step
@@ -63,7 +60,6 @@ contains
     type (error_message) :: errmsg
     ! local
     character(len=400) :: errstr
-    integer :: ier,type_invgrid,len_id
     character (len=38) :: myname = 'initialReadSpecfem3dKernelDisplacement'
 !
     call addTrace(errmsg,myname)
@@ -71,75 +67,27 @@ contains
     this%lu = get(fuh)
     this%basename = basename
 !
-    open(unit=this%lu,file=trim(this%basename)//'.main',status='old',action='read',access='stream',&
-         form='unformatted',iostat=ier)
-    if (ier /= 0) then
-       call add(errmsg,2,"File '"//trim(this%basename)//".main' cannot be opened to read",myname)
-       goto 1
-    endif
-
-    read(this%lu) this%specfem_version
+    call readSpecfem3dForASKIMainFile(trim(this%basename)//'.main',this%lu,errmsg,&
+         specfem_version=this%specfem_version,file_ID=this%eventid,nproc=this%nproc,&
+         nwp=this%ntot,df=this%df,nf=this%nfreq,jf=this%jf)
+    if(.level.errmsg == 2) goto 2
+!
     select case(this%specfem_version)
-    case(1,2)
+    case(version_globe_specfem3d_for_ASKI_files,version_cartesian_specfem3d_for_ASKI_files)
        ! OK, so pass doing nothing
     case default
-       write(errstr,*) "specfem version = ",this%specfem_version,&
-            " is not supported: 1 = SPECFEM3D_GLOBE, 2 = SPECFEM3D_Cartesian"
+       write(errstr,*) "readSpecfem3dForASKIMainFile returned specfem_version = ",this%specfem_version,&
+            "; this module only supports specfem versions ",version_globe_specfem3d_for_ASKI_files," = SPECFEM3D_GLOBE and ",&
+            version_cartesian_specfem3d_for_ASKI_files," = SPECFEM3D_Cartesian ."
        call add(errmsg,2,errstr,myname)
-       goto 1
+       goto 2
     end select
-
-    read(this%lu) len_id
-    if(len_id/=length_ID_specfem3d_kernel_displacement) then
-       write(errstr,*) "length of ASKI ID is ",len_id,&
-            ", only length ",length_ID_specfem3d_kernel_displacement," supported here. Please update this code accordingly"
-       call add(errmsg,2,errstr,myname)
-       goto 1
-    end if
-
-    read(this%lu) this%eventid,this%nproc,type_invgrid,this%ntot,this%df,this%nfreq
-
-    ! check if specfem_version and type_invgrid are a valid match
-    if(this%specfem_version == 1) then
-       select case(type_invgrid)
-       case(1,3,4)
-          ! OK, so pass doing nothing
-       case default
-          write(errstr,*) "type of inversion grid = ",type_invgrid," is not supported by SPECFEM3D_GLOBE"
-          call add(errmsg,2,errstr,myname)
-          goto 1
-       end select
-    end if
-    if(this%specfem_version == 2) then
-       select case(type_invgrid)
-       case(2,3,4)
-          ! OK, so pass doing nothing
-       case default
-          write(errstr,*) "type of inversion grid = ",type_invgrid," is not supported by SPECFEM3D_Cartesian"
-          call add(errmsg,2,errstr,myname)
-          goto 1
-       end select
-    end if
-
-    if(this%nfreq<1 .or. this%ntot<1) then
-       write(errstr,*) "ntot,df,nf =",this%ntot,this%df,this%nfreq,"; ntot and nf should be positive"
-       call add(errmsg,2,errstr,myname)
-       goto 1
-    end if
-    allocate(this%jf(this%nfreq))
-    read(this%lu) this%jf
-
-    close(this%lu)
-
-    ! finally allocate for spectra
-    allocate(this%u(this%ntot,3),this%ustr(this%ntot,6))
-
+!
     ! if program comes here, there was no error reading the file, so return
     return
-
+!
     ! if there is an error reading the file, deallocate everything before return
-1   close(this%lu)
-    call deallocateSpecfem3dKernelDisplacement(this,fuh)
+2   call deallocateSpecfem3dKernelDisplacement(this,fuh)
   end subroutine initialReadSpecfem3dKernelDisplacement
 !----------------------------------------------------------------------------------------------------
 !> \brief Deallocate object
@@ -172,11 +120,16 @@ contains
     character(len=400) :: errstr
     character(len=40) :: myname = 'readFrequencySpecfem3dKernelDisplacement'
     character(len=509) :: filename
-    integer :: ier,len_id,nproc,specfem_version,ntot,jf_file
+    integer :: nproc,specfem_version,ntot,jf_file
     double precision :: df
-    character(len=length_ID_specfem3d_kernel_displacement) :: id
+    character(len=length_ID_specfem3d_for_ASKI_files) :: id
 !
     call addTrace(errmsg,myname)
+!
+    if(this%lu == -1) then
+       call add(errmsg,2,"object was not yet initiated, call initialReadSpecfem3dKernelDisplacement first",myname)
+       return
+    end if
 !
     ! check validity of frequency index
 !
@@ -184,79 +137,74 @@ contains
        write(errstr,*) "incoming frequency index ",jf,", not contained in this kernelDisplacement object. "
        call add(errmsg,2,errstr,myname)
        return
+    else
+       write(errstr,*) "will read kernel displacement for frequency index ",jf
+       call add(errmsg,0,errstr,myname)
     end if
 !
-    ! open specific file for this frequency
-    write(filename,"(a,i6.6)") trim(this%basename)//".jf",jf
-    open(unit=this%lu,file=filename,status='old',action='read',access='stream',&
-         form='unformatted',iostat=ier)
-    if (ier /= 0) then
-       call add(errmsg,2,"File '"//trim(filename)//"' cannot be opened to read",myname)
-       close(this%lu)
-       return
-    else
-       call add(errmsg,0,"Successfully opened file '"//trim(filename)//"' to read",myname)
-    endif
+    ! make this%jfcur invalid before changing values in arrays this%u,this%ustr.
+    ! in case of returning on error, it can be no longer assured what is contained in the object.
+    ! when returning on success (end of subroutine), set this%jfcur properly
+    this%jfcur = -1
 !
-    read(this%lu) specfem_version
+    ! read specific file for this frequency
+    write(filename,"(a,i6.6)") trim(this%basename)//".jf",jf
+    if(associated(this%u)) deallocate(this%u)
+    if(associated(this%ustr)) deallocate(this%ustr)
+    call readSpecfem3dForASKISpectralWavefieldFile(filename,this%lu,errmsg,specfem_version=specfem_version,&
+         file_ID=id,nproc=nproc,nwp=ntot,df=df,jfcur=jf_file,u=this%u,ustr=this%ustr)
+!
+    ! check content of frequency file
     if(specfem_version/=this%specfem_version) then
        write(errstr,*) "specfem_version ",specfem_version," contained in this file does not match specfem_version ",&
             this%specfem_version," of main file"
        call add(errmsg,2,errstr,myname)
-       close(this%lu)
        return
     end if
-
-    read(this%lu) len_id
-    if(len_id/=length_ID_specfem3d_kernel_displacement) then
-       write(errstr,*) "length of ASKI ID is ",len_id,&
-            ", only length ",length_ID_specfem3d_kernel_displacement," supported here. Please update this code accordingly"
-       call add(errmsg,2,errstr,myname)
-       close(this%lu)
-       return
-    end if
-
-    read(this%lu) id,nproc,ntot,df,jf_file
     if(id/=this%eventid) then
        call add(errmsg,2,"ID contained in this file '"//trim(id)//"' does not match ID '"//&
             trim(this%eventid)//"' of main file",myname)
-       close(this%lu)
        return
     end if
     if(nproc/=this%nproc) then
        write(errstr,*) "nproc ",nproc," contained in this file does not match nproc ",this%nproc," of main file"
        call add(errmsg,2,errstr,myname)
-       close(this%lu)
        return
     end if
     if(ntot/=this%ntot) then
        write(errstr,*) "ntot ",ntot," contained in this file does not match ntot ",this%ntot," of main file"
        call add(errmsg,2,errstr,myname)
-       close(this%lu)
        return
     end if
     if(df/=this%df) then
        write(errstr,*) "df ",df," contained in this file does not match df ",this%df," of main file"
        call add(errmsg,2,errstr,myname)
-       close(this%lu)
        return
     end if
     if(jf_file/=jf) then
        write(errstr,*) "requested frequency index ",jf," (also contained in filename) does not match the frequency index ",&
             jf_file,"actually contained in the file"
        call add(errmsg,2,errstr,myname)
-       close(this%lu)
        return
     end if
-
-    ! make this%jf invalid before changing values in arrays this%u,this%ustr
-    ! in case of returning on error (well, crashing the program in this case..), it can be no longer assured what is contained in the object
-    ! when returning on success (end of subroutine), set this%jfcur properly
-    this%jfcur = -1
-    ! read spectrum from file
-    read(this%lu) this%u,this%ustr
-
-    close(this%lu)
+!
+    ! check spectra
+    if(.not.(associated(this%u).and.associated(this%ustr))) then
+       call add(errmsg,2,"readSpecfem3dForASKISpectralWavefieldFile did not return both of u, ustr",myname)
+       return
+    end if
+    if(size(this%u,1)/=this%ntot .or. size(this%u,2)/= 3) then
+       write(errstr,*) "readSpecfem3dForASKISpectralWavefieldFile returned u of size ",&
+            size(this%u,1),size(this%u,2),"; expected size ",this%ntot,"   3"
+       call add(errmsg,2,errstr,myname)
+       return
+    end if
+    if(size(this%ustr,1)/=this%ntot .or. size(this%ustr,2)/= 6) then
+       write(errstr,*) "readSpecfem3dForASKISpectralWavefieldFile returned ustr of size ",&
+            size(this%ustr,1),size(this%ustr,2),"; expected size ",this%ntot,"   6"
+       call add(errmsg,2,errstr,myname)
+       return
+    end if
 !
     this%jfcur = jf
   end subroutine readFrequencySpecfem3dKernelDisplacement
@@ -293,6 +241,24 @@ contains
     ustr => this%ustr
   end function getStrainsSpecfem3dKernelDisplacement
 !-------------------------------------------------------------------------
+!> \brief Get unit factor of strains
+!
+  subroutine getUnitFactorStrainsSpecfem3dKernelDisplacement(this,uf_ustr,errmsg)
+    type (specfem3d_kernel_displacement) :: this
+    real :: uf_ustr
+    type(error_message) :: errmsg
+    select case (this%specfem_version)
+    case(version_globe_specfem3d_for_ASKI_files)
+       uf_ustr = 1.0
+    case(version_cartesian_specfem3d_for_ASKI_files)
+       uf_ustr = 1.0
+    case default ! object not yet initiated
+       uf_ustr = 0.
+       call add(errmsg,2,"specfem3d_kernel_displacement object not yet initiated. don't know the specfem version",&
+            "getUnitFactorStrainsSpecfem3dKernelDisplacement")
+    end select
+  end subroutine getUnitFactorStrainsSpecfem3dKernelDisplacement
+!-------------------------------------------------------------------------
 !> \brief Get displacements
 !
   function getSpecfem3dKernelDisplacement(this) result(u)
@@ -301,11 +267,29 @@ contains
     u => this%u
   end function getSpecfem3dKernelDisplacement
 !-------------------------------------------------------------------------
+!> \brief Get unit factor of displacements
+!
+  subroutine getUnitFactorSpecfem3dKernelDisplacement(this,uf_u,errmsg)
+    type (specfem3d_kernel_displacement) :: this
+    real :: uf_u
+    type(error_message) :: errmsg
+    select case (this%specfem_version)
+    case(version_globe_specfem3d_for_ASKI_files)
+       uf_u = 1.0
+    case(version_cartesian_specfem3d_for_ASKI_files)
+       uf_u = 1.0
+    case default ! object not yet initiated
+       uf_u = 0.
+       call add(errmsg,2,"specfem3d_kernel_displacement object not yet initiated. don't know the specfem version",&
+            "getUnitFactorSpecfem3dKernelDisplacement")
+    end select
+  end subroutine getUnitFactorSpecfem3dKernelDisplacement
+!-------------------------------------------------------------------------
 !> \brief Get event ID
 !
   function getEventIDSpecfem3dKernelDisplacement(this) result(res)
     type (specfem3d_kernel_displacement), intent(in) :: this
-    character(len=length_ID_specfem3d_kernel_displacement) :: res
+    character(len=length_ID_specfem3d_for_ASKI_files) :: res
     res = this%eventid
   end function getEventIDSpecfem3dKernelDisplacement
 !-------------------------------------------------------------------------

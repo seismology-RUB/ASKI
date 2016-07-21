@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief hold basic requirements for a specific iteration step
 !!
@@ -23,7 +23,7 @@
 !!  integration weights, etc. are supervised by this module
 !!
 !! \author Florian Schumacher
-!! \date March 2013
+!! \date Nov 2015
 !
 module iterationStepBasics
 !
@@ -33,6 +33,9 @@ module iterationStepBasics
   use wpVtkFile
   use inversionGrid
   use invgridVtkFile
+  use seismicEvent
+  use seismicEventList
+  use seismicNetwork
   use eventStationVtkFile
   use integrationWeights
   use kernelReferenceModel
@@ -96,17 +99,19 @@ contains
     type (invgrid_vtk_file) :: invgrid_vtk
     type (wp_vtk_file) :: wp_vtk
     type (event_station_vtk_file) :: evstat_vtk
+    type (seismic_event) :: event
        ! reference model
     character(len=character_length_pmtrz) :: parametrization
     logical :: kim_krm_existed
     type (kernel_inverted_model) :: kim_krm
     character(len=character_length_param) :: param_name
        ! other
-    logical :: recreate_files
+    logical :: recreate_files,invgrid_can_transform_points_outside_to_vtk
     integer :: i_partest
     integer :: j,n,ios,nf
+    logical :: l_partest
     real :: volume
-    character (len=80), dimension(14) :: iter_inpar_keys
+    character (len=80), dimension(16) :: iter_inpar_keys
     type (error_message) :: errmsg2
     character(len=400) :: errstr
     character(len=27) :: myname = 'initiateIterationStepBasics'
@@ -116,7 +121,7 @@ contains
          'PARFILE_INVERSION_GRID', 'FILE_KERNEL_REFERENCE_MODEL', 'ITERATION_STEP_NUMBER_OF_FREQ', &
          'ITERATION_STEP_INDEX_OF_FREQ', 'PATH_KERNEL_DISPLACEMENTS', 'PATH_KERNEL_GREEN_TENSORS', &
          'PATH_OUTPUT_FILES', 'PATH_SENSITIVITY_KERNELS', 'PATH_SYNTHETIC_DATA', 'TYPE_INTEGRATION_WEIGHTS', &
-         'FILEBASE_BASIC_STATS'/
+         'FILEBASE_BASIC_STATS','PATH_KERNEL_REFERENCE_MODELS','USE_PATH_SPECIFIC_MODELS'/
 !
 !  function starts here
 !
@@ -131,14 +136,25 @@ contains
 !  read input parameters
 !
     call createKeywordsInputParameter(this%inpar,iter_inpar_keys)
+    call new(errmsg2,myname)
     call readSubroutineInputParameter(this%inpar,get(fuh),trim(this%iter_path)//&
-         trim((.inpar.invbasics).sval.'PARFILE_ITERATION_STEP'),errmsg)
+         trim((.inpar.invbasics).sval.'PARFILE_ITERATION_STEP'),errmsg2)
     call undo(fuh)
-    if (.level.errmsg == 2) return
+    if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+    call dealloc(errmsg2)
+    if(.level.errmsg == 2) return
 !
     ! check consistency of entries in iteration step specific parfile
     ! during creation of object this%inpar, there was already checked if the required keywords are present
     ! now check correct type of values here (except character types) and consistencies
+!
+    l_partest = lval(this%inpar,'USE_PATH_SPECIFIC_MODELS',iostat=ios)
+    if(ios/=0) then
+       write(errstr,*) "parameter 'USE_PATH_SPECIFIC_MODELS' = '"//trim(this%inpar.sval.&
+            'USE_PATH_SPECIFIC_MODELS')//"' of iteration step parfile is not a valid logical value"
+       call add(errmsg,2,trim(errstr),myname)
+       return
+    end if
 !
     nf = ival(this%inpar,'ITERATION_STEP_NUMBER_OF_FREQ',iostat=ios)
     if(ios/=0) then
@@ -200,44 +216,76 @@ contains
        call add(errmsg,2,trim(errstr),myname)
        return
     end if
-    if(.not.validTypeIntegrationWeights(i_partest,err=errmsg)) return
+    call new(errmsg2,myname)
+    if(.not.validTypeIntegrationWeights(i_partest,err=errmsg2)) then
+       call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
+       return
+    end if
+    call dealloc(errmsg2)
 !
     ! check dependent validity of inversion grid, wavefield points (i.e. FORWARD_METHOD) and integration weights
+    call new(errmsg2,myname)
     if(.not.validTypeInversionGrid(this%inpar.sval.'TYPE_INVERSION_GRID',&
          method=(.inpar.invbasics).sval.'FORWARD_METHOD',&
-         intw_type=this%inpar.ival.'TYPE_INTEGRATION_WEIGHTS',err=errmsg)) return
+         intw_type=this%inpar.ival.'TYPE_INTEGRATION_WEIGHTS',err=errmsg2)) then
+       call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
+       return
+    end if
+    call dealloc(errmsg2)
 !
 ! create wavefield points
 !
+    call new(errmsg2,myname)
     call createWavefieldPoints(this%wp,(.inpar.invbasics).sval.'FORWARD_METHOD',fuh, &
-         trim(this%iter_path)//trim(this%inpar.sval.'FILE_WAVEFIELD_POINTS'),errmsg)
+         trim(this%iter_path)//trim(this%inpar.sval.'FILE_WAVEFIELD_POINTS'),errmsg2)
+    if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+    call dealloc(errmsg2)
     if (.level.errmsg == 2) return
 !
 ! create inversion grid
 !
+    call new(errmsg2,myname)
     call createInversionGrid(this%invgrid,this%inpar.sval.'TYPE_INVERSION_GRID',&
          trim(this%iter_path)//trim(this%inpar.sval.'PARFILE_INVERSION_GRID'),this%iter_path,&
-         get(fuh),errmsg,recreate=recreate_files)
+         get(fuh),errmsg2,recreate=recreate_files)
     call undo(fuh)
+    if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+    call dealloc(errmsg2)
     if (.level.errmsg == 2) return
+    invgrid_can_transform_points_outside_to_vtk = canTransformToVtkPointsOutsideInversionGrid(this%invgrid,'wp')
+    if(.not.invgrid_can_transform_points_outside_to_vtk) then
+       call add(errmsg,1,"inversion grids of type '"//trim(this%inpar.sval.'TYPE_INVERSION_GRID')//&
+            "' cannot transform outside wavefield points to vtk",myname)
+    end if
 !
 !  create integration weights (if not existent yet, or if recreate_files=True)
 !
     inquire(file=trim(this%iter_path)//trim(this%inpar.sval.'FILE_INTEGRATION_WEIGHTS'), exist=intw_existed)
     if(intw_existed .and. .not.recreate_files) then
+       call new(errmsg2,myname)
        call readIntegrationWeights(this%intw,get(fuh),trim(this%iter_path)//&
-            trim(this%inpar.sval.'FILE_INTEGRATION_WEIGHTS'),errmsg)
+            trim(this%inpar.sval.'FILE_INTEGRATION_WEIGHTS'),errmsg2)
        call undo(fuh)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        if (.level.errmsg == 2) return
     else ! intw_existed .and. .not.recreate_files
        ! create integration weights
-       call createIntegrationWeights(this%intw,this%inpar.ival.'TYPE_INTEGRATION_WEIGHTS',this%wp,this%invgrid,errmsg)
+       call new(errmsg2,myname)
+       call createIntegrationWeights(this%intw,this%inpar.ival.'TYPE_INTEGRATION_WEIGHTS',this%wp,this%invgrid,errmsg2)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        if (.level.errmsg == 2) return
        !
        ! write integration weights
+       call new(errmsg2,myname)
        call writeIntegrationWeights(this%intw,get(fuh),trim(this%iter_path)//&
-            trim(this%inpar.sval.'FILE_INTEGRATION_WEIGHTS'),errmsg)
+            trim(this%inpar.sval.'FILE_INTEGRATION_WEIGHTS'),errmsg2)
        call undo(fuh)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        if (.level.errmsg == 2) return
     endif ! intw_existed .and. invgrid_existed
 !
@@ -246,19 +294,19 @@ contains
     if(.ncell.this%intw /= .ncell.this%invgrid) then
        write(errstr,*) "number of invgrid cells contained in integration weights = ",.ncell.this%intw,&
             " differs from actual number of cells of inversion grid  = ",.ncell.this%invgrid,&
-            " -> files are inconsistent, so recreate files by running 'initBasics -recr ...'"
+            " -> files are inconsistent. Please recreate files by running 'initBasics -recr ...'"
        call add(errmsg,2,errstr,myname)
        return
     end if
     if(.nwp.this%intw /= .ntot.this%wp) then
        write(errstr,*) "number of wavefield points contained in integration weights = ",.nwp.this%intw,&
             " differs from actual number wavefield points = ",.ntot.this%wp,&
-            " -> files are inconsistent, so recreate files by running 'initBasics -recr ...'"
+            " -> files are inconsistent. Please recreate files by running 'initBasics -recr ...'"
        call add(errmsg,2,errstr,myname)
        return
     end if
 !
-! write vtk files, if not existendyou have new inversion grid or new integration weights or recreate_files=True
+! write vtk files, if not existend, you have new inversion grid or new integration weights or recreate_files=True
 !
     if(.not.intw_existed .or. recreate_files) then
        !
@@ -275,39 +323,61 @@ contains
        end if
        !
        ! wavefield points
+       call new(errmsg2,myname)
        call init(wp_vtk,this%wp,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS'),&
-            trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,'Wavefield points',&
+            trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg2,'Wavefield points',&
             wp_indx_req=wp_inside)
-       if (.level.errmsg == 2) return
+       if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeWp
+          call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
+          return
+       end if
        ! write wavefield points tp vtk file
-       call writeWp(wp_vtk,get(fuh),errmsg,overwrite=.true.)
+       call writeWp(wp_vtk,get(fuh),errmsg2,overwrite=.true.)
        call undo(fuh)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        if (.level.errmsg == 2) return
        call dealloc(wp_vtk)
        !
        ! if there are any wavefield points outside the inversion grid, write additionally all the wavefield points
        ! (including those outside the inversion grid) and (separately) only the points outside
-       if(anyWpOutside(this%intw)) then
+       ! THIS IS DEPENDENT ON THE TYPE OF INVERSION GRID: some grids cannot transform points outside the inversion grid into vtk coordinates
+       if(anyWpOutside(this%intw) .and. invgrid_can_transform_points_outside_to_vtk) then
           ! all wavefield points
+          call new(errmsg2,myname)
           call init(wp_vtk,this%wp,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
-               //'_all',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,&
+               //'_all',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg2,&
                vtk_title='Wavefield points including points outside invgrid')
-          if (.level.errmsg == 2) return
+          if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeWp
+             call add(errmsg,errmsg2)
+             call dealloc(errmsg2)
+             return
+          end if
           ! write wavefield points tp vtk file
-          call writeWp(wp_vtk,get(fuh),errmsg,overwrite=.true.)
+          call writeWp(wp_vtk,get(fuh),errmsg2,overwrite=.true.)
           call undo(fuh)
+          if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
           if (.level.errmsg == 2) return
           call dealloc(wp_vtk)
           !
           ! wavefield points outside invgrid
           wp_outside => getWpOutside(this%intw)
+          call new(errmsg2,myname)
           call init(wp_vtk,this%wp,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
-               //'_outside',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,&
+               //'_outside',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg2,&
                vtk_title='Wavefield points including points outside invgrid',wp_indx_req=wp_outside)
-          if (.level.errmsg == 2) return
+          if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeWp
+             call add(errmsg,errmsg2)
+             call dealloc(errmsg2)
+             return
+          end if
           ! write wavefield points tp vtk file
-          call writeWp(wp_vtk,get(fuh),errmsg,overwrite=.true.)
+          call writeWp(wp_vtk,get(fuh),errmsg2,overwrite=.true.)
           call undo(fuh)
+          if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
           if (.level.errmsg == 2) return
           call dealloc(wp_vtk)
           if(associated(wp_outside)) deallocate(wp_outside)
@@ -315,12 +385,19 @@ contains
        endif ! anyWpOutside(this%intw)
        !
        ! inversion grid
+       call new(errmsg2,myname)
        call init(invgrid_vtk,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS'),&
-            trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,vtk_title='inversion grid',&
+            trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg2,vtk_title='inversion grid',&
             cell_indx_req=cells_filled)
-       if (.level.errmsg == 2) return
-       call writeInvgrid(invgrid_vtk,get(fuh),errmsg,overwrite=.true.)
+       if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeInvgrid
+          call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
+          return
+       end if
+       call writeInvgrid(invgrid_vtk,get(fuh),errmsg2,overwrite=.true.)
        call undo(fuh)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        if (.level.errmsg == 2) return
        call dealloc(invgrid_vtk)
        !
@@ -328,23 +405,37 @@ contains
        !  and (seperately) the empty cells
        if(anyCellEmpty(this%intw)) then
           ! total inversion grid (including empty cells)
+          call new(errmsg2,myname)
           call init(invgrid_vtk,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
                //'_total',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),&
-               errmsg,vtk_title='inversion grid including empty cells')
-          if (.level.errmsg == 2) return
-          call writeInvgrid(invgrid_vtk,get(fuh),errmsg,overwrite=.true.)
+               errmsg2,vtk_title='inversion grid including empty cells')
+          if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeInvgrid
+             call add(errmsg,errmsg2)
+             call dealloc(errmsg2)
+             return
+          end if
+          call writeInvgrid(invgrid_vtk,get(fuh),errmsg2,overwrite=.true.)
           call undo(fuh)
+          if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
           if (.level.errmsg == 2) return
           call dealloc(invgrid_vtk)
           !
           ! empty cells
           cells_empty => getEmptyCells(this%intw)
+          call new(errmsg2,myname)
           call init(invgrid_vtk,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
-               //'_empty_cells',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,&
+               //'_empty_cells',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg2,&
                vtk_title='empty inversion grid cells',cell_indx_req=cells_empty)
-          if (.level.errmsg == 2) return
-          call writeInvgrid(invgrid_vtk,get(fuh),errmsg,overwrite=.true.)
+          if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeInvgrid
+             call add(errmsg,errmsg2)
+             call dealloc(errmsg2)
+             return
+          end if
+          call writeInvgrid(invgrid_vtk,get(fuh),errmsg2,overwrite=.true.)
           call undo(fuh)
+          if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
           if (.level.errmsg == 2) return
           call dealloc(invgrid_vtk)
           if(associated(cells_empty)) deallocate(cells_empty)
@@ -352,46 +443,107 @@ contains
        endif ! anyCellEmpty(this%intw)
        !
        ! write inversion grid cell indices to invgridVtkFile
+       call new(errmsg2,myname)
        call init(invgrid_vtk,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
             //'_invgrid_cell_indices',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,&
             vtk_title='cell indices of inversion grid',cell_indx_req=cells_filled)
-       if (.level.errmsg == 2) return
-       call writeData(invgrid_vtk,get(fuh),real(cells_filled),errmsg,data_name='cell_index',overwrite=.true.)
+       if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeData
+          call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
+          return
+       end if
+       call writeData(invgrid_vtk,get(fuh),real(cells_filled),errmsg2,data_name='cell_index',overwrite=.true.)
        call undo(fuh)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        if (.level.errmsg == 2) return
        call dealloc(invgrid_vtk)
        !
-       ! write events.vtk (depdent on (.inpar.invbasics).lval.'USE_LOCAL_INVGRID_COORDS_FOR_VTK', 
-       ! this is invgrid dependent, so use invgrid file name as base name)
+       ! write event coordinates to vtk file
+       if(.not.canTransformToVtkPointsOutsideInversionGrid(this%invgrid,'event')) then
+          call add(errmsg,1,"inversion grids of type '"//trim(this%inpar.sval.'TYPE_INVERSION_GRID')//&
+               "' cannot transform event coordinates lying outside the inversion grid. This may raise an "//&
+               "error in the respective 'transformToVtk...InversionGrid' routine",myname)
+       end if
+       n = .nev.(.evlist.invbasics)
+       allocate(rdata(n)); rdata = 0.
+       j = 0
+       do while (nextEventSeismicEventList(.evlist.invbasics,event))
+          j = j+1
+          rdata(j) = .mag.event
+       end do
+       call new(errmsg2,myname)
        call init(evstat_vtk,.evlist.invbasics,this%invgrid,trim(this%iter_path)//&
-            trim(this%inpar.sval.'FILEBASE_BASIC_STATS'),&
-            trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,vtk_title='events')
-       if (.level.errmsg == 2) return
-       call writeEvents(evstat_vtk,get(fuh),errmsg,overwrite=.true.)
+            trim(this%inpar.sval.'FILEBASE_BASIC_STATS')//'_events_mag',&
+            trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg2,vtk_title='magnitude of events')
+       if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeData
+          call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
+          return
+       end if
+       call writeData(evstat_vtk,get(fuh),rdata,errmsg2,data_name='mag',overwrite=.true.)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        call undo(fuh)
        if (.level.errmsg == 2) return
        call dealloc(evstat_vtk)
+       deallocate(rdata)
        !
-       ! write stations.vtk (depdent on (.inpar.invbasics).lval.'USE_LOCAL_INVGRID_COORDS_FOR_VTK', 
-       ! this is invgrid dependent, so use invgrid file name as base name)
+       ! write station coordinates to vtk file
+       if(.not.canTransformToVtkPointsOutsideInversionGrid(this%invgrid,'station')) then
+          call add(errmsg,1,"inversion grids of type '"//trim(this%inpar.sval.'TYPE_INVERSION_GRID')//&
+               "' cannot transform station coordinates lying outside the inversion grid. This may raise an "//&
+               "error in the respective 'transformToVtk...InversionGrid' routine",myname)
+       end if
+       call new(errmsg2,myname)
        call init(evstat_vtk,.statlist.invbasics,this%invgrid,trim(this%iter_path)//&
             trim(this%inpar.sval.'FILEBASE_BASIC_STATS'),&
-            trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,vtk_title='stations')
-       if (.level.errmsg == 2) return
-       call writeStations(evstat_vtk,get(fuh),errmsg,overwrite=.true.)
+            trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg2,vtk_title='stations')
+       if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeStations
+          call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
+          return
+       end if
+       call writeStations(evstat_vtk,get(fuh),errmsg2,overwrite=.true.)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        call undo(fuh)
        if (.level.errmsg == 2) return
        call dealloc(evstat_vtk)
        !
+!!$! FS FS START
+!!$! for reasons of testing, write paths vtk file
+!!$call init(evstat_vtk,.evlist.invbasics,.statlist.invbasics,&
+!!$     reshape( (/ 'S001','R012','S002','R011','S003','R010' /) , (/2,3/) ),this%invgrid,trim(this%iter_path)//&
+!!$     !paths,this%invgrid,trim(this%iter_path)//&
+!!$     trim(this%inpar.sval.'FILEBASE_BASIC_STATS')//'_path',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),&
+!!$     errmsg,vtk_title='paths')
+!!$if (.level.errmsg == 2) return
+!!$!call writePaths(evstat_vtk,get(fuh),errmsg,overwrite=.true.)
+!!$!call writeData(evstat_vtk,get(fuh),(/1.,2.,3./),errmsg,data_name='test_data_on_paths',&
+!!$!     overwrite=.true.)
+!!$call writeData(evstat_vtk,get(fuh),(/ (1.,-1),(2.,-2.),(3.,-3.)/),errmsg,data_name='test_complex_data_on_paths',&
+!!$     overwrite=.true.)
+!!$call undo(fuh)
+!!$if (.level.errmsg == 2) return
+!!$call dealloc(evstat_vtk)
+!!$! FS FS END
        ! write number of wavefield points per invgrid box to invgridVtkFile
        idata => getNwpPerBoxIntegrationWeights(this%intw)
+       call new(errmsg2,myname)
        call init(invgrid_vtk,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
-            //'_nwp_per_cell',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,&
+            //'_nwp_per_cell',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg2,&
             vtk_title='Number of wavefield Points per inversion grid cell',cell_indx_req=cells_filled)
-       if (.level.errmsg == 2) return
-       call writeData(invgrid_vtk,get(fuh),real(idata),errmsg,data_name='number_of_wavefield_points',&
+       if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeData
+          call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
+          return
+       end if
+       call writeData(invgrid_vtk,get(fuh),real(idata),errmsg2,data_name='number_of_wavefield_points',&
             data_indx_is_invgrid=.true.,overwrite=.true.)
        call undo(fuh)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        if(associated(idata)) deallocate(idata)
        if (.level.errmsg == 2) return
        call dealloc(invgrid_vtk)
@@ -403,13 +555,20 @@ contains
        do j = 1,.ncell.(this%invgrid)
           rdata(j) = sum((this%intw).weight.j)
        end do
+       call new(errmsg2,myname)
        call init(invgrid_vtk,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
-            //'_sumw_per_cell',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,&
+            //'_sumw_per_cell',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg2,&
             vtk_title='Sum of integration weights per (~ volume of) inversion grid cell',cell_indx_req=cells_filled)
-       if (.level.errmsg == 2) return
-       call writeData(invgrid_vtk,get(fuh),rdata,errmsg,data_name='sum_of_integration_weights',&
+       if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeData
+          call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
+          return
+       end if
+       call writeData(invgrid_vtk,get(fuh),rdata,errmsg2,data_name='sum_of_integration_weights',&
             data_indx_is_invgrid=.true.,overwrite=.true.)
        call undo(fuh)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        deallocate(rdata)
        if (.level.errmsg == 2) return
        call dealloc(invgrid_vtk)
@@ -429,61 +588,109 @@ contains
           call dealloc(errmsg2)
        end do ! j
        if(n > 0) then
+          call new(errmsg2,myname)
           call init(invgrid_vtk,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
-               //'_cell_vol',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,&
+               //'_cell_vol',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg2,&
                vtk_title='Volume of inversion grid cell',cell_indx_req=idata(1:n))
-          if (.level.errmsg == 2) return
-          call writeData(invgrid_vtk,get(fuh),rdata(1:n),errmsg,data_name='cell_volume',&
+          if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeData
+             call add(errmsg,errmsg2)
+             call dealloc(errmsg2)
+             return
+          end if
+          call writeData(invgrid_vtk,get(fuh),rdata(1:n),errmsg2,data_name='cell_volume',&
                data_indx_is_invgrid=.false.,overwrite=.true.)
           call undo(fuh)
+          if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
           deallocate(rdata,idata)
           if (.level.errmsg == 2) return
           call dealloc(invgrid_vtk)
        else
           ! raise warning, no volumes can be computed
-          call add(errmsg,1,"cell volume could not be computed for any inversion grid cell",myname)
+          call add(errmsg,1,"cell volume could not be computed for any inversion grid cell (value 0 in vtk files)",&
+               myname)
           deallocate(rdata,idata)
        end if
        if(n < .ncell.(this%invgrid)) then
           ! raise warning, for some cells the volume could not be computed
           write(errstr,*) "for ",.ncell.(this%invgrid)-n," out of ",.ncell.(this%invgrid),&
-               " inversion grid cells, their volume could not be computed"
+               " inversion grid cells, their volume could not be computed (value 0 in vtk files)"
           call add(errmsg,1,errstr,myname)
        end if
        !
        ! write integration weights on wavefield points
        rdata => getAtWavefieldPointsIntegrationWeights(this%intw)
+       call new(errmsg2,myname)
        call init(wp_vtk,this%wp,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
-            //'_intw_on_wp',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,&
+            //'_intw_on_wp',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg2,&
             vtk_title='Integration weights on wavefield points',wp_indx_req=wp_inside)
-       if (.level.errmsg == 2) return
-       call writeData(wp_vtk,get(fuh),rdata,errmsg,'integration_weights',data_indx_is_wp=.true.,overwrite=.true.)
+       if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeData
+          call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
+          return
+       end if
+       call writeData(wp_vtk,get(fuh),rdata,errmsg2,'integration_weights',data_indx_is_wp=.true.,overwrite=.true.)
        call undo(fuh)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        deallocate(rdata)
+       if (.level.errmsg == 2) return
+       call dealloc(wp_vtk)
+       !
+       ! write at each wavefield point its cell index (for all located wavefield points)
+       idata => getCellIdexAtWavefieldPointsIntegrationWeights(this%intw)
+       call new(errmsg2,myname)
+       call init(wp_vtk,this%wp,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
+            //'_icell_on_wp',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg2,&
+            vtk_title='Located Invgrid cells on wavefield points',wp_indx_req=wp_inside)
+       if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeData
+          call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
+          return
+       end if
+       call writeData(wp_vtk,get(fuh),real(idata),errmsg2,'cell_index',data_indx_is_wp=.true.,overwrite=.true.)
+       call undo(fuh)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
+       deallocate(idata)
        if (.level.errmsg == 2) return
        call dealloc(wp_vtk)
        !
        ! write type of weights (per invgrid cell)
        idata => getTypeIntegrationWeights(this%intw)
+       call new(errmsg2,myname)
        call init(invgrid_vtk,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
-            //'_intw_type',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,&
+            //'_intw_type',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg2,&
             vtk_title='type of integration weights',cell_indx_req=cells_filled)
-       if (.level.errmsg == 2) return
-       call writeData(invgrid_vtk,get(fuh),real(idata),errmsg,data_name='type_of_weights',&
+       if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeData
+          call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
+          return
+       end if
+       call writeData(invgrid_vtk,get(fuh),real(idata),errmsg2,data_name='type_of_weights',&
             data_indx_is_invgrid=.true.,overwrite=.true.)
        call undo(fuh)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        if (.level.errmsg == 2) return
        call dealloc(invgrid_vtk)
        !
        ! write error level returned from computation of weights (per invgrid cell)
        idata => getErrLevelIntegrationWeights(this%intw)
+       call new(errmsg2,myname)
        call init(invgrid_vtk,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
-            //'_intw_err_level',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,&
+            //'_intw_err_level',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg2,&
             vtk_title='Error level returned from computation of weights',cell_indx_req=cells_filled)
-       if (.level.errmsg == 2) return
-       call writeData(invgrid_vtk,get(fuh),real(idata),errmsg,data_name='weights_error_level',&
+       if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeData
+          call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
+          return
+       end if
+       call writeData(invgrid_vtk,get(fuh),real(idata),errmsg2,data_name='weights_error_level',&
             data_indx_is_invgrid=.true.,overwrite=.true.)
        call undo(fuh)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        if (.level.errmsg == 2) return
        call dealloc(invgrid_vtk)
        !
@@ -493,8 +700,11 @@ contains
     !
     !  create kernel reference model
     !
+    call new(errmsg2,myname)
     call createKernelReferenceModel(this%krm,(.inpar.invbasics).sval.'FORWARD_METHOD',fuh, &
-         trim(this%iter_path)//trim(this%inpar.sval.'FILE_KERNEL_REFERENCE_MODEL'),errmsg)
+         trim(this%iter_path)//trim(this%inpar.sval.'FILE_KERNEL_REFERENCE_MODEL'),errmsg2)
+    if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+    call dealloc(errmsg2)
     if (.level.errmsg == 2) return
     !
     ! write kernel reference model interpolated on inversion grid as kim file and vtk files
@@ -506,26 +716,41 @@ contains
        parametrization = (.inpar.invbasics).sval.'MODEL_PARAMETRIZATION'
        !
        ! kreate kernel inverted model object by interpolating kernel reference model to inversion grid
+       call new(errmsg2,myname)
        call interpolateKernelReferenceToKernelInvertedModel(kim_krm,this%krm,&
-            parametrization,this%invgrid,this%intw,errmsg)
+            parametrization,this%invgrid,this%intw,errmsg2)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        if (.level.errmsg == 2) return
        ! write kernel inverted model file
+       call new(errmsg2,myname)
        call writeFileKernelInvertedModel(kim_krm,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
-            //'_krm_on_invgrid.kim',get(fuh),errmsg)
+            //'_krm_on_invgrid.kim',get(fuh),errmsg2)
        call undo(fuh)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        if (.level.errmsg == 2) return
        ! write kernel inverted model vtk files
+       call new(errmsg2,myname)
        call writeVtkKernelInvertedModel(kim_krm,this%invgrid,(.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT',&
             trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')//'_krm_on_invgrid.kim',&
-            get(fuh),errmsg,overwrite=.true.)
+            get(fuh),errmsg2,overwrite=.true.)
        call undo(fuh)
+       if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+       call dealloc(errmsg2)
        if (.level.errmsg == 2) return
        call dealloc(kim_krm)
        !
        ! write kernel reference model on wavefield points as wpVtkFile (filename base is file kernel reference model + 'on wp' !)
        !
+       if(.not.invgrid_can_transform_points_outside_to_vtk) then
+          wp_inside => getWpInside(this%intw)
+          if(.not.associated(wp_inside)) then
+             call add(errmsg,2,"there no wavefield points inside the inversion grid",myname)
+             return
+          end if
+       end if
        do while(nextParamModelParametrization(parametrization,param_name))
-          !
           ! get model values for this parameter
           rdata => getModelValuesKernelReferenceModel(this%krm,parametrization,param_name)
           if(.not.associated(rdata)) then
@@ -533,17 +758,36 @@ contains
                   trim(parametrization)//"' parameter '"//trim(param_name)//"'",myname)
              cycle
           end if
-          call init(wp_vtk,this%wp,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
-               //'_krm_on_wp_'//trim(parametrization)//"-"//trim(param_name),&
-               trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),&
-               errmsg,vtk_title=trim(parametrization)//'-'//trim(param_name)//' model values on wavefield points')
-          if (.level.errmsg == 2) return
-          call writeData(wp_vtk,get(fuh),rdata,errmsg,trim(parametrization)//'-'//trim(param_name),&
+          call new(errmsg2,myname)
+          if(invgrid_can_transform_points_outside_to_vtk) then
+             call init(wp_vtk,this%wp,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
+                  //'_krm_on_wp_'//trim(parametrization)//"-"//trim(param_name),&
+                  trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),&
+                  errmsg2,vtk_title=trim(parametrization)//'-'//trim(param_name)//' model values on wavefield points')
+          else
+             call init(wp_vtk,this%wp,this%invgrid,trim(this%iter_path)//trim(this%inpar.sval.'FILEBASE_BASIC_STATS')&
+                  //'_krm_on_wp_'//trim(parametrization)//"-"//trim(param_name),&
+                  trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),&
+                  errmsg2,vtk_title=trim(parametrization)//'-'//trim(param_name)//' model values on wavefield points',&
+                  wp_indx_req=wp_inside)
+          end if
+          if (.level.errmsg2 == 2) then ! only in case or ERROR return here, otherwise use errmsg2 also for call writeData
+             call add(errmsg,errmsg2)
+             call dealloc(errmsg2)
+             return
+          end if
+          call writeData(wp_vtk,get(fuh),rdata,errmsg2,trim(parametrization)//'-'//trim(param_name),&
                data_indx_is_wp=.true.,overwrite=.true.)
+          deallocate(rdata)
           call undo(fuh)
+          if (.level.errmsg2 > 0) call add(errmsg,errmsg2)
+          call dealloc(errmsg2)
           if (.level.errmsg == 2) return
           call dealloc(wp_vtk)
        end do ! while(nextParam)
+       if(.not.invgrid_can_transform_points_outside_to_vtk) then
+          if(associated(wp_inside)) deallocate(wp_inside)
+       end if
     end if ! .not.kim_krm_existed .or. recreate_files
 !
   end subroutine initiateIterationStepBasics

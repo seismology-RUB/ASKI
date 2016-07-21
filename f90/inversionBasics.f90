@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 0.3.
+!   This file is part of ASKI version 1.0.
 !
-!   ASKI version 0.3 is free software: you can redistribute it and/or modify
+!   ASKI version 1.0 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 0.3 is distributed in the hope that it will be useful,
+!   ASKI version 1.0 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief holds basic requirements for inversion process
 !!
@@ -24,7 +24,7 @@
 !!  are supervised by this module. 
 !!
 !! \author Florian Schumacher
-!! \date March 2013
+!! \date Nov 2015
 !
 module inversionBasics
 !
@@ -35,6 +35,7 @@ module inversionBasics
   use componentTransformation
   use errorMessage
   use modelParametrization
+  use parameterCorrelation
 !
   implicit none
 !
@@ -50,6 +51,9 @@ module inversionBasics
   interface operator (.statlist.); module procedure getStationListInversionBasics; end interface
   interface operator (.comptrans.); module procedure getComponentTransformationInversionBasics; end interface
   interface operator (.ifreq.); module procedure getMeasuredDataFrequencyIndicesInversionBasics; end interface
+  interface operator (.df.); module procedure getMeasuredDataFrequencyStepInversionBasics; end interface
+  interface operator (.ufmdata.); module procedure getMeasuredDataUnitFactorInversionBasics; end interface
+  interface operator (.pcorr.); module procedure getParameterCorrelationInversionBasics; end interface
 !
 !> \brief type contains all basic requirements for an inversion procedure
   type inversion_basics
@@ -59,6 +63,7 @@ module inversionBasics
      type (seismic_event_list) :: event_list !< list of all events involved in this inversion
      type (seismic_network) :: station_list !< list of all stations involved in this inversion
      type (component_transformation) :: cmptr !< component transformation
+     type (parameter_correlation) :: pcorr !< parameter correlation object
      integer, dimension(:), pointer :: ifreq => null() !< measured data frequency indices
   end type inversion_basics
 !
@@ -84,15 +89,16 @@ contains
     ! local
     integer :: j,nf,i_partest,ios
     real :: r_partest
-    character (len=80), dimension(15) :: main_inpar_keys
+    logical :: l_partest
+    character (len=80), dimension(20) :: main_inpar_keys
     character(len=400) :: errstr
     character(len=23) :: myname = 'initiateInversionBasics'
     ! keywords for input parameter
-    data main_inpar_keys/'CURRENT_ITERATION_STEP', 'DEFAULT_VTK_FILE_FORMAT', &
+    data main_inpar_keys/'APPLY_EVENT_FILTER', 'APPLY_STATION_FILTER', 'CURRENT_ITERATION_STEP', 'DEFAULT_VTK_FILE_FORMAT', &
          'FILE_EVENT_LIST', 'FILE_STATION_LIST', 'FORWARD_METHOD', 'ITERATION_STEP_PATH', 'MAIN_PATH_INVERSION', &
          'MEASURED_DATA_FREQUENCY_STEP', 'MEASURED_DATA_NUMBER_OF_FREQ', 'MEASURED_DATA_INDEX_OF_FREQ', &
-         'MODEL_PARAMETRIZATION', 'PARFILE_ITERATION_STEP','PATH_MEASURED_DATA', 'PATH_EVENT_FILTER', &
-         'PATH_STATION_FILTER'/
+         'MODEL_PARAMETRIZATION','PARAMETER_CORRELATION_MODE','PARAMETER_CORRELATION_FILE', 'PARFILE_ITERATION_STEP',&
+         'PATH_MEASURED_DATA', 'PATH_EVENT_FILTER','PATH_STATION_FILTER', 'UNIT_FACTOR_MEASURED_DATA'/
 !------------------------------------------------------------------------
 !  subroutine starts here
 !
@@ -102,7 +108,7 @@ contains
 !
     call createKeywordsInputParameter(this%inpar,main_inpar_keys)
     call readSubroutineInputParameter(this%inpar,lu,trim(parfile),errmsg)
-    if (.level.errmsg == 2) return
+    if (.level.errmsg == 2) goto 1
 !------------------------------------------------------------------------
 !  check consistency of entries in main parfile!!!
 !THIS IS ONLY HELPFUL, IF INDEED ALL VALUES ARE CORRECTLY SET IN THE PARFILE. "PRELIMINARY" PARFILES CANNOT BE USED THEN WITH iversionBasics
@@ -112,12 +118,28 @@ contains
     ! during creation of object this%inpar, there was already checked if the required keywords are present
     ! now check correct type of values here and some special values
 !
+    l_partest = lval(this%inpar,'APPLY_EVENT_FILTER',iostat=ios)
+    if(ios/=0) then
+       write(errstr,*) "parameter 'APPLY_EVENT_FILTER' = '"//trim(this%inpar.sval.'APPLY_EVENT_FILTER')//&
+            "' of main parfile is not a valid logical value"
+       call add(errmsg,2,trim(errstr),myname)
+       goto 1
+    end if
+!
+    l_partest = lval(this%inpar,'APPLY_STATION_FILTER',iostat=ios)
+    if(ios/=0) then
+       write(errstr,*) "parameter 'APPLY_STATION_FILTER' = '"//trim(this%inpar.sval.'APPLY_STATION_FILTER')//&
+            "' of main parfile is not a valid logical value"
+       call add(errmsg,2,trim(errstr),myname)
+       goto 1
+    end if
+!
     i_partest = ival(this%inpar,'CURRENT_ITERATION_STEP',iostat=ios)
     if(ios/=0) then
        write(errstr,*) "parameter 'CURRENT_ITERATION_STEP' = '"//trim(this%inpar.sval.'CURRENT_ITERATION_STEP')//&
             "' of main parfile is not a valid integer value"
        call add(errmsg,2,trim(errstr),myname)
-       return
+       goto 1
     end if
 !
     select case(this%inpar.sval.'DEFAULT_VTK_FILE_FORMAT')
@@ -127,7 +149,7 @@ contains
        write(errstr,*) "parameter 'DEFAULT_VTK_FILE_FORMAT' = '"//trim(this%inpar.sval.'DEFAULT_VTK_FILE_FORMAT')//&
             "' of main parfile is not valid; must be either 'ASCII' or 'BINARY'"
        call add(errmsg,2,trim(errstr),myname)
-       return       
+       goto 1       
     end select
 !
     r_partest = rval(this%inpar,'MEASURED_DATA_FREQUENCY_STEP',iostat=ios)
@@ -135,13 +157,13 @@ contains
        write(errstr,*) "parameter 'MEASURED_DATA_FREQUENCY_STEP' = '"//trim(this%inpar.sval.&
             'MEASURED_DATA_FREQUENCY_STEP')//"' of main parfile is not a valid real value"
        call add(errmsg,2,trim(errstr),myname)
-       return
+       goto 1
     end if
     if(r_partest .le. 0.) then
        write(errstr,*) "parameter 'MEASURED_DATA_FREQUENCY_STEP' = ",r_partest,&
             " of main parfile is not valid; must be positive"
        call add(errmsg,2,trim(errstr),myname)
-       return
+       goto 1
     end if
 !
     nf = ival(this%inpar,'MEASURED_DATA_NUMBER_OF_FREQ',iostat=ios)
@@ -149,13 +171,13 @@ contains
        write(errstr,*) "parameter 'MEASURED_DATA_NUMBER_OF_FREQ' = '"//trim(this%inpar.sval.&
             'MEASURED_DATA_NUMBER_OF_FREQ')//"' of main parfile is not a valid integer value"
        call add(errmsg,2,trim(errstr),myname)
-       return
+       goto 1
     end if
     if(nf .le. 0) then
        write(errstr,*) "parameter 'MEASURED_DATA_NUMBER_OF_FREQ' = ",nf,&
             " of main parfile is not valid; must be positive"
        call add(errmsg,2,trim(errstr),myname)
-       return
+       goto 1
     end if
 !
     this%ifreq => ivecp(this%inpar,'MEASURED_DATA_INDEX_OF_FREQ',nf,iostat=ios)
@@ -163,51 +185,68 @@ contains
        write(errstr,*) "parameter 'MEASURED_DATA_INDEX_OF_FREQ' = '"//trim(this%inpar.sval.&
             'MEASURED_DATA_INDEX_OF_FREQ')//"' is not a vector of ",nf," integers"
        call add(errmsg,2,trim(errstr),myname)
-       return
+       goto 1
     end if
     if(any(this%ifreq < 0)) then
        write(errstr,*) "entries of vector 'MEASURED_DATA_INDEX_OF_FREQ' = '"//trim(this%inpar.sval.&
             'MEASURED_DATA_INDEX_OF_FREQ')//"' must not be negative"
        call add(errmsg,2,trim(errstr),myname)
-       deallocate(this%ifreq)
-       return
+       goto 1
     end if
     do j = 1,nf
        if(any(this%ifreq(j+1:nf) == this%ifreq(j))) then
           write(errstr,*) "vector 'MEASURED_DATA_INDEX_OF_FREQ' = '"//trim(this%inpar.sval.&
                'MEASURED_DATA_INDEX_OF_FREQ')//"' must not contain multiple entries"
           call add(errmsg,2,trim(errstr),myname)
-          deallocate(this%ifreq)
-          return
+          goto 1
        end if
     end do ! j
+!
+    r_partest = rval(this%inpar,'UNIT_FACTOR_MEASURED_DATA',iostat=ios)
+    if(ios/=0) then
+       write(errstr,*) "parameter 'UNIT_FACTOR_MEASURED_DATA' = '"//trim(this%inpar.sval.&
+            'UNIT_FACTOR_MEASURED_DATA')//"' of main parfile is not a valid real value"
+       call add(errmsg,2,trim(errstr),myname)
+       goto 1
+    end if
+    if(r_partest <= 0.) then
+       write(errstr,*) "parameter 'UNIT_FACTOR_MEASURED_DATA' = ",r_partest,&
+            " of main parfile is not valid; must be strictly positive"
+       call add(errmsg,2,trim(errstr),myname)
+       goto 1
+    end if    
 !
     if(.not.validModelParametrization(this%inpar.sval.'MODEL_PARAMETRIZATION')) then
        write(errstr,*) "parameter 'MODEL_PARAMETRIZATION' = '"//trim(this%inpar.sval.'MODEL_PARAMETRIZATION')//&
             "' of main parfile is not valid; valid parametrizations and parameters are: "//trim(all_valid_pmtrz_param)
        call add(errmsg,2,trim(errstr),myname)
-       return
+       goto 1
     end if
+!
+    call createParameterCorrelation(this%pcorr,this%inpar.sval.'PARAMETER_CORRELATION_MODE',&
+         trim(this%inpar.sval.'MAIN_PATH_INVERSION')//trim(this%inpar.sval.'PARAMETER_CORRELATION_FILE'),lu,&
+         this%inpar.sval.'MODEL_PARAMETRIZATION',errmsg)
+    if (.level.errmsg == 2) goto 1
 !
     write(this%iter_path,"(2a,i3.3,a)") trim(this%inpar.sval.'MAIN_PATH_INVERSION'),trim(this%inpar.sval.'ITERATION_STEP_PATH'), &
          this%inpar.ival.'CURRENT_ITERATION_STEP','/'
 !------------------------------------------------------------------------
-!  read event file, create event list and write events.vtk
+!  read event file, create event list
 !
     call createEventListFromEventFile(this%inpar.sval.'FILE_EVENT_LIST',lu,&
          'ASKI_events',this%event_list,errmsg)
-    if (.level.errmsg == 2) return
+    if (.level.errmsg == 2) goto 1
 !------------------------------------------------------------------------
-!  read station file, create station list and write stations.vtk
+!  read station file, create station list
 !
     call createStationListFromStationFile(this%inpar.sval.'FILE_STATION_LIST',lu,&
          'ASKI_stations',this%station_list,errmsg)
-    if (.level.errmsg == 2) return
+    if (.level.errmsg == 2) goto 1
 !
     if(.csys.this%event_list /= .csys.this%station_list) then
        call add(errmsg,2,"the coordinate system '"//.csys.this%event_list//"' used in event list differs from '"&
             //.csys.this%station_list//"' used in station list",myname)
-       return
+       goto 1
     end if
 !------------------------------------------------------------------------
 !  create component transformation object and check value of COORDINATE_SYSTEM
@@ -219,8 +258,14 @@ contains
     else
        call add(errmsg,2,"coordinate system '"//.csys.this%station_list//&
             "' of station list is neither 'S' nor 'C': cannot create component transformation",myname)
-       return
+       goto 1
     endif
+!
+    ! if routine comes here, everything went OK, so return
+    return
+!
+    ! if there was an error, deallocate (what was already created of the) object before returning
+1   call deallocateInversionBasics(this)
   end subroutine initiateInversionBasics
 !------------------------------------------------------------------------
 !> \brief for one given frequency index ifreq_in return its index position in array this%ifreq
@@ -288,6 +333,7 @@ contains
     call dealloc(this%event_list)
     call dealloc(this%station_list)
     call dealloc(this%cmptr)
+    call dealloc(this%pcorr)
     if(associated(this%ifreq)) deallocate(this%ifreq)
   end subroutine deallocateInversionBasics
 !------------------------------------------------------------------------
@@ -353,5 +399,38 @@ contains
     integer, dimension(:), pointer :: ifreq
     ifreq => this%ifreq
   end function getMeasuredDataFrequencyIndicesInversionBasics
+!------------------------------------------------------------------------
+!> \brief get measured data frequency step contained in inversion_basics parfile
+!! \param this inversion_basics object
+!! \param df frequency step
+!! \return measured data frequency step contained in this%inpar
+!
+  function getMeasuredDataFrequencyStepInversionBasics(this) result(df)
+    type (inversion_basics), intent(in) :: this
+    real :: df
+    df = (this%inpar).rval.'MEASURED_DATA_FREQUENCY_STEP'
+  end function getMeasuredDataFrequencyStepInversionBasics
+!------------------------------------------------------------------------
+!> \brief get measured data unit factor contained in inversion_basics parfile
+!! \param this inversion_basics object
+!! \param uf unit factor
+!! \return measured data frequency step contained in this%inpar
+!
+  function getMeasuredDataUnitFactorInversionBasics(this) result(uf)
+    type (inversion_basics), intent(in) :: this
+    real :: uf
+    uf = (this%inpar).rval.'UNIT_FACTOR_MEASURED_DATA'
+  end function getMeasuredDataUnitFactorInversionBasics
+!------------------------------------------------------------------------
+!> \brief get parameter correlation contained in inversion_basics object
+!! \param this inversion_basics object
+!! \param pcorr parameter correlation
+!! \return parameter correlation contained in inversion_basics object
+!
+  function getParameterCorrelationInversionBasics(this) result(pcorr)
+    type (inversion_basics), intent(in) :: this
+    type (parameter_correlation) :: pcorr
+    pcorr = this%pcorr
+  end function getParameterCorrelationInversionBasics
 !
 end module inversionBasics
