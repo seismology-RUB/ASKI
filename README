@@ -2,56 +2,74 @@
 THIS IS A VERY SHORT DOCUMENTATION ON HOW TO GET
 STARTED WITH
 
-    A S K I  - version 0.3
+    A S K I  - version 1.0
 
 ####################################################
 
 ASKI and some of its components, as well as documentation and some examples
-are available via http://www.rub.de/ASKI
+are available via http://www.rub.de/aski
 Please also refer to this address in case you want to get in touch with the
 authors, who are very eager on any feedback, especially about problems you may 
 encounter installing or using the software.
 
-The authors are Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
-and Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany), 2013.
+The authors are Florian Schumacher (Ruhr-University Bochum, Germany)
+and Wolfgang Friederich (Ruhr-University Bochum, Germany), 2015.
 
-ASKI version 0.3 is free software: you can redistribute it and/or modify
+ASKI version 1.0 is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 2 of the License, or
 any later version.
-ASKI version 0.3 is distributed in the hope that it will be useful,
+ASKI version 1.0 is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-A copy of the GNU General Public License is provided in file GNU_GPL_v2.0.txt,
+A copy of the GNU General Public License is provided in file LICENSE, 
 you may also see <http://www.gnu.org/licenses/>.
 
 
 ##########
 REQUIREMENTS
 ##########
-Unix-like operating system (?!), so far only run on GNU Linux Debian 4.7.2-5
+Unix-like operating system (?!), so far only run on Debian GNU/Linux 8 (jessie)
 GNU Make
-Fortran compiler (sufficient standard) (so far only tested: GNU Fortran (Debian 4.7.2-5) 4.7.2)
-BLAS, LAPACK, BLACKS, SCALAPACK libraries (available via <http://www.netlib.org/>)
+Fortran compiler (sufficient standard) (so far only tested: GNU Fortran (Debian 4.9.2-10) 4.9.2)
+BLAS and LAPACK  libraries for all applications ,
+BLACKS, SCALAPACK and MPI libraries optionally for few parallel applications (e.g. available via <http://www.netlib.org/>)
 
 
 ##########
 INSTALLATION
 ##########
-0) Extract the directory ASKI_0.3 containing all files/subdirectories of the ASKI code to some directory,
+0) Extract the directory ASKI_1.0 containing all files and subdirectories to some path,
    if not done yet
 
 1) Adjust the software to your system and personal requirements by:
-   + setting the variables SHELL and FFLAGS in file ASKI_0.3/Makefile to desired values
-   + setting the variables BLAS, LAPACK, BLACS and SCALAPACK in file ASKI_0.3/Makefile in order to correctly bind the libraries
-   + setting environment variable 'F95' to the name of your compiler
+   + setting the variables COMPILER, MPICOMPILER in file ASKI_1.0/Makefile appropriately
+   + setting the variables BLAS, LAPACK, (BLACS, SCALAPACK, MPILIB) in file ASKI_1.0/Makefile in order to correctly bind the libraries
+   + adjusting the variable FFLAGS in file ASKI_1.0/Makefile , if required
 
-2) Run command "make clean" in ASKI_0.3/
+2) Run command "make all" in ASKI_1.0/ to compile all serial programs (nearly all functionality)
 
-3) Compile all binaries by running "make all" in ASKI_0.3/
+3) Run command "make parallel" in ASKI_1.0/ to compile all parallel programs (two optional linear system solvers which run in parallel)
 
-Now ASKI_0.3/bin should contain all binaries and no error should have occurred (at best...).
+Now ASKI_1.0/bin should contain all binaries and no error should have occurred (at best...).
+
+
+##########
+WHAT COMES WITH THE SOFTWARE?
+##########
++ ASKI_1.0/f90 contains all FORTRAN code files (even if the FORTRAN standard used
+  by your compile should be higher than FORTRAN90, it is still called f90...)
+
++ After installing and compilation of the fortran code, ASKI_1.0/bin contains the executables
+  of ASKI. 
+
++ ASKI_1.0/obj is only used for object and mod files during compilation
+
++ ASKI_1.0/py contains python scripts and modules of ASKI, which are referred to in the manual
+
++ ASKI_1.0/template contains a lot of template parameter files which can be used to create 
+  specific ones for your purpos
 
 
 ##########
