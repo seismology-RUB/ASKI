@@ -109,6 +109,12 @@
 #
   USE_LOCAL_INVGRID_COORDS_FOR_VTK = .False.
 
+# Select the geometry type. VTK_GEOMETRY_TYPE is one of:
+#   'CELLS'          data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as 'UNSTRUCTURED_GRID' datasets) -> intuitive volumetric view
+#   'CELL_CENTERS'   data on inversion grids will be written on the cell center POINTS to vtk files (as 'POLYDATA' datasets) -> smaller files, better to apply filters in ParaView
+#
+  VTK_GEOMETRY_TYPE = CELLS
+
 #  Scale vtk geometry coordinates by factor VTK_COORDS_SCALING_FACTOR, if SCALE_VTK_COORDS = .True.
 #  this may be helpful if coordinate values (e.g. in m) get so large that they cause problems in paraview
 #

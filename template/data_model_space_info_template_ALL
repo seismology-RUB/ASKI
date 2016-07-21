@@ -1,10 +1,20 @@
-DATA MODEL SPACE INFO (version handling possible (?))
-ASCII
-MODEL PARAMETERS
+There can be arbitrary (documenting) header lines before the blocks.
+
+The first line starting with 'MODEL VALUES' or 'DATA SAMPLES' is interpreted as the 
+starting line of a block.  Inside a block, there must NOT be unexpected lines!
+
+
+MODEL VALUES
 INVERSION_GRID_CELLS ALL
 PARAMETERS ALL
 2 vp vs
+
+
+There can be arbitrary (documenting) lines between the blocks.
+
+
 DATA SAMPLES
+WEIGHTING NONE
 PATHS ALL
 12 evID01 evID02 evID03 evID04 evID05 evID06 evID07 evID08 evID09 evID10 evID11 evID12
 12 R001 R002 R003 R004 R005 R006 R007 R008 R009 R010 R011 R012
@@ -14,3 +24,8 @@ FREQUENCIES ALL
 4 12 13 14 15
 IMRE ALL
 2 im re
+
+
+There can be arbitrary (documenting) lines after the blocks.
+
+It does not matter which block comes first (DATA SAMPLE or MODEL VALUES).

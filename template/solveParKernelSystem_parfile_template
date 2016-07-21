@@ -1,0 +1,62 @@
+#------------------------------------------------------------------------------
+#  PARAMETER FILE FOR PROGRAM solveParKernelSystem
+#  mainly specifying parameters regarding parallelization 
+#------------------------------------------------------------------------------
+#
+#  HOWTO USE THE PARAMETER FILE:
+#
+# comment lines, STARTING with "#" are ignored
+# empty lines and lines containing blanks only are ignored
+# lines not containing "=" are ignored
+#
+# specify one parameter per line, valid lines having the form "keyword = value"
+# (blanks leading or following the keyword, the "=", or the value are ignored)
+#
+# in a non comment line, all characters in front of "=" (without leading and appending blanks)
+# are interpreted as the keyword, allowing for blank characters within the keyword (e.g. for lines  "   key word = value   ",
+# the string "key word" is used as the keyword)
+# all characters behind "=" (without leading and appending blanks) are interpreted as the value string from 
+# which the value is read, which in particular means that "#" comments at the end of a line (such as 
+# " keyword = value  # comment ") are NOT allowed (in the latter case, the string "value  # comment" would be used
+# to read a value from)
+#
+# by ASKI convention, specify PATHS (i.e. directory names, which will be 
+# concatenated with a filename of a file in that directory) always ending on '/'
+# specify FILENAMES always WITHOUT leading '/'
+#------------------------------------------------------------------------------
+
+
+
+# number of processes in the rows/columns of the 2D process grid as used by the BLACS libraries
+# the total number of required mpi processes is NPROC_ROWS * NPROC_COLUMNS
+
+NPROC_ROWS = 
+NPROC_COLUMNS = 
+
+
+
+# the number of rows and columns per submatrix block
+# ScaLAPACK subdivides the linear system matrix into a block matrix, each block being a submatrix of size
+# NROW_PER_BLOCK-times-NCOL_PER_BLOCK
+# the total numbers of rows (columns) of the global system matrix, however, does not need to be a multiple of 
+# NROW_PER_BLOCK (NCOOL_PER_BLOCK), there will be fractional blocks at the bottom (right end) of the matrix
+# There is not yet an automated ScaLAPACK functionality telling you the optimal block sizes, which are
+# dependent on the linear system and your parallel environment. Anything from 200 to 500 should be sensible (?)
+# For more information, browse the web, e.g. http://www.netlib.org/utk/papers/scalapack/node19.html
+
+NROW_PER_BLOCK = 
+NCOL_PER_BLOCK = 
+
+
+
+# number of rows of the kernel matrix which are handled by the master process at a time
+# the larger this number is, the more memory is required for the master process to keep those rows in the memory
+#  e.g.
+#   - the master process will read this number of rows of the kernel matrix from the kernel files before distributing it onto the process grid
+#     for this operation it is efficient if NROW_TO_PROCESS_AT_ONCE is a multiple of the number of data samples per data path (in case
+#     all data paths have the same number of data samples, i.e. the same number of frequencies and components)
+#     otherwise kernel files might be opened and closed several times, which could cost little extra performance...
+#   - the smoothing equations will also be requested by the master process and then distributed onto the process grid. this
+#     will be done in sections of rows, each containing NROW_TO_PROCESS_AT_ONCE rows
+
+NROW_TO_PROCESS_AT_ONCE = 

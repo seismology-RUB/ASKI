@@ -1,0 +1,112 @@
+#------------------------------------------------------------------------------
+#  PARAMETER FILE FOR PROGRAM solveCglsKernelSystem
+#------------------------------------------------------------------------------
+#
+#  HOWTO USE THE PARAMETER FILE:
+#
+# comment lines, STARTING with "#" are ignored
+# empty lines and lines containing blanks only are ignored
+# lines not containing "=" are ignored
+#
+# specify one parameter per line, valid lines having the form "keyword = value"
+# (blanks leading or following the keyword, the "=", or the value are ignored)
+#
+# in a non comment line, all characters in front of "=" (without leading and appending blanks)
+# are interpreted as the keyword, allowing for blank characters within the keyword (e.g. for lines  "   key word = value   ",
+# the string "key word" is used as the keyword)
+# all characters behind "=" (without leading and appending blanks) are interpreted as the value string from 
+# which the value is read, which in particular means that "#" comments at the end of a line (such as 
+# " keyword = value  # comment ") are NOT allowed (in the latter case, the string "value  # comment" would be used
+# to read a value from)
+#
+# by ASKI convention, specify PATHS (i.e. directory names, which will be 
+# concatenated with a filename of a file in that directory) always ending on '/'
+# specify FILENAMES always WITHOUT leading '/'
+#------------------------------------------------------------------------------
+
+
+#------------------------------------------------------------------------------------
+# CONVERGENCE CRITERIA
+#
+# Define here parameters that are used to define convergence criteria of the 
+# algorithm.
+#
+# ADDITIONALLY, the algorithm terminates if it detects the existence of a file
+# with filename outfile_base_TERMINATE.txt. 
+# So if the algorithm converges very slowly and you want to terminate it
+# manually, just create a file with this name, i.e. output file base as defined by 
+# positional command line argument, plus extension "_TERMINATE.txt" (case sensitive).
+# This file can be empty, e.g. use command "touch" to create it.
+# Then the algorithm terminates and the current solution is written to file.
+# This might be preferable to just killing the running process.
+# You could continue the iterative algorithm at this very point, passing the name 
+# of the output file 'outfile_base_up_abs.kim' to option -startsol .
+#------------------------------------------------------------------------------------
+
+
+# Upper limit of number of iterations (will stop then, even if convergence criterion is not yet met).
+# This mechanism cannot be switched off: set to a ridiculously high value if you don't want to use it. 
+# Maximum possible value to be used: approx. 2.147.483.647 (4 byte signed integer)
+# If you require more iterations, you should modify the program. Otherwise, continue the algorithm
+# by passing the solution to option -startsol, as described above.
+
+MAX_NUM_CG_ITERATIONS = 
+
+
+
+# Window sizes of short-term average (sta) and long-term average (lta) of the residual norm of the system, 
+# which are used to evaluate a termination criterion of the conjugate-gradient algorithm. 
+# The algorithm assumes a monotonically decreasing residual norm, i.e. sta < lta.
+# It terminates when sta/lta equals 1 (in terms of single precision), i.e. when sta becomes close enough to lta,
+# or when lta is not monotonically decreasing anymore, i.e. starts to increase.
+# The numbers NITER_WINDOW_STA,NITER_WINDOW_LTA define the number of iterations over which the averrages are 
+# computed. Which values are sensible actually depends on the linear system. 
+# The termination checks based on sta,lta cannot be taken into account before iteration NITER_WINDOW_LTA + 1
+# It is required to define NITER_WINDOW_STA < NITER_WINDOW_LTA.
+# A ratio of NITER_WINDOW_LTA/NITER_WINDOW_STA = 10 was experienced to be feasible. E.g. define
+#   NITER_WINDOW_STA = 20
+#   NITER_WINDOW_LTA = 200
+
+NITER_WINDOW_STA = 
+NITER_WINDOW_LTA = 
+
+
+
+#------------------------------------------------------------------------------------
+# NUMERICAL PERFORMANCE
+#
+# I there is an error that some values become NaN , you should try to use double precision
+# variables for vectors and scalars in the CGLS algorithm by Bjoerck et al. This might be 
+# helpful if the kernel matrix contains values which are so low that certain summations 
+# become not representable in single prercision.
+# To use double precision, you need to set 
+#   CUSTOM_REAL = SIZE_DOUBLE
+# at the very beginning of the declarations in source file solveCglsKernelSystem.f90 .
+# In this case, more memory will be required. For single precision use, SIZE_REAL is 
+# used as a value there.
+#------------------------------------------------------------------------------------
+
+
+# Logicals indicating whether to use BLAS Level 1 and Level 2 routines for vector and
+# matrix-vector operations in the course of the CG algorithm. If .false., intrinsic fortran
+# functionality will be used for those kinds of operations (e.g. matmul and explicit summation etc.),
+# which for small problems might be more efficient than using BLAS. For large problems, at least
+# BLAS Level 2 routines are recommended, i.e. USE_BLAS_LEVEL_2 = .true.
+
+USE_BLAS_LEVEL_1 = 
+USE_BLAS_LEVEL_2 = 
+
+
+
+# THE FOLLOWING FEATURE SEEMS NOT TO WORK, HENCE IT IS DISABLED IN THE CODE SO 
+# THAT THE VALUE OF NITER_RECOMPUTE_RESIDUAL DOES NOT HAVE ANY EFFECT AT AL!
+# if you want to use it anyway, you need to enable it in the code. it should
+# be easy to find for you. If you cannot find it easily, it is probably best 
+# for you not to use it (no offense).
+# 
+# Number of iterations after which (circularly repeating) a true residual vector should be computed from
+# the current solution of the system, instead of only updating it (i.e. approximating it) as defined by
+# the original algorithm (in paper by Ake Bjoerck, Tommy Elfving and Zdenek Strakos)
+# if NO recomputation should be done (i.e. original algorithm), set NITER_RECOMPUTE_RESIDUAL <= 0
+
+NITER_RECOMPUTE_RESIDUAL = -1

@@ -1,0 +1,144 @@
+#------------------------------------------------------------------------------
+#  PARAMETER FILE FOR Spherical Chunk Inversion Grid (schunk)
+#------------------------------------------------------------------------------
+#
+#  HOWTO USE THE PARAMETER FILE:
+#
+# comment lines, STARTING with "#" are ignored
+# empty lines and lines containing blanks only are ignored
+# lines not containing "=" are ignored
+#
+# specify one parameter per line, valid lines having the form "keyword = value"
+# (blanks leading or following the keyword, the "=", or the value are ignored)
+#
+# in a non comment line, all characters in front of "=" (without leading and appending blanks)
+# are interpreted as the keyword, allowing for blank characters within the keyword 
+# (e.g. for lines  "   key word = value   ", the string "key word" is used as the keyword)
+# all characters behind "=" (without leading and appending blanks) are interpreted as the value string from 
+# which the value is read, which in particular means that "#" comments at the end of a line (such as 
+# " keyword = value  # comment ") are NOT allowed (in the latter case, the string "value  # comment" would be used
+# to read a value from)
+#
+# by ASKI convention, specify PATHS (i.e. directory names, which will be 
+# concatenated with a filename of a file in that directory) always ending on '/'
+# specify FILENAMES always WITHOUT leading '/'
+#------------------------------------------------------------------------------
+# The chunks inversion grid consists of 1, 2, 3 or 6 chunks of a cubed sphere (such as the 
+# schunk inversion grid). The chunk width is always 90 degrees, except for 1-chunk grids
+# where smaller chunks are allowed. The inversion grid cells are equi-angularly distributed,
+# resulting in cells which are more or less evenly distributed in size (by contrast to the 
+# schunk inversion grid, where the lateral projections of the cells onto the tangential plane
+# have an equi-distant distribution on the plane). 
+# 2 chunk grids consist of two neighbouring 90-degree chunks, 3 chunk grids of three chunks 
+# which are ALL neighbours of each other (i.e. essentially half of the Earth).
+# Inside the chunks, the inversion grid cells are constructed on the basis of regularly distributed
+# base cells in the fashion of the schunk inversion grid, having a certain number of refinement
+# blocks in depth inside which a fixed regular lateral resolution and depth resolution can be chosen.
+# (THE FOLLOWING FEATURE IS NOT YET IMPLEMENTED: thereafter, by certain mechanisms, the base cells
+# can be locally refined, e.g. due to ray coverage of the data)
+#------------------------------------------------------------------------------
+
+
+###########################
+#  C H U N K (S)   G E O M E T R Y
+###########################
+#
+#
+# Number of chunks (1, 2, 3, or 6)
+#
+ CHUNKS_INVGRID_GEOM_NCHUNK = 3
+
+# Maximum radius (upper boundary of the chunk(s)) in km
+#
+CHUNKS_INVGRID_GEOM_RMAX = 6371.0
+
+# Geographic latitude of center of the first (or only) chunk in degrees
+# Geographic longitude of center of the first (or only) chunk in degrees
+CHUNKS_INVGRID_GEOM_CLAT = 37.5
+CHUNKS_INVGRID_GEOM_CLON = 24.6
+
+# assuming ROT = 0
+# width of spherical chunk parallel to latitude in degrees (must be 90.0 for NCHUNK > 1)
+# width of spherical chunk parallel to in longitude degrees (must be 90.0 for NCHUNK > 1)
+#
+CHUNKS_INVGRID_GEOM_WLAT = 90.0
+CHUNKS_INVGRID_GEOM_WLON = 90.0
+
+# rotation of chunk around local vertical counterclockwise in degrees
+#
+CHUNKS_INVGRID_GEOM_ROT = -34.0
+
+
+###########################
+#  B A S E   C E L L S
+###########################
+#
+#
+# Number of blocks of layers within which lateral cell width remains comstant
+# Number of layers within each block (integer array)
+# Thickness of layers in each block in km (real array)
+#
+CHUNKS_INVGRID_BASE_NREF_BLOCKS = 2
+CHUNKS_INVGRID_BASE_NLAY = 10 5
+CHUNKS_INVGRID_BASE_THICKNESS = 50. 100.
+#
+# Number of cells in latitude direction for each layer block
+# Number of cells in longitude direction for each layer block
+#
+CHUNKS_INVGRID_BASE_NLAT = 66 20
+CHUNKS_INVGRID_BASE_NLON = 66 20
+
+
+###########################
+#  L O C A L   C E L L   R E F I N E M E N T
+###########################
+#
+#
+# (NOT YET IMPLEMENTED)
+# (ideas: give here the absolute paths of the station and event list files, as well 
+#         as a data model space info file containing the paths. according to the 
+#         thereby defined ray coverage, the base cells could be locally refined in 
+#         a recursive manner (each cell could e.g. halfened in each dimension of 
+#         space recursively if a certain criterion is met). 
+#         the refinement criteria could be dependent on a maximum global depth defined,
+#         a threashold value could handle the number of rays which a cell
+#         must be intersected with before it is refined, etc.
+
+
+###########################
+#  I N T E R N A L   F I L E S
+###########################
+#
+#
+# Filename of binary inversion grid file (relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/)
+# to which a newly created inversion grid will be written and from which the inversion grid
+# will be read if it exists and if not recreating the inversion grid
+#
+CHUNKS_INVGRID_FILE = chunks_invgrid
+
+
+###########################
+#  V T K   F I L E   O U T P U T
+###########################
+#
+#
+# VTK_PROJECTION is one of:
+#   'GLOBAL'      center of chunk(s) in CLAT, CLON, with applied CHUNKS_INVGRID_GEOM_ROT
+#   'LOCAL_CURV'  center of chunk in x=y=0, NO CHUNKS_INVGRID_GEOM_ROT applied, but with curvature
+#   'LOCAL_FLAT'  center of chunk in x=y=0, NO CHUNKS_INVGRID_GEOM_ROT, NO curvature, i.e. projection of each depth onto the tangential x-y-plane
+#   'LOCAL_NORTH_CURV'  same as 'LOCAL_CURV', but WITH CHUNKS_INVGRID_GEOM_ROT applied, i.e. x really points to south
+#   'LOCAL_NORTH_FLAT'  same as 'LOCAL_FLAT', but WITH CHUNKS_INVGRID_GEOM_ROT applied, i.e. x really points to south
+#
+VTK_PROJECTION = GLOBAL
+
+# Select the geometry type. VTK_GEOMETRY_TYPE is one of:
+#   'CELLS'          data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as 'UNSTRUCTURED_GRID' datasets) -> intuitive volumetric view
+#   'CELL_CENTERS'   data on inversion grids will be written on the cell center POINTS to vtk files (as 'POLYDATA' datasets) -> smaller files, better to apply filters in ParaView
+#
+  VTK_GEOMETRY_TYPE = CELLS
+
+#  Scale vtk geometry coordinates by factor VTK_COORDS_SCALING_FACTOR, if SCALE_VTK_COORDS = .True.
+#  this may be helpful if coordinate values (e.g. in m) get so large that they cause problems in paraview
+#
+  SCALE_VTK_COORDS = .False.
+  VTK_COORDS_SCALING_FACTOR = 1.

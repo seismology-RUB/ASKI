@@ -54,8 +54,19 @@
 #  COORDINATE SPECIFICATIONS FOR VTK FILE OUTPUT
 #---------------------------------------------------------------------------
 
+# Select the geometry type. VTK_GEOMETRY_TYPE is one of:
+#   'CELLS'          data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as 'UNSTRUCTURED_GRID' datasets) -> intuitive volumetric view
+#   'CELL_CENTERS'   data on inversion grids will be written on the cell center POINTS to vtk files (as 'POLYDATA' datasets) -> smaller files, better to apply filters in ParaView
+#
+  VTK_GEOMETRY_TYPE = CELLS
+
 #  Scale vtk geometry coordinates by factor VTK_COORDS_SCALING_FACTOR, if SCALE_VTK_COORDS = .True.
 #  this may be helpful if coordinate values (e.g. in m) get so large that they cause problems in paraview
 #
   SCALE_VTK_COORDS = .False.
   VTK_COORDS_SCALING_FACTOR = 1.
+
+#  in case of using SPECFEM3D_GLOBE, define here the maximum radius [km] of the sphere, by which Earth is approximated
+#  (only used to interpret "depth" and "altitude" of events and stations when plotting to vtk files, this is
+#  ignored for SPECFEM3D_Cartesian applications)
+   SPECFEM3D_R_EARTH_KM = 6371.0

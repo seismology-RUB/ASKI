@@ -19,7 +19,7 @@ the 1D model file expected by program createStartmodelKim must have the followin
      The values 'coord' are assumed to be be strictly monotonical(!) and can be either increasing
      or decreasing. You may choose this monotonicity at your will dependent on the coordinate for
      which the interpolation should be done (which, dependent on your inversion grid type may be
-     depth or positive z-value...)
+     e.g. depth or positive z-value...)
 
 as in total 2+nval lines are read from this file, everything below (such as this comment block)
 is ignored

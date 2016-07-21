@@ -30,18 +30,30 @@
 #  GENERAL SPECIFICATIONS
 #---------------------------------------------------------------------------
 
-#  Forward method. Supported methods: GEMINI, SPECFEM3D
+#  Forward method. Supported methods: GEMINI, SPECFEM3D, NEXD
 #
   FORWARD_METHOD = SPECFEM3D
 
 
 #  (an)elastic model parametrization (as accepted by module modelParametrization)
 #  currently accepted model parametrizations (parameters) :
-#     isoLame (rho,lambda,mu)
-#     isoVelocity (rho,vp,vs)
+#     isoLameSI (rho [kg/m^3] , lambda [Pa] ,mu [Pa])
+#     isoVelocitySI (rho [kg/m^3] , vp [m/s] ,vs [m/s])
+#     isoVelocity1000 (rho [g/cm^3] , vp [km/s] ,vs [km/s])
 #
-  MODEL_PARAMETRIZATION = isoVelocity
+  MODEL_PARAMETRIZATION = isoVelocitySI
 
+#  any model parameters can be correlated to others which are not inverted for
+#  so far supported correlation modes: 
+#     'NONE' : no parameter correlation will be done whatsoever
+#     'CORRELATE_KERNELS' : will add correlated kernel values of other parameters to the ones of those parameters which are inverted for
+##### NOT YET SUPPORTED: PASSIVE_UPDATE (...)
+  PARAMETER_CORRELATION_MODE = NONE
+
+#  file containing the definition of the correlation and the correlation coefficients
+#  the value is ignored in case of PARAMETER_CORRELATION_MODE = NONE
+#  RELATIVE TO MAIN_PATH_INVERSION!
+  PARAMETER_CORRELATION_FILE = model_parameter_correlation
 
 #---------------------------------------------------------------------------
 #  HOW TO FIND ITERATION STEP PATH
@@ -75,10 +87,12 @@
 #  DATA SPECIFICATIONS
 #---------------------------------------------------------------------------
 
-#  paths where ASKI finds files related to the measured data as expected (text files containing complex numbers
-#  in assumed frequency discretization as defined below)
-#  this path can be everywhere, e.g. close to where you have stored/processed your (time domain) data, 
+#  Paths where ASKI finds files related to the measured data as expected (text files containing complex numbers
+#  in assumed frequency discretization as defined below).
+#  These paths can be everywhere, e.g. close to where you have stored/processed your (time domain) data, 
 #  or in directory MAIN_PATH_INVERSION, etc. ...
+#  The flags APPLY_EVENT_FILTER, APPLY_STATION_FILTER control whether to apply any filters at all (if .false.
+#  then PATH_EVENT_FILTER, PATH_STATION_FILTER are ignored)
 #  NAMING CONVENTION OF FILES IN THESE DIRECTORIES, AS EXPECTED BY PROGRAMS:
 #  FILE_MEASURED_DATA: will by convention be: data_EVENTID_STATIONNAME_COMP
 #  FILE_EVENT_FILTER: will by convention be: filter_EVENTID
@@ -87,7 +101,11 @@
 #  valid component supported by module componentTransformation
 #
   PATH_MEASURED_DATA = /mydata/your_name_of_inversion/ASKI_data/
+
+  APPLY_EVENT_FILTER = .true.
   PATH_EVENT_FILTER = /mydata/your_name_of_inversion/ASKI_event_filter/
+
+  APPLY_STATION_FILTER = .false.
   PATH_STATION_FILTER = /mydata/your_name_of_inversion/ASKI_station_filter/
 
 
@@ -137,6 +155,15 @@
   MEASURED_DATA_FREQUENCY_STEP = 
   MEASURED_DATA_NUMBER_OF_FREQ = 
   MEASURED_DATA_INDEX_OF_FREQ = 
+
+
+#  Indicate the unit factor of the measured data. The definition of the factor is:
+#  Multiplication of the measured data (displacement) with this factor gives values in the SI unit of meters [m].
+#  EXAMPLE: If you use seismic time-domain data for ASKI in the unit of nano meters [nm], then UNIT_FACTOR_MEASURED_DATA
+#  must be set to 1.0e-9 , because the data values in nano meters [nm] must be divided by 1.0e9 in order to get meters [m].
+#  If you use seismic displacement data in the SI unit of meters, then UNIT_FACTOR_MEASURED_DATA must be set to 1.0
+#
+  UNIT_FACTOR_MEASURED_DATA = 1.0
 
 
 #---------------------------------------------------------------------------

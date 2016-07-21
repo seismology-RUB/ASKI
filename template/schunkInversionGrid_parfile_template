@@ -1,0 +1,110 @@
+#------------------------------------------------------------------------------
+#  PARAMETER FILE FOR Spherical Chunk Inversion Grid (schunk)
+#------------------------------------------------------------------------------
+#
+#  HOWTO USE THE PARAMETER FILE:
+#
+# comment lines, STARTING with "#" are ignored
+# empty lines and lines containing blanks only are ignored
+# lines not containing "=" are ignored
+#
+# specify one parameter per line, valid lines having the form "keyword = value"
+# (blanks leading or following the keyword, the "=", or the value are ignored)
+#
+# in a non comment line, all characters in front of "=" (without leading and appending blanks)
+# are interpreted as the keyword, allowing for blank characters within the keyword 
+# (e.g. for lines  "   key word = value   ", the string "key word" is used as the keyword)
+# all characters behind "=" (without leading and appending blanks) are interpreted as the value string from 
+# which the value is read, which in particular means that "#" comments at the end of a line (such as 
+# " keyword = value  # comment ") are NOT allowed (in the latter case, the string "value  # comment" would be used
+# to read a value from)
+#
+# by ASKI convention, specify PATHS (i.e. directory names, which will be 
+# concatenated with a filename of a file in that directory) always ending on '/'
+# specify FILENAMES always WITHOUT leading '/'
+#------------------------------------------------------------------------------
+# The spherical chunk inversion grid is derived from a simple planar cartesian
+# grid by projection of each grid plane onto a spherical shell, assuming that
+# the cartesian grid plane touches the spherical shell at its center.
+# Since cells have uniform size in the planar cartesian grid plane, cells
+# on the spherical shell become successively smaller with distance from the 
+# center of the spherical chunk. Radially, the inversion grid may consist of
+# several layer blocks each of which may have its own cell size.
+# To describe points in the spherical chunk, we either use LOCAL cartesian coordinates
+# with the center of the chunk at x=y=0 and z=r, or GLOBAL cartesian coordinates
+# with z pointing towards the north pole, x pointing towards the equator at lon=0
+# and y pointing towards the equator at lon=90.
+# The center of the chunk may be shifted to any place on the sphere and, in addition,
+# may be rotated counterclockwise around its local vertical.
+#------------------------------------------------------------------------------
+
+
+#---------------------------------------------------------------------------
+#  GEOMETRY OF INVERSION GRID DOMAIN
+#---------------------------------------------------------------------------
+
+# Geographic latitude of center of spherical chunk in degrees
+# Geographic longitude of center of spherical chunk in degrees
+# Maximum radius (upper boundary of spherical chunk) in km
+#
+  SCHUNK_INVGRID_CLAT = 37.5
+  SCHUNK_INVGRID_CLON = 24.6
+  SCHUNK_INVGRID_RMAX = 6371.0
+
+# assuming ROT = 0
+# width of spherical chunk parallel to longitude in degrees
+# width of spherical chunk parallel to latitude in degrees
+#
+  SCHUNK_INVGRID_WLAT = 7.0
+  SCHUNK_INVGRID_WLON = 9.0
+
+# rotation of chunk around local vertical counterclockwise in degrees
+#
+  SCHUNK_INVGRID_ROT = -34.0
+
+
+#---------------------------------------------------------------------------
+#  SUBDIVISION OF GEOMETRIC DOMAIN IN INVERSION GRID CELLS
+#---------------------------------------------------------------------------
+
+# Number of blocks of layers within which lateral cell width remains comstant
+# Number of layers within each block (integer array)
+# Thickness of layers in each block in km (real array)
+#
+  SCHUNK_INVGRID_NREF_BLOCKS = 2
+  SCHUNK_INVGRID_NLAY = 10 10
+  SCHUNK_INVGRID_THICKNESS = 6. 12.
+
+# Number of cells in latitude direction for each layer block
+# Number of cells in longitude direction for each layer block
+#
+  SCHUNK_INVGRID_NLAT = 51 16
+  SCHUNK_INVGRID_NLON = 66 20
+
+
+#---------------------------------------------------------------------------
+#  COORDINATE SPECIFICATIONS FOR VTK FILE OUTPUT
+#---------------------------------------------------------------------------
+
+# Customizing the VTK output:
+#
+# VTK_PROJECTION is one of:
+#   'GLOBAL'      center of chunk in CLAT, CLON, with applied SCHUNK_INVGRID_ROT
+#   'LOCAL_CURV'  center of chunk in x=y=0, NO SCHUNK_INVGRID_ROT applied, but with curvature
+#   'LOCAL_FLAT'  center of chunk in x=y=0, NO SCHUNK_INVGRID_ROT applied, NO curvature, i.e. projection of each depth onto the tangential x-y-plane
+#   'LOCAL_NORTH_CURV'  same as 'LOCAL_CURV', but WITH SCHUNK_INVGRID_ROT applied, i.e. x really points to south
+#   'LOCAL_NORTH_FLAT'  same as 'LOCAL_FLAT', but WITH SCHUNK_INVGRID_ROT applied, i.e. x really points to south
+#
+  VTK_PROJECTION = GLOBAL
+
+# Select the geometry type. VTK_GEOMETRY_TYPE is one of:
+#   'CELLS'          data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as 'UNSTRUCTURED_GRID' datasets) -> intuitive volumetric view
+#   'CELL_CENTERS'   data on inversion grids will be written on the cell center POINTS to vtk files (as 'POLYDATA' datasets) -> smaller files, better to apply filters in ParaView
+#
+  VTK_GEOMETRY_TYPE = CELLS
+
+# Scale all VTK point coordinates by an additional factor
+# if SCALE_VTK_COORDS = .false., then VTK_COORDS_SCALING_FACTOR is ignored
+#
+  SCALE_VTK_COORDS = .false.
+  VTK_COORDS_SCALING_FACTOR = 0.001
