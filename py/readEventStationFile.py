@@ -1,20 +1,20 @@
 #----------------------------------------------------------------------------
-#   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+#   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 #
-#   This file is part of ASKI version 0.3.
+#   This file is part of ASKI version 1.0.
 #
-#   ASKI version 0.3 is free software: you can redistribute it and/or modify
+#   ASKI version 1.0 is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
 #   the Free Software Foundation, either version 2 of the License, or
 #   (at your option) any later version.
 #
-#   ASKI version 0.3 is distributed in the hope that it will be useful,
+#   ASKI version 1.0 is distributed in the hope that it will be useful,
 #   but WITHOUT ANY WARRANTY; without even the implied warranty of
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #   GNU General Public License for more details.
 #
 #   You should have received a copy of the GNU General Public License
-#   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+#   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 #----------------------------------------------------------------------------
 class eventList:
     """This class reads event list files in analogy with 

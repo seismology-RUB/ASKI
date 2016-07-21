@@ -1,22 +1,22 @@
 #!/usr/bin/env python
 #
 #----------------------------------------------------------------------------
-#   Copyright 2013 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+#   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 #
-#   This file is part of ASKI version 0.3.
+#   This file is part of ASKI version 1.0.
 #
-#   ASKI version 0.3 is free software: you can redistribute it and/or modify
+#   ASKI version 1.0 is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
 #   the Free Software Foundation, either version 2 of the License, or
 #   (at your option) any later version.
 #
-#   ASKI version 0.3 is distributed in the hope that it will be useful,
+#   ASKI version 1.0 is distributed in the hope that it will be useful,
 #   but WITHOUT ANY WARRANTY; without even the implied warranty of
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #   GNU General Public License for more details.
 #
 #   You should have received a copy of the GNU General Public License
-#   along with ASKI version 0.3.  If not, see <http://www.gnu.org/licenses/>.
+#   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
 #----------------------------------------------------------------------------
 #
 from sys import argv as sys_argv
@@ -39,6 +39,7 @@ PATH_KERNEL_DISPLACEMENTS = 'kernel_displacements/'
 PATH_KERNEL_GREEN_TENSORS = 'kernel_green_tensors/'
 PATH_SENSITIVITY_KERNELS = 'sensitivity_kernels/'
 PATH_SYNTHETIC_DATA = 'synthetic_data/'
+PATH_KERNEL_REFERENCE_MODELS = 'kernel_reference_models/'
 
 FILE_INTEGRATION_WEIGHTS = 'integration_weights'
 FILEBASE_BASIC_STATS = PATH_OUTPUT_FILES+'stats'
@@ -79,6 +80,21 @@ def create_iter_dir(iter_path,indx):
 # specify FILENAMES always WITHOUT leading '/'
 #------------------------------------------------------------------------------
 
+#---------------------------------------------------------------------------
+#  PATH SPECIFIC MODE
+#---------------------------------------------------------------------------
+
+#  set the following flag to .true. if you intend to use the ASKI functionality of 
+#  path specific kernel reference models (usually only for the very first iteration
+#  and a 1D method)
+#  if you want to use one global kernel reference model (for all paths, i.e. kernels)
+#  set this flag to .false.
+#
+  USE_PATH_SPECIFIC_MODELS = .false.
+
+#---------------------------------------------------------------------------
+#  FREQUENCY SUBSET
+#---------------------------------------------------------------------------
 
 #  frequency discretization of this iteration step, must be subset of global frequency discretization 
 #  for this inversion defined in main parameter file
@@ -97,9 +113,14 @@ def create_iter_dir(iter_path,indx):
 #---------------------------------------------------------------------------
 
 #  Type of inversion grid:
-#    ccsInversionGrid  -> NOT SUPPORTED YET!!
-#      ASKI internal and method independent spherical inverison grid using (one or several) chunks in 
-#      the concept of a cubed sphere
+#    chunksInversionGrid
+#      ASKI internal, method independent spherical inverison grid using (one or several) chunks in 
+#      the concept of a cubed sphere and variable cell refinement
+#
+#    schunkInversionGrid
+#      ASKI internal and method independent spherical simple chunk inverison grid using one chunks in 
+#      the concept of a cubed sphere which is assumed rather small in lateral width (as certain
+#      assumptions are made on the inversion grid cells not to be distorted too much)
 #
 #    scartInversionGrid
 #       ASKI internal and method independent simple Cartesian inversion grid containing of layeres of 
@@ -132,7 +153,7 @@ def create_iter_dir(iter_path,indx):
 #    1 = Scattered Data Integration, as in D. Levin [1999], polynomial degree 1
 #    2 = Scattered Data Integration, as in D. Levin [1999], polynomial degree 2, i.e. approximation order 3 (?)
 #    3 = Scattered Data Integration, as in D. Levin [1999], polynomial degree 3, i.e. approximation order 4 (?)
-#    4 = for each cell compute the highest possible order of SDI integration (trying types 3,2,1 (in that order) until computation was successful)
+#    4 = for each cell compute the highest possible order of SDI integration (trying degrees 3,2,1 , in that order). if not even SDI degree 1 is successful, choose weights of type 5
 #    5 = average of function values, multiplied with volume of box (i.e. linear integration)
 #    6 = external integration weights, to be used along with a suitable inversion grid (e.g. specfem3dInversionGrid)
 # 
@@ -179,17 +200,22 @@ def create_iter_dir(iter_path,indx):
 #  FILE_KERNEL_GREEN_TENSOR: will by convention be: kernel_gt_STATIONNAME
 #    file_kernel_green_tensor and file_kernel_displacement will be basenames only.
 #    every method then deals with the naming by its own (could be multiple files or having some extension etc.)
-#  FILE_SPECTRAL_KERNEL: will by convention be: spectral_kernel_PARAMETRIZATION_EVENTID_STATIONNAME
+#  FILE_SPECTRAL_KERNEL: will in case of pre-integrated kernels on inversion grid by convention be: spectral_kernel_PARAMETRIZATION_EVENTID_STATIONNAME
+#  FILE_SPECTRAL_KERNEL: will in case of plain kernel values on wavefield points by convention be: spectral_kernel_ON-WP_PARAMETRIZATION_EVENTID_STATIONNAME
+#  FILE_SYNTHETIC_DATA: must by convention be: synthetics_EVENTID_STATIONNAME_COMP
+#  FILE_KERNEL_REFERENCE_MODEL: Only used in case USE_PATH_SPECIFIC_MODELS = .true. ; must by convention be: krm_EVENTID_STATIONNAME
+
 #  FILE_SYNTHETIC_DATA: will by convention be: synthetics_EVENTID_STATIONNAME
 #
   PATH_KERNEL_DISPLACEMENTS = {5}
   PATH_KERNEL_GREEN_TENSORS = {6}
   PATH_SENSITIVITY_KERNELS = {7}
   PATH_SYNTHETIC_DATA = {8}
+  PATH_KERNEL_REFERENCE_MODELS = {11}
 
 """.format(inversion_name,indx,FILE_WAVEFIELD_POINTS,FILE_KERNEL_REFERENCE_MODEL,PATH_OUTPUT_FILES,
            PATH_KERNEL_DISPLACEMENTS,PATH_KERNEL_GREEN_TENSORS,PATH_SENSITIVITY_KERNELS,
-           PATH_SYNTHETIC_DATA,FILE_INTEGRATION_WEIGHTS,FILEBASE_BASIC_STATS)
+           PATH_SYNTHETIC_DATA,FILE_INTEGRATION_WEIGHTS,FILEBASE_BASIC_STATS,PATH_KERNEL_REFERENCE_MODELS)
     # create iteration step directory
     print "mkdir '"+iter_path+"'"
     os_mkdir(iter_path)
@@ -207,6 +233,8 @@ def create_iter_dir(iter_path,indx):
     os_mkdir(os_path.join(iter_path,PATH_SENSITIVITY_KERNELS))
     print "mkdir '"+os_path.join(iter_path,PATH_SYNTHETIC_DATA)+"'"
     os_mkdir(os_path.join(iter_path,PATH_SYNTHETIC_DATA))
+    print "mkdir '"+os_path.join(iter_path,PATH_KERNEL_REFERENCE_MODELS)+"'"
+    os_mkdir(os_path.join(iter_path,PATH_KERNEL_REFERENCE_MODELS))
 #############################################################
 help_str = """
    create_ASKI_dir.py
@@ -249,12 +277,13 @@ print "running script create_ASKI_dir.py now with argument values:"
 print "  parameter file = '"+parfile+"'"
 print "  number of iteration steps = '"+str(n_iter_steps)+"'"
 contin = raw_input('is this correct? continue? [y/n] ')
+print "###"
 print ""
 if not contin.lower().startswith('y'):
     exit_now()
 #
 param = inputParameter(parfile)
-noKeys = param.keysNotPresent(['MAIN_PATH_INVERSION','ITERATION_STEP_PATH','PARFILE_ITERATION_STEP'])
+noKeys = param.keysNotPresent(['MAIN_PATH_INVERSION','ITERATION_STEP_PATH','PARFILE_ITERATION_STEP','PARAMETER_CORRELATION_FILE'])
 if len(noKeys) > 0:
     print "### ERROR : the following keywords are required in parameter file '"+parfile+"':"
     print "### "+',  '.join(noKeys)
@@ -284,6 +313,9 @@ if os_path.exists(main_path):
 else:
     print "mkdir '"+main_path+"'"
     os_makedirs(main_path)
+#
+# create empty model parameter correlation file if it does not exist, otherwise leave it untouched
+open(os_path.join(main_path,param.sval('PARAMETER_CORRELATION_FILE')), 'a').close()
 #
 # create all iteration step paths, if they do not exist
 for i in range(n_iter_steps):
