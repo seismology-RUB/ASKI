@@ -41,11 +41,11 @@
         integer :: numtasks                                             ! number of parallel processes for gt-calculation
         integer :: ng                                                   ! total number of wavefield points
         integer :: nnod                                                 ! total number of depth nodes
-        complex, dimension(:,:,:), pointer :: g                         ! g(wp,comp,force) for current frequency at wp
-        complex, dimension(:,:,:), pointer :: gstr                      ! gstr(wp,1-6,force) for current frequency at wp
+        complex, dimension(:,:,:), pointer :: g => null()               ! g(wp,comp,force) for current frequency at wp
+        complex, dimension(:,:,:), pointer :: gstr => null()            ! gstr(wp,1-6,force) for current frequency at wp
         type (seismic_station) :: si                                    ! station information
-        type (file_stream_access), dimension(:), pointer :: fda         ! file pointers to all files
-        type (group_stream_access), dimension(:), pointer :: root       ! root group
+        type (file_stream_access), dimension(:), pointer :: fda => null()    ! file pointers to all files
+        type (group_stream_access), dimension(:), pointer :: root => null()  ! root group
     end type
 !
  contains
@@ -66,6 +66,8 @@
     character (len=400) :: filename
     character (len=3) :: crank
     character (len=34) :: myname = 'initialReadGeminiKernelGreenTensor'
+!
+    nullify(dset,group,ft)
 !
     call addTrace(errmsg,myname)
     lu = get(fuh)
@@ -129,6 +131,8 @@
     type (data_stream_access), pointer :: dset
     type (group_stream_access), pointer :: group
     character (len=36) :: myname = 'readFrequencyGeminiKernelGreenTensor'
+!
+    nullify(d,dset,group)
 !
     call addTrace(errmsg,myname)
 !

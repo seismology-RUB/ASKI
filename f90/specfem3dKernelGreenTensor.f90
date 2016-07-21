@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief Module dealing with kernel green tensor for methods SPECFEM3D (Cartesian and GLOBE)
 !!
@@ -149,6 +149,8 @@ contains
     integer, dimension(:), pointer :: jf
     character (len=length_ID_specfem3d_for_ASKI_files) :: staname_comp
     character (len=37) :: myname = 'initialReadSpecfem3dKernelGreenTensor'
+!
+    nullify(jf)
 !
     ! IN MODULE kernelGreenTensor IT WAS CHECKED THAT comp IS NOT EMPTY AND ALL ENTRIES ARE 
     ! VALID COMPONENTS AND THAT ALL ENTRIES IN VECTOR comp ARE AVAILABLE COMPONENTS FOR THIS OBJECT
@@ -324,6 +326,8 @@ contains
     character(len=length_ID_specfem3d_for_ASKI_files) :: staname_comp
     complex, dimension(:,:), pointer :: g_comp,gstr_comp
 !
+    nullify(g_comp,gstr_comp)
+!
     call addTrace(errmsg,myname)
 !
     ! check if this was initiated
@@ -459,6 +463,8 @@ contains
     type (error_message) :: errmsg
     character (len=36) :: myname = 'getStrainsSpecfem3dKernelGreenTensor'
 !
+    nullify(gstr)
+!
     call addTrace(errmsg,myname)
 !
     if(this%jfcur == -1) then
@@ -506,6 +512,8 @@ contains
     complex, dimension(:,:,:), pointer :: g
     type (error_message) :: errmsg
     character (len=29) :: myname = 'getSpecfem3dKernelGreenTensor'
+!
+    nullify(g)
 !
     call addTrace(errmsg,myname)
 !

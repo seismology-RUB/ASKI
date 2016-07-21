@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 
 !  Program to perform the solution the least-squares
@@ -188,6 +188,9 @@ program solveCglsKernelSystem
   double precision :: DNRM2
   external DNRM2
 
+  nullify(smoothing_scaling_values,damping_scaling_values,mdata_norm,sdata_norm,K_loc,rhs_loc,&
+       regeq_coef,regeq_T_coef,regeq_indx,regeq_T_indx,regeq_rhs,coef,coef_T,indx,indx_T,&
+       pparam,idx_dmspace,pcell,idx_kim,model_vector)
 
 !------------------------------------------------------------------------
 !  single or double precision for CG algorithm?
@@ -300,8 +303,7 @@ program solveCglsKernelSystem
   if (.level.(.errmsg.ap) == 2) goto 30
 !
    if((.not.add_smoothing).and.(ap.optset.'-smoothbnd')) then
-      write(*,*) "ERROR: -smoothbnd can only be set when adding smoothing equations by option -smoothing. In ",&
-           "any case, -smoothbnd is currently ignored!"
+      write(*,*) "ERROR: -smoothbnd can only be set when adding smoothing equations by option -smoothing."
       goto 30
    end if
 !

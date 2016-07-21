@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 program solveParKernelSystem
   use inversionBasics
@@ -79,6 +79,8 @@ program solveParKernelSystem
   integer :: ios,lu_out,lu1,lu2
   logical :: outfile_exists,outfile_is_relative
   real :: misfit
+
+  nullify(smoothing_scaling_values,damping_scaling_values,mdata_norm,sdata_norm,solution,pparam,idx_dmspace,pcell)
 
 !------------------------------------------------------------------------
 !  get info from parallel environment
@@ -175,8 +177,7 @@ program solveParKernelSystem
 !
    if((.not.add_smoothing).and.(ap.optset.'-smoothbnd')) then
       if(mypnum==0) then
-         write(*,*) "ERROR: -smoothbnd can only be set when adding smoothing equations by option -smoothing. In ",&
-              "any case, -smoothbnd is currently ignored!"
+         write(*,*) "ERROR: -smoothbnd can only be set when adding smoothing equations by option -smoothing."
          call usage(ap)
       end if
       goto 10
@@ -604,9 +605,9 @@ program solveParKernelSystem
      write(*,*) "reading in kernel matrix now and distributing to parallel process grid"
   end if
   ! subroutine readMatrixParKernelLinearSystem(this,df_measured_data,&
-  !      nfreq_measured_data,ifreq_measured_data,path_sensitivity_kernels,ntot_invgrid,pcorr,&
-  !      lu1,lu2,errmsg,apply_event_filter,path_event_filter,apply_station_filter,path_station_filter,&
-  !      ignore_data_weights,apply_kernel_normalization)
+  !     nfreq_measured_data,ifreq_measured_data,path_sensitivity_kernels,ntot_invgrid,pcorr,&
+  !     lu1,lu2,errmsg,apply_event_filter,path_event_filter,apply_station_filter,path_station_filter,&
+  !     ignore_data_weights,apply_kernel_normalization)
   call new(errmsg,myname)
   lu1 = get(fuh)
   lu2 = get(fuh)
@@ -618,7 +619,8 @@ program solveParKernelSystem
        apply_event_filter=lval(.inpar.invbasics,'APPLY_EVENT_FILTER'),&
        path_event_filter=sval(.inpar.invbasics,'PATH_EVENT_FILTER'),&
        apply_station_filter=lval(.inpar.invbasics,'APPLY_STATION_FILTER'),&
-       path_station_filter=sval(.inpar.invbasics,'PATH_STATION_FILTER'))
+       path_station_filter=sval(.inpar.invbasics,'PATH_STATION_FILTER'),&
+       apply_kernel_normalization=normalize_data)
   call add(fuh,lu1); call add(fuh,lu2)
   if (.level.errmsg /= 0) call print(errmsg)
   !call print(errmsg)
@@ -652,10 +654,10 @@ program solveParKernelSystem
   end if
 !
   ! subroutine setRhsAsDataResidualParKernelLinearSystem(this,&
-  !      nfreq_measured_data,ifreq_measured_data,nfreq_synthetic_data,ifreq_synthetic_data,&
-  !      path_synthetic_data,path_measured_data,lu,misfit,errmsg,&
-  !      apply_event_filter,path_event_filter,apply_station_filter,path_station_filter,&
-  !      ignore_data_weights,apply_sdata_normalization,apply_mdata_normalization,set_corrected_residual)
+  !     nfreq_measured_data,ifreq_measured_data,nfreq_synthetic_data,ifreq_synthetic_data,&
+  !     path_synthetic_data,path_measured_data,lu,misfit,errmsg,&
+  !     apply_event_filter,path_event_filter,apply_station_filter,path_station_filter,&
+  !     ignore_data_weights,apply_sdata_normalization,apply_mdata_normalization,set_corrected_residual)
   call new(errmsg,myname)
   call setRhsAsDataResidualParKernelLinearSystem(PKLSE,ival(.inpar.invbasics,'MEASURED_DATA_NUMBER_OF_FREQ'),&
        ivec(.inpar.invbasics,'MEASURED_DATA_INDEX_OF_FREQ',ival(.inpar.invbasics,'MEASURED_DATA_NUMBER_OF_FREQ')),&
@@ -667,6 +669,7 @@ program solveParKernelSystem
        path_event_filter=sval(.inpar.invbasics,'PATH_EVENT_FILTER'),&
        apply_station_filter=lval(.inpar.invbasics,'APPLY_STATION_FILTER'),&
        path_station_filter=sval(.inpar.invbasics,'PATH_STATION_FILTER'),&
+       apply_mdata_normalization=normalize_data,&
        set_corrected_residual=lval(.inpar.iterbasics,'USE_PATH_SPECIFIC_MODELS'))
   call undo(fuh)
   if (.level.errmsg /= 0) call print(errmsg)

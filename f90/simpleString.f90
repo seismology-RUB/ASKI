@@ -1,22 +1,22 @@
 !--------------------------------------------------------------------------
-!   Copyright 2015 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
 !
 !   This file is part of Gemini II.
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   Gemini II and ASKI version 1.0 are free software: you can
+!   Gemini II and ASKI version 1.1 are free software: you can
 !   redistribute it and/or modify it under the terms of the GNU
 !   General Public License as published by the Free Software
 !   Foundation, either version 2 of the License, or (at your option) 
 !   any later version.
 !
-!   Gemini II and ASKI version 1.0 are distributed in the hope that they
+!   Gemini II and ASKI version 1.1 are distributed in the hope that they
 !   will be useful, but WITHOUT ANY WARRANTY; without even the implied
 !   warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 !   See the GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with Gemini II and ASKI version 1.0.
+!   along with Gemini II and ASKI version 1.1.
 !   If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !----------------------------------------------------------------------------
@@ -29,7 +29,7 @@
 	interface operator (.length.); module procedure lengthSimpleString; end interface
 	type simple_string
 		private
-		character (len=1), dimension(:), pointer :: zeichen
+		character (len=1), dimension(:), pointer :: zeichen => null()
 	end type simple_string
 !
  contains
@@ -61,7 +61,11 @@
 !
 	integer function lengthSimpleString(this)
 	type (simple_string), intent(in) :: this
-	lengthSimpleString = size(this%zeichen)
+	if(associated(this%zeichen)) then
+		lengthSimpleString = size(this%zeichen)
+	else
+		lengthSimpleString = 0
+	end if
 	end function lengthSimpleString
 !----------------------------------------------------------------------------
 !  convert string back to character sequence
@@ -69,8 +73,13 @@
 	subroutine convertToCharSimpleString(this,string)
 	type (simple_string) :: this
 	character (len=*) :: string
-	integer :: n,i
-	n=min(size(this%zeichen),len(string))
+	integer :: n,i,size_this_zeichen
+	if(associated(this%zeichen)) then
+		size_this_zeichen = size(this%zeichen)
+	else
+		size_this_zeichen = 0
+	end if
+	n=min(size_this_zeichen,len(string))
 	do i=1,n
 		string(i:i) = this%zeichen(i)
 	enddo

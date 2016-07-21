@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief module to write data on event,station coordinates or pahts to vkt output
 !!
@@ -27,7 +27,7 @@
 !!  file base name followed by an index, in order to be considered by Paraview as a sequence of data.
 !!
 !! \author Florian Schumacher
-!! \date Nov 2015
+!! \date March 2013
 !
 module eventStationVtkFile
 !
@@ -273,6 +273,7 @@ contains
     integer, dimension(:), allocatable :: ipoint_of_station,ipoint_of_event
     real, dimension(:,:), pointer :: points_tmp
 !
+    nullify(points_tmp)
     call addTrace(errmsg,myname)
     if(trim(this%filename) /= '') call deallocateEventStationVtkFile(this)
 !

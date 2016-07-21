@@ -34,10 +34,10 @@
     type gemini_wavefield_points
         private
          character (len=1) :: csys
-         integer :: nwp                          ! total number of wavefield points
-         real, dimension(:), pointer :: xg       ! x-values in sphere scaled with rearth or on halfspace
-         real, dimension(:), pointer :: yg       ! y-values in sphere scaled with rearth or on halfspace
-         real, dimension(:), pointer :: zg       ! z-values in sphere scaled with rearth or in halfspace
+         integer :: nwp                                    ! total number of wavefield points
+         real, dimension(:), pointer :: xg => null()       ! x-values in sphere scaled with rearth or on halfspace
+         real, dimension(:), pointer :: yg => null()       ! y-values in sphere scaled with rearth or on halfspace
+         real, dimension(:), pointer :: zg => null()       ! z-values in sphere scaled with rearth or in halfspace
     end type
 !
  contains
@@ -179,7 +179,13 @@
     type (gemini_wavefield_points), intent(in) :: this
     real, dimension(:), pointer :: c1,c2,c3
     integer :: n
-    n = size(this%xg)
+    if(associated(this%xg)) then
+       n = size(this%xg)
+    else
+       n = 0
+       nullify(c1,c2,c3)
+       return
+    end if
     allocate(c1(n),c2(n),c3(n))
     c1 = this%xg
     c2 = this%yg

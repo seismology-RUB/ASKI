@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 program timeKernel2vtk
   use inversionBasics
@@ -65,6 +65,8 @@ program timeKernel2vtk
 
   logical :: kernel_on_wp
 
+  nullify(str_vec,nt1,nt2,k,cells_filled,wp_inside)
+
 !------------------------------------------------------------------------
 !  preliminary processing
 !
@@ -83,7 +85,7 @@ program timeKernel2vtk
        "windows (must have same length as vector given by -nt2)","ivec","")
   call addOption(ap,"-nt2",.true.,"(mandatory) vector of length nwin, giving end indices of nwin time "//&
        "windows (must have same length as vector given by -nt1)","ivec","")
-  call addOption(ap,"-wp",.false.,"if set, time waveform kernel files '...ON-WP...' (kernels on wavefield "//&
+  call addOption(ap,"-wp",.false.,"(optional) if set, time waveform kernel files '...ON-WP...' (kernels on wavefield "//&
        "points) will be read (assuming they exist). If not set, normal time kernel files (pre-integrated) are "//&
        "read.")
 !

@@ -1,22 +1,22 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
 !   and Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !   and Christian Ullisch (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief Wrapper module for kernel displacement
 !!
@@ -27,6 +27,7 @@ module kernelDisplacement
   use geminiKernelDisplacement
   use specfem3dKernelDisplacement
   use nexdKernelDisplacement
+  use complexKernelFrequency
   use errorMessage
   use fileUnitHandler
   implicit none
@@ -35,6 +36,7 @@ module kernelDisplacement
   interface operator (.df.); module procedure getDfKernelDisplacement; end interface
   interface operator (.nf.); module procedure getNfKernelDisplacement; end interface
   interface operator (.jfcur.); module procedure getJfcurKernelDisplacement; end interface
+  interface operator (.fc.); module procedure getComplexFrequencyKernelDisplacement; end interface
 !< fork here to specific method by associating some pointer (only ONE!)
   type kernel_displacement
      private
@@ -101,15 +103,16 @@ contains
     call addTrace(errmsg,myname)
     if (associated(this%gemini_kd)) then
        call readFrequencyGeminiKernelDisplacement(this%gemini_kd,jf,errmsg)
-       if (.level.errmsg == 2) then
-          call addTrace(errmsg,myname); return
-       endif
+       if (.level.errmsg == 2) return
     else if (associated(this%specfem3d_kd)) then
        call readFrequencySpecfem3dKernelDisplacement(this%specfem3d_kd,jf,errmsg)
        if (.level.errmsg == 2) return
     else if (associated(this%nexd_kd)) then
        call readFrequencyNexdKernelDisplacement(this%nexd_kd,jf,errmsg)
        if (.level.errmsg == 2) return
+    else
+       call add(errmsg,2,"kernel_displacement object not yet initiated",myname)
+       return
     endif
   end subroutine readFrequencyKernelDisplacement
 !-------------------------------------------------------------------------
@@ -177,6 +180,31 @@ contains
     endif
   end function getJfcurKernelDisplacement
 !-------------------------------------------------------------------------
+!> \brief Get complex frequency, return negative real frequency if not yet initiated
+!
+  function getComplexFrequencyKernelDisplacement(this) result(res)
+    type (kernel_displacement), intent(in) :: this
+    complex :: res
+    ! local
+    real :: df
+    integer :: jf
+!
+    res = cmplx(-1.0)
+    if (associated(this%gemini_kd)) then
+       df = .df.(this%gemini_kd)
+       jf = .jfcur.(this%gemini_kd)
+       res = getComplexKernelFrequency('GEMINI',df,jf)
+    else if (associated(this%specfem3d_kd)) then
+       df = .df.(this%specfem3d_kd)
+       jf = .jfcur.(this%specfem3d_kd)
+       res = getComplexKernelFrequency('SPECFEM3D',df,jf)
+    else if (associated(this%nexd_kd)) then
+       df = .df.(this%nexd_kd)
+       jf = .jfcur.(this%nexd_kd)
+       res = getComplexKernelFrequency('NEXD',df,jf)
+    endif
+  end function getComplexFrequencyKernelDisplacement
+!-------------------------------------------------------------------------
 !> \brief Get pointer to strains
 !! \details Allocate here for the return array ustr (allocation can also be done in the
 !!  method-specific realization of kernelDisplacement). This is done in order to be most flexible,
@@ -190,6 +218,10 @@ contains
     character (len=28) :: myname = 'getStrainsKernelDisplacement'
     ! local
     complex, dimension(:,:), pointer :: ustr_local
+!
+    nullify(ustr_local)
+!
+    nullify(ustr)
 !
     if (associated(this%gemini_kd)) then
        ustr_local => getStrainsGeminiKernelDisplacement(this%gemini_kd)
@@ -209,6 +241,9 @@ contains
           call add(errmsg,2,"no kernel displacement strains were returned by function getStrainsNexdKernelDisplacement",myname)
           return
        end if
+    else
+       call add(errmsg,2,"kernel_displacement object not yet initiated",myname)
+       return
     endif
     allocate(ustr(size(ustr_local,1),size(ustr_local,2)))
     ustr = ustr_local
@@ -226,6 +261,9 @@ contains
        call getUnitFactorStrainsSpecfem3dKernelDisplacement(this%specfem3d_kd,uf_ustr,errmsg)
     else if (associated(this%nexd_kd)) then
        call getUnitFactorStrainsNexdKernelDisplacement(this%nexd_kd,uf_ustr)
+    else
+       call add(errmsg,2,"kernel_displacement object not yet initiated","getUnitFactorStrainsKernelDisplacement")
+       return
     end if
   end subroutine getUnitFactorStrainsKernelDisplacement
 !-------------------------------------------------------------------------
@@ -242,6 +280,10 @@ contains
     character (len=21) :: myname = 'getKernelDisplacement'
     ! local
     complex, dimension(:,:), pointer :: u_local
+!
+    nullify(u_local)
+!
+    nullify(u)
 !
     if (associated(this%gemini_kd)) then
        u_local => getGeminiKernelDisplacement(this%gemini_kd)
@@ -261,6 +303,9 @@ contains
           call add(errmsg,2,"no kernel displacement values were returned by function getNexdKernelDisplacement",myname)
           return
        end if
+    else
+       call add(errmsg,2,"kernel_displacement object not yet initiated",myname)
+       return
     endif
     allocate(u(size(u_local,1),size(u_local,2)))
     u = u_local
@@ -278,6 +323,9 @@ contains
        call getUnitFactorSpecfem3dKernelDisplacement(this%specfem3d_kd,uf_u,errmsg)
     else if (associated(this%nexd_kd)) then
        call getUnitFactorNexdKernelDisplacement(this%nexd_kd,uf_u)
+    else
+       call add(errmsg,2,"kernel_displacement object not yet initiated","getUnitFactorKernelDisplacement")
+       return
     end if
   end subroutine getUnitFactorKernelDisplacement
 !-------------------------------------------------------------------------

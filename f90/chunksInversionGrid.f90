@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Wolfgang Friederich and Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Wolfgang Friederich and Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief simple spherical inversion grid using one chunk of a cubed sphere
 !!
@@ -33,7 +33,7 @@
 !!  can be locally refined, e.g. due to ray coverage of the data)
 !!
 !! \author Florian Schumacher
-!! \date Mar 2015
+!! \date Nov 2015
 !
 module chunksInversionGrid
 !
@@ -265,6 +265,8 @@ contains
     integer :: ios
     character(len=400) :: errstr
     character(len=500) :: char_string
+!
+    nullify(nlay_block,nlat_block,nlon_block,thickness)
 !
     nchunk = ival(inpar,'CHUNKS_INVGRID_GEOM_NCHUNK',iostat=ios)
     if(ios/=0) then
@@ -502,6 +504,7 @@ contains
     integer, dimension(:,:,:,:), allocatable :: icell_base_1chunk
     character (len=500) :: invgrid_filename
 !
+    nullify(nlay_block,nlat,nlon,ip,thickness)
     call addTrace(errmsg,myname)
     this%is_defined = .false.
 !
@@ -946,6 +949,8 @@ contains
     logical :: layer_is_bottom,layer_is_top
     character(len=4) :: bound_nb
     integer, dimension(:), pointer :: idx_nb
+
+    nullify(idx_nb)
 
     ! NOW DEFINE NEIGHBOUR ARRAY FOR ALL BASE CELLS, LOOP ON 1 CHUNK AND DEFINE FOR ALL CHUNS (simple index shift)
 
@@ -1545,6 +1550,7 @@ contains
     integer, dimension(:), pointer :: nlay_block,nlat_block,nlon_block
     real, dimension(:), pointer :: thickness
 !
+    nullify(ip,nlay_block,nlat_block,nlon_block,thickness)
     call addTrace(errmsg,myname)
 !
     this%is_defined = .false.
@@ -2068,6 +2074,7 @@ contains
     integer :: ios,ichunk,icell,zero
     integer, dimension(:), pointer :: ip
 !
+    nullify(ip)
     call addTrace(errmsg,myname)
 !
     zero = 0
@@ -2608,7 +2615,7 @@ contains
 !! \param cell_indx_req optional incoming array defining invgrid cell indices for which vtk cells should be returned only
 !! \param indx_map if cell_indx_req present, then indx_map(cell_indx_req(i)) = i for all valid and non duplicate cell_indx_req(i) , otherwise identity
 !
-  subroutine getGeometryVtkChunksInversionGrid(this,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,errmsg,& !! FS FS CONTINUE: properly account for geometry_type, then test the functionality
+  subroutine getGeometryVtkChunksInversionGrid(this,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,errmsg,& 
        cell_indx_req,indx_map_out)
     type (chunks_inversion_grid) :: this
     integer :: geometry_type
@@ -2630,7 +2637,12 @@ contains
     integer, dimension(:,:,:,:), allocatable :: idx_point
     integer, dimension(:), allocatable :: ichunk_corner
 !
+    nullify(indx_map)
+!
     call addTrace(errmsg,myname)
+    nullify(points,cell_connectivity,cell_type,cell_indx_out)
+    if(present(indx_map_out)) nullify(indx_map_out)
+!
     if(.not.this%is_defined) then
        call add(errmsg,2,"inversion grid not yet defined",myname)
        return
@@ -2913,7 +2925,10 @@ contains
     integer, dimension(:), pointer :: nb_xmin,nb_xmax,nb_ymin,nb_ymax,nb_zmin,nb_zmax,nb
     character(len=39) :: bnd_cond
 !
+    nullify(nb_xmin,nb_xmax,nb_ymin,nb_ymax,nb_zmin,nb_zmax,nb)
+!
     nullify(nb_idx)
+!
     if(.not.this%is_defined) return
 !
     if(present(boundary_conditions)) then
@@ -3081,7 +3096,11 @@ contains
     integer :: jxmin,jxmax,jymin,jymax,jzmin,jzmax
     double precision :: uf_correction
 !
+    nullify(idx,jzmax_wp,jxmax_wp,jymax_wp,iglob_wp,chunk_icell_internal)
+!
     call addTrace(errmsg,myname)
+    nullify(wp_idx)
+!
     if(.not.this%is_defined) then
        call add(errmsg,2,"inversion grid not yet defined",myname)
        return

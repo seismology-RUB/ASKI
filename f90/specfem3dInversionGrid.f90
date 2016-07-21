@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief inversion grid consisting SPECFEM3D elements as inversion grid cells
 !!
@@ -173,6 +173,8 @@ contains
     integer, dimension(:), allocatable :: igll_cc_mean
     real :: cc_mean_factor
     real, dimension(:), pointer :: x,y,z
+!
+    nullify(x,y,z)
 !
     call addTrace(errmsg,myname)
     if(this%is_defined) then
@@ -630,6 +632,8 @@ contains
     real :: c1,c2,c3
 !
     call addTrace(errmsg,myname)
+    nullify(points,cell_connectivity,cell_type,cell_indx_out)
+    if(present(indx_map_out)) nullify(indx_map_out)
 !
     if(.not.this%is_defined) then
        call add(errmsg,2,"inversion grid not yet defined",myname)
@@ -734,6 +738,8 @@ contains
     integer :: icell
     integer, dimension(:), pointer :: nb,nb2
 !
+    nullify(nb,nb2)
+!
     nullify(nb_idx)
     if(.not.this%is_defined) return
 !
@@ -769,7 +775,10 @@ contains
     logical :: xyz_inconsistent
     integer, dimension(:), pointer :: idx
 !
+    nullify(idx)
+!
     call addTrace(errmsg,myname)
+    nullify(wp_idx)
 !
     if(.not.this%is_defined) then
        call add(errmsg,2,"inversion grid not yet defined",myname)

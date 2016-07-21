@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief module which computes integrated time waveform sensitivity kernels
 !!
@@ -266,6 +266,8 @@ contains
     complex, dimension(:,:), pointer :: skernel_vals
     complex, dimension(:), allocatable :: skernel_vals_filtered_reshaped
     logical :: apply_filter
+!
+    nullify(jf,comp,param,skernel_vals)
 !
     call addTrace(errmsg,myname)
 !
@@ -822,7 +824,12 @@ contains
     character(len=character_length_component), dimension(:), pointer :: comp_loc
     integer, dimension(:), pointer :: jt_loc
 !
+    nullify(param_loc,comp_loc,jt_loc)
+!
     call addTrace(errmsg,myname)
+    if(present(param)) nullify(param)
+    if(present(comp)) nullify(comp)
+    if(present(jt)) nullify(jt)
 !
     ! open stream access file
     ios = openFileStreamAccess(fsa,lu,filename)
@@ -895,6 +902,8 @@ contains
     type (flexible), dimension(:), pointer :: ft
     integer :: on_invgrid_int,iparam_in_file,icomp_in_file,ifreq
     character(len=400) :: errstr
+!
+    nullify(group,dset,ft)
 !
     nullify(param_in_file,comp_in_file,jt_in_file)
 !
@@ -1047,6 +1056,8 @@ contains
     character(len=character_length_component), dimension(:), pointer :: comp_in_file
     character(len=400) :: errstr
     character(len=29) :: myname = 'initialReadTimeWaveformKernel'
+!
+    nullify(jt_in_file,comp_indx_in_file,param_indx_in_file,param_in_file,comp_in_file)
 !
     call addTrace(errmsg,myname)
 !
@@ -1215,6 +1226,8 @@ contains
     logical :: traverse_path_from_root
     character(len=400) :: errstr
     character(len=22) :: myname = 'readTimeWaveformKernel'
+!
+    nullify(group,tgroup,dset,d)
 !
     call addTrace(errmsg,myname)
 !

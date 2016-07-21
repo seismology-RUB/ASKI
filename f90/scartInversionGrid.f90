@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief simple layered Cartesian inversion grid
 !!
@@ -154,6 +154,7 @@ contains
     character (len=400) :: errstr
     character (len=34) :: myname = 'createFromValuesScartInversionGrid'
 !
+    nullify(rp)
     call addTrace(errmsg,myname)
     if(this%is_defined) then
        call add(errmsg,1,"this object is already defined, deallocating it now before creating new one",myname)
@@ -316,6 +317,7 @@ contains
          'SCART_INVGRID_THICKNESS','SCART_INVGRID_NX','SCART_INVGRID_NY','USE_LOCAL_INVGRID_COORDS_FOR_VTK',&
          'SCALE_VTK_COORDS','VTK_COORDS_SCALING_FACTOR','VTK_GEOMETRY_TYPE'/
 !
+    nullify(thickness,rp)
     call addTrace(errmsg,myname)
     if(this%is_defined) then
        call add(errmsg,1,"this object is already defined, deallocating it now before creating new one",myname)
@@ -560,6 +562,8 @@ contains
     real :: xmin,xmax,ymin,ymax
     real, dimension(:), pointer :: x_below,x,x_above,y_below,y,y_above
     logical :: layer_is_bottom,layer_is_top
+!
+    nullify(ip)
 !
     allocate(this%face_neighbours_xy(4,this%ncell),this%face_neighbours_z(2,this%ncell))
 !
@@ -893,7 +897,11 @@ contains
     real :: xmin,xmax,ymin,ymax,zmin,zmax
     logical :: select_cell_indices
 !
+    nullify(indx_map,x,y)
+!
     call addTrace(errmsg,myname)
+    nullify(points,cell_connectivity,cell_type,cell_indx_out)
+    if(present(indx_map_out)) nullify(indx_map_out)
 !
     if(.not.this%is_defined) then
        call add(errmsg,2,"inversion grid not yet defined",myname)
@@ -1063,6 +1071,8 @@ contains
     integer, dimension(:), pointer :: nb,nb_zmin,nb_zmax
     character(len=39) :: bnd_cond
 !
+    nullify(nb,nb_zmin,nb_zmax)
+!
     nullify(nb_idx)
     if(.not.this%is_defined) return
 !
@@ -1180,7 +1190,10 @@ contains
     integer :: iwp,nwp,icell
     integer, dimension(:), pointer :: idx
 !
+    nullify(idx)
+!
     call addTrace(errmsg,myname)
+    nullify(wp_idx)
 !
     if(.not.this%is_defined) then
        call add(errmsg,2,"inversion grid not yet defined",myname)
@@ -1394,6 +1407,8 @@ contains
     integer :: ix,iy,iz,iblock
     real, dimension(:), pointer :: rp
 !
+    nullify(rp)
+!
     call inverseCellIndexScartInversionGrid(this,icell,ix,iy,iz,iblock)
 !
     rp => getVectorPointer(this%x(iblock))
@@ -1527,6 +1542,8 @@ contains
     logical :: l
     real :: c1_copy,c2_copy,c3_copy
     real, dimension(:), pointer :: cx,cy
+!
+    nullify(cx,cy)
 !
     l = .false.
 !

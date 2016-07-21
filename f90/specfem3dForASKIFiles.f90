@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 
 module specfem3dForASKIFiles
@@ -83,6 +83,8 @@ contains
     character(len=28) :: myname = 'readSpecfem3dForASKIMainFile'
     character(len=400) :: errstr
 !
+    nullify(ip_dummy,rp_dummy,nb_idx_dummy)
+!
     call addTrace(errmsg,myname)
 !
     ! Find out the total number of optional parameters that are requested from this file (optional arguments after errmsg)
@@ -96,19 +98,46 @@ contains
     if(present(nwp)) npresent = npresent + 1 
     if(present(df)) npresent = npresent + 1 
     if(present(nf)) npresent = npresent + 1 
-    if(present(jf)) npresent = npresent + 1 
-    if(present(x)) npresent = npresent + 1 
-    if(present(y)) npresent = npresent + 1 
-    if(present(z)) npresent = npresent + 1 
-    if(present(rho)) npresent = npresent + 1 
-    if(present(vp)) npresent = npresent + 1 
-    if(present(vs)) npresent = npresent + 1 
+    if(present(jf)) then
+       npresent = npresent + 1
+       nullify(jf)
+   end if
+    if(present(x)) then
+       npresent = npresent + 1
+       nullify(x)
+    end if
+    if(present(y)) then
+       npresent = npresent + 1
+       nullify(y)
+    end if
+    if(present(z)) then
+       npresent = npresent + 1
+       nullify(z)
+    end if
+    if(present(rho)) then
+       npresent = npresent + 1
+       nullify(rho)
+    end if
+    if(present(vp)) then
+       npresent = npresent + 1
+       nullify(vp)
+    end if
+    if(present(vs)) then
+       npresent = npresent + 1
+       nullify(vs)
+    end if
     if(present(ngllx)) npresent = npresent + 1 
     if(present(nglly)) npresent = npresent + 1 
     if(present(ngllz)) npresent = npresent + 1 
-    if(present(jacobian)) npresent = npresent + 1 
+    if(present(jacobian)) then
+       npresent = npresent + 1
+       nullify(jacobian)
+    end if
     if(present(ncell)) npresent = npresent + 1 
-    if(present(nb_idx)) npresent = npresent + 1 
+    if(present(nb_idx)) then
+       npresent = npresent + 1
+       nullify(nb_idx)
+    end if
 !
     if(npresent == 0) then
        call add(errmsg,1,"there are no incoming parameters that should be read from file, the call to this "//&
@@ -609,6 +638,8 @@ contains
     character(len=41) :: myname = 'readSpecfem3dForASKISpectralWavefieldFile'
     character(len=400) :: errstr
 !
+    nullify(u_dummy)
+!
     call addTrace(errmsg,myname)
 !
     ! Find out the total number of optional parameters that are requested from this file (optional arguments after errmsg)
@@ -621,8 +652,14 @@ contains
     if(present(nwp)) npresent = npresent + 1 
     if(present(df)) npresent = npresent + 1 
     if(present(jfcur)) npresent = npresent + 1 
-    if(present(u)) npresent = npresent + 1 
-    if(present(ustr)) npresent = npresent + 1 
+    if(present(u)) then
+       npresent = npresent + 1
+       nullify(u)
+    end if
+    if(present(ustr)) then
+       npresent = npresent + 1
+       nullify(ustr)
+    end if
 !
     if(npresent == 0) then
        call add(errmsg,1,"there are no incoming parameters that should be read from file, the call to this "//&

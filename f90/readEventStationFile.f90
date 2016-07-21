@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief read content of ASKI event file and ASKI station file
 !!
@@ -85,6 +85,7 @@ contains
     real, dimension(6) :: M
 !
     call addTrace(errmsg,myname)
+    nullify(events)
 !
     ! open event file
     open(unit=lu, file=trim(event_file) , status = 'old', action  = 'read', iostat = ios)
@@ -183,6 +184,7 @@ contains
     type (seismic_event), dimension(:), pointer :: events
 !
     call addTrace(errmsg,'createEventListFromStandardEventFile')
+    nullify(events)
     call createEventsFromStandardEventFile(event_file,lu,events,errmsg)
     if(.level.errmsg == 2) return
     if(.not.associated(events)) then
@@ -190,7 +192,7 @@ contains
             'createEventListFromStandardEventFile')
        return
     end if
-    call createSeismicEventList(event_list,name,.csys.events(1),events)
+    call createSeismicEventList(event_list,name,.csys.(events(1)),events)
     nullify(events)
   end subroutine createEventListFromStandardEventFile
 !------------------------------------------------------------------------
@@ -219,6 +221,7 @@ contains
     real :: lat, lon, alt
 !
     call addTrace(errmsg,myname)
+    nullify(stations)
 !
     ! open station file
     open(unit=lu, file=trim(station_file) , status = 'old', action  = 'read', iostat = ios)
@@ -308,6 +311,7 @@ contains
     type (seismic_station), dimension(:), pointer :: stations
 !
     call addTrace(errmsg,'createStationListFromStandardStationFile')
+    nullify(stations)
     call createStationsFromStandardStationFile(station_file,lu,stations,errmsg)
     if(.level.errmsg == 2) return
     if(.not.associated(stations)) then

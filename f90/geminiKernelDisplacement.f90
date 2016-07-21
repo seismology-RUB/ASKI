@@ -41,11 +41,11 @@
         real :: kfcur                                           ! current frequency index: f = kf*df
         integer :: ng                                           ! total number of surface wavefield points
         integer :: nnod                                         ! nuber of depth nodes
-        complex, dimension(:,:), pointer :: u                   ! array of 3 vector pointers for displacement
-        complex, dimension(:,:), pointer :: ustr                ! array of 6 vector pointers for strain components on grid
+        complex, dimension(:,:), pointer :: u => null()         ! array of 3 vector pointers for displacement
+        complex, dimension(:,:), pointer :: ustr => null()      ! array of 6 vector pointers for strain components on grid
         integer :: numtasks                                     ! number of parallel tasks that wrote kernel displacements
-        type (file_stream_access), dimension(:), pointer :: fda         ! file pointers to all files
-        type (group_stream_access), dimension(:), pointer :: root       ! root groups of all files
+        type (file_stream_access), dimension(:), pointer :: fda => null()    ! file pointers to all files
+        type (group_stream_access), dimension(:), pointer :: root => null()  ! root groups of all files
     end type
     integer, parameter :: length_ID_gemini_kernel_displacement = 13 !< change this number CONSISTENTLY with respective numbers in submodules (specfem3d,gemini,etc) 
 !
@@ -67,6 +67,8 @@
     character (len=400) :: filename
     character (len=3) :: crank
     character (len=35) :: myname = 'initialReadGeminiKernelDisplacement'
+!
+    nullify(dset,group,ft)
 !
     call addTrace(errmsg,myname)
     lu = get(fuh)
@@ -154,6 +156,8 @@
     type (data_stream_access), pointer :: dset
     type (group_stream_access), pointer :: group
     character (len=37) :: myname = 'readFrequencyGeminiKernelDisplacement'
+!
+    nullify(d,dset,group)
 !
     call addTrace(errmsg,myname)
 !

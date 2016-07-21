@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief Module computing, writing, reading, dealing with integration weights
 !!
@@ -135,6 +135,7 @@ contains
     double precision :: sum_intw
     integer :: ncell_invgrid,icell,cnt_empty_cells,size_idx,type_standard_cell
 !
+    nullify(c1,c2,c3,idx,weight,jacobian)
     call addTrace(errmsg,myname)
     if(this%ntot_wp /= 0) then
        call add(errmsg,1,"there are already integration weights defined, "//&
@@ -529,6 +530,7 @@ contains
     character (len=400) :: errstr
 !
     call addTrace(errmsg,myname)
+    nullify(weight)
 !
     select case (type_standard_cell) ! (4=Tetrahedron,6=Hexahedron)
     case( 4 )
@@ -585,6 +587,7 @@ contains
     real, parameter :: third = 0.333333333
 !
     call addTrace(errmsg,myname)
+    nullify(weight)
 !
     ! define nh (and, hence, h). This invgrid cell (or rather the 'standard' cell [-1,1]^3) will be subdivided into nh*nh*nh subcubes
 !
@@ -876,6 +879,7 @@ contains
     real, parameter :: sixth = 0.16666666666666
 !
     call addTrace(errmsg,myname)
+    nullify(weight)
 !
     ! define nh (and, hence, h). This invgrid cell (or rather the 'standard' cell {0 <= x,y,z ; x+y+z<=1}) will be subdivided into nh*nh*nh subcells
 !
@@ -1139,6 +1143,7 @@ contains
     character (len=400) :: errstr
 !
     call addTrace(errmsg,myname)
+    nullify(weight)
 !
     select case (type_standard_cell) ! (4=Tetrahedron,6=Hexahedron)
     case( 4 )
@@ -1195,6 +1200,7 @@ contains
     real :: sumw_std_cell
 !
     call addTrace(errmsg,myname)
+    nullify(weight)
 !
     ! define nh (and, hence, h). This invgrid cell (or rather the 'standard' cell [-1,1]^3) will be subdivided into nh*nh*nh subcubes
 !
@@ -1505,6 +1511,7 @@ contains
     real, parameter :: sixth = 0.16666666666666
 !
     call addTrace(errmsg,myname)
+    nullify(weight)
 !
     ! define nh (and, hence, h). This invgrid cell (or rather the 'standard' cell {0 <= x,y,z ; x+y+z<=1}) will be subdivided into nh*nh*nh subcells
 !
@@ -1780,6 +1787,7 @@ contains
     character (len=400) :: errstr
 !
     call addTrace(errmsg,myname)
+    nullify(weight)
 !
     select case (type_standard_cell) ! (4=Tetrahedron,6=Hexahedron)
     case( 4 )
@@ -1838,7 +1846,8 @@ contains
     real, parameter :: sixth = 0.1666666666666
     real :: sumw_std_cell
 !
-    call new(errmsg,myname)
+    call addTrace(errmsg,myname)
+    nullify(weight)
 !
     ! define nh (and, hence, h). This invgrid cell (or rather the 'standard' cell [-1,1]^3) will be subdivided into nh*nh*nh subcubes
 !
@@ -2172,7 +2181,8 @@ contains
     real, parameter :: sixth = 0.1666666666666
     real :: sumw_std_cell
 !
-    call new(errmsg,myname)
+    call addTrace(errmsg,myname)
+    nullify(weight)
 !
     ! define nh (and, hence, h). This invgrid cell (or rather the 'standard' cell {0 <= x,y,z ; x+y+z<=1}) will be subdivided into nh*nh*nh subcells
 !
@@ -2525,6 +2535,7 @@ contains
     real, dimension(:), pointer :: weight
     integer, dimension(:), pointer :: idx
 !
+    nullify(weight,idx)
     nullify(w)
     if(this%ntot_wp==0 .or. .not.associated(this%wp_idx)) return
 !
@@ -2547,6 +2558,7 @@ contains
     integer :: i
     integer, dimension(:), pointer :: idx
 !
+    nullify(idx)
     nullify(icell)
     if(this%ntot_wp==0 .or. .not.associated(this%wp_idx)) return
 !
@@ -2566,6 +2578,7 @@ contains
     integer :: i
     integer, dimension(:), pointer :: idx
 !
+    nullify(idx)
     nullify(n)
     if(.not.associated(this%wp_idx)) return
 !
@@ -2652,6 +2665,7 @@ contains
     integer, dimension(:), pointer :: idx
     integer, dimension(:), allocatable :: indx_inside
 !
+    nullify(idx)
     nullify(indx_return)
     if(.not.associated(this%wp_idx) .or. this%ntot_wp==0) return
 !
@@ -2681,6 +2695,7 @@ contains
     integer, dimension(:), pointer :: idx
     integer, dimension(:), allocatable :: indx_outside
 !
+    nullify(idx)
     nullify(indx_return)
     if(.not.associated(this%wp_idx) .or. this%ntot_wp==0) return
 !
@@ -2710,6 +2725,7 @@ contains
     integer, dimension(:), pointer :: idx
     logical, dimension(:), allocatable :: indx_outside
 !
+    nullify(idx)
     b = .true.
     if(this%ntot_wp == 0 .or. .not.associated(this%wp_idx)) return
 !
@@ -2755,6 +2771,7 @@ contains
     real, dimension(:), pointer :: pw
     character (len=23) :: myname = 'writeIntegrationWeights'
 !
+    nullify(pidx,pw)
     call addTrace(errmsg,myname)
 !
     if(.not.associated(this%wp_idx)) then
@@ -2823,6 +2840,7 @@ contains
     character (len=22) :: myname = 'readIntegrationWeights'
     character (len=400) :: errstr
 !
+    nullify(pidx,pw)
     call addTrace(errmsg,myname)
 !
     open(lu,file = trim(filename),form = 'unformatted',action='read',status='old',iostat = ierr)

@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 program kernel2vtk
    use inversionBasics
@@ -73,6 +73,8 @@ program kernel2vtk
    logical :: kernels_on_wp,path_specific,terminate_program,kernel_file_exists,kernel_file_is_on_invgrid
 
    real :: df
+
+   nullify(str_vec,all_ifreq,ifreq,k,cells_filled,wp_inside)
 
 !------------------------------------------------------------------------
 !  preliminary processing
@@ -332,6 +334,7 @@ contains
 
   subroutine kernel_on_wp_2_vtk()
 
+    df = (.inpar.invbasics).rval.'MEASURED_DATA_FREQUENCY_STEP'
     print *,"kernel2vtk: converting plain '"//trim(parametrization)//"'-kernel values on wavefield points to vtk for"
     print *,"  parameters ","'"//param//"',"
     print *,"  frequency indices (corresponding to df = ",df,")  ",ifreq

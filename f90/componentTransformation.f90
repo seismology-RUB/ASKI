@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief Handles definition of and transformation between different components of orthogonal bases (e.g. directions of data components)
 !!
@@ -25,7 +25,7 @@
 !!  transforming C_in to global Cartesian coordinates CX,CY,CZ and then CX,CY,CZ to C_out
 !!
 !! \author Florian Schumacher
-!! \date Nov 2015
+!! \date August 2012
 !
 module componentTransformation
 !
@@ -54,7 +54,7 @@ module componentTransformation
        integer :: nstat = 0 !< number of stations (i.e. size of 3rd dimension of arrays C2XYZ,XYZ2C) (also indicates if object was created already)
        double precision, dimension(:,:,:), pointer :: C2XYZ => null() !< array containing the coefficients needed to transform components to X,Y,Z
        double precision, dimension(:,:,:), pointer :: XYZ2C => null() !< array containing the coefficients needed to transform X,Y,Z to components
-       character(len=character_length_staname), dimension(:), pointer :: staname !< in case csys='S', contains respective station names (nstat many)
+       character(len=character_length_staname), dimension(:), pointer :: staname => null() !< in case csys='S', contains respective station names (nstat many)
     end type component_transformation
 !
     integer, parameter :: character_length_component = 4

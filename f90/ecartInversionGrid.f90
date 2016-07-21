@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !
 !#########################################################################################
@@ -617,6 +617,8 @@ contains
 !!$    real, dimension(1,1) :: U,VT
     ! Triangle Triangle Test TTT
     real, dimension(3) :: p1_TTT,q1_TTT,r1_TTT,p2_TTT,q2_TTT,r2_TTT,n_TTT
+!
+    nullify(idx)
 !
 ! BEWARE: SO FAR, THIS ROUTINE ONLY FINDS TET4 NEIGHBOURS OF TET4 CELLS! HEX8 CELLS ARE COMPLETELY IGNORED FOR NOW (complicated
     if(this%ncell_hex8>0) &
@@ -1375,6 +1377,7 @@ contains
     integer, dimension(:), pointer :: nb
     integer, parameter :: zero = 0
 !
+    nullify(nb)
     call addTrace(errmsg,myname)
 !
     if(file_exists) then
@@ -1443,6 +1446,7 @@ contains
     integer, dimension(:), pointer :: nb
     character(len=400) :: line
 !
+    nullify(nb)
     call addTrace(errmsg,myname)
     allocate(this%face_neighbour(this%ncell))
 !
@@ -1646,6 +1650,8 @@ contains
     real :: xc,yc,zc
 !
     call addTrace(errmsg,myname)
+    nullify(points,cell_connectivity,cell_type,cell_indx_out)
+    if(present(indx_map_out)) nullify(indx_map_out)
 !
     if(.not.this%is_defined) then
        call add(errmsg,2,"inversion grid not yet defined",myname)
@@ -1774,6 +1780,7 @@ contains
     integer :: icell
     integer, dimension(:), pointer :: nb,nb2
 !
+    nullify(nb,nb2)
     nullify(nb_idx)
     if(.not.this%is_defined) return
 !
@@ -1810,7 +1817,10 @@ contains
     integer, dimension(:), pointer :: idx_to_locate,ptmp
     real, dimension(:,:), allocatable :: wp_coords
 !
+    nullify(idx,idx_to_locate,ptmp)
+!
     call addTrace(errmsg,myname)
+    nullify(wp_idx)
 !
     if(.not.this%is_defined) then
        call add(errmsg,2,"inversion grid not yet defined",myname)
@@ -1894,6 +1904,7 @@ contains
 ! BEWARE: THIS ROUTINE MIGHT WELL BE OF NOT VERY GOOD PERFORMANCE! (in terms of memory access in huge array wp_coords, etc)
 ! PLEASE DON'T HESITATE TO IMPROVE!
 !
+    nullify(idx_wp_inside,ptmp)
     nullify(idx)
     ! get all nodes of this thetrahedron
     p1 = this%point(:,this%cell_tet4(1,icell_tet4))

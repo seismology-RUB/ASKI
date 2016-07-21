@@ -76,6 +76,8 @@
     type (flexible), dimension(:), pointer :: ft
     character (len=22) :: myname = 'readSAGeminiEarthModel'
 !
+    nullify(group,dset,rp,zp,ft)
+!
     call addTrace(errmsg,myname)
     ierr = openFileStreamAccess(fda,get(fuh),filename)
     if (ierr /= 0) then

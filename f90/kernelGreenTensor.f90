@@ -1,22 +1,22 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
 !   and Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !   and Christian Ullisch (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief Wrapper module for kernel Green tensor
 !!
@@ -27,6 +27,7 @@ module kernelGreenTensor
   use geminiKernelGreenTensor
   use specfem3dKernelGreenTensor
   use nexdKernelGreenTensor
+  use complexKernelFrequency
   use componentTransformation
   use errorMessage
   use fileUnitHandler
@@ -36,6 +37,7 @@ module kernelGreenTensor
   interface operator (.df.); module procedure getDfKernelGreenTensor; end interface
   interface operator (.nf.); module procedure getNfKernelGreenTensor; end interface
   interface operator (.jfcur.); module procedure getJfcurKernelGreenTensor; end interface
+  interface operator (.fc.); module procedure getComplexFrequencyKernelGreenTensor; end interface
 !
 !< fork here to specific method by associating some pointer (exactly ONE!)
   type kernel_green_tensor
@@ -71,6 +73,7 @@ contains
     integer :: ncomp,ncomp_available,icomp,i
     character (len=character_length_component), dimension(:), pointer :: comp_available
 !
+    nullify(comp_available)
     call addTrace(errmsg,myname)
     write(errstr,*) "initiating Green tensor object for station '",trim(staname),"' for components '"!,trim(comp)//",","'"
     do i = 1,size(comp)
@@ -363,6 +366,31 @@ contains
     endif
   end function getJfcurKernelGreenTensor
 !-------------------------------------------------------------------------
+!> \brief Get complex frequency, return negative real frequency if not yet initiated
+!
+  function getComplexFrequencyKernelGreenTensor(this) result(res)
+    type (kernel_green_tensor), intent(in) :: this
+    complex :: res
+    ! local
+    real :: df
+    integer :: jf
+!
+    res = cmplx(-1.0)
+    if (associated(this%gemini_kgt)) then
+       df = .df.(this%gemini_kgt)
+       jf = .jfcur.(this%gemini_kgt)
+       res = getComplexKernelFrequency('GEMINI',df,jf)
+    else if (associated(this%specfem3d_kgt)) then
+       df = .df.(this%specfem3d_kgt)
+       jf = .jfcur.(this%specfem3d_kgt)
+       res = getComplexKernelFrequency('SPECFEM3D',df,jf)
+    else if (associated(this%nexd_kgt)) then
+       df = .df.(this%nexd_kgt)
+       jf = .jfcur.(this%nexd_kgt)
+       res = getComplexKernelFrequency('NEXD',df,jf)
+    endif
+  end function getComplexFrequencyKernelGreenTensor
+!-------------------------------------------------------------------------
 !> \brief Get pointer to green tensor strains.
 !! \details Allocate here for the return array gstr (allocation can also be done in the
 !!  method-specific realization of kernelGreenTensor). This is done in order to be most flexible,
@@ -377,7 +405,9 @@ contains
     ! local
     complex, dimension(:,:,:), pointer :: gstr_local
     integer :: icomp_out,icomp_local
-! 
+!
+    nullify(gstr_local)
+!
     call addTrace(errmsg,myname)
     nullify(gstr)
 !
@@ -456,6 +486,10 @@ contains
           call add(errmsg,2,"no Green tensor strains were returned by function getStrainsNexdKernelGreenTensor",myname)
           return
        end if ! associated(gstr_local)
+
+    else ! associated this%***_kgt
+       call add(errmsg,2,"kernel_green_tensor object not yet initiated",myname)
+       return
     endif ! associated this%***_kgt
   end subroutine getStrainsKernelGreenTensor
 !-------------------------------------------------------------------------
@@ -471,6 +505,9 @@ contains
        call getUnitFactorStrainsSpecfem3dKernelGreenTensor(this%specfem3d_kgt,uf_gstr,errmsg)
     else if (associated(this%nexd_kgt)) then
        call getUnitFactorStrainsNexdKernelGreenTensor(this%nexd_kgt,uf_gstr,errmsg)
+    else
+       call add(errmsg,2,"kernel_green_tensor object not yet initiated","getUnitFactorStrainsKernelGreenTensor")
+       return
     end if
   end subroutine getUnitFactorStrainsKernelGreenTensor
 !-------------------------------------------------------------------------
@@ -489,7 +526,11 @@ contains
     complex, dimension(:,:,:), pointer :: g_local
     integer :: icomp_out,icomp_local
 !
+    nullify(g_local)
+!
     call addTrace(errmsg,myname)
+    nullify(g)
+!
     if (associated(this%gemini_kgt)) then
        ! g_local must not be deallocated here!
        g_local => getGeminiKernelGreenTensor(this%gemini_kgt)
@@ -565,6 +606,10 @@ contains
           call add(errmsg,2,"no Green tensor strains were returned by function getNexdKernelGreenTensor",myname)
           return
        end if ! associated(this%nexd_kgt)
+
+    else ! associated this%***_kgt
+       call add(errmsg,2,"kernel_green_tensor object not yet initiated",myname)
+       return
     endif ! associated(this%***_kgt)
   end subroutine getKernelGreenTensor
 !-------------------------------------------------------------------------
@@ -580,6 +625,9 @@ contains
        call getUnitFactorSpecfem3dKernelGreenTensor(this%specfem3d_kgt,uf_g,errmsg)
     else if (associated(this%nexd_kgt)) then
        call getUnitFactorNexdKernelGreenTensor(this%nexd_kgt,uf_g,errmsg)
+    else
+       call add(errmsg,2,"kernel_green_tensor object not yet initiated","getUnitFactorKernelGreenTensor")
+       return
     end if
   end subroutine getUnitFactorKernelGreenTensor
 !-------------------------------------------------------------------------

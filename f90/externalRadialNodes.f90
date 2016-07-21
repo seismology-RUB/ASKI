@@ -54,7 +54,7 @@ module externalRadialNodes
        double precision, dimension(:), pointer :: drblocks => null()   ! array with node distance per block
        double precision :: shift                                       ! shift of "surface radius"
        double precision :: rearth                                      ! earth radius taken as surface
-       double precision, dimension(:), pointer :: rnod                 ! nodes radii
+       double precision, dimension(:), pointer :: rnod => null()       ! nodes radii
        integer :: nnod                                                 ! number of radii
      end type external_radial_nodes
 !

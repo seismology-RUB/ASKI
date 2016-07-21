@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Wolfgang Friederich and Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Wolfgang Friederich and Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief simple spherical inversion grid using one chunk of a cubed sphere
 !!
@@ -125,40 +125,42 @@ contains
          'SCHUNK_INVGRID_WLON','SCHUNK_INVGRID_ROT','SCHUNK_INVGRID_NREF_BLOCKS','SCHUNK_INVGRID_NLAY',&
          'SCHUNK_INVGRID_THICKNESS','SCHUNK_INVGRID_NLAT','SCHUNK_INVGRID_NLON','VTK_PROJECTION',&
          'SCALE_VTK_COORDS','VTK_COORDS_SCALING_FACTOR','VTK_GEOMETRY_TYPE'/
-    !
+!
+    nullify(nlay_block,nlat,nlon,thickness,z)
+!
     call addTrace(errmsg,myname)
     if(this%is_defined) then
        call add(errmsg,1,"this object is already defined, deallocating it now before creating new one",myname)
        call deallocateSchunkInversionGrid(this)
     end if
-    !
+!
     call createKeywordsInputParameter(inpar,inpar_keys)
     call readSubroutineInputParameter(inpar,lu,parfile,errmsg)
     if (.level.errmsg == 2) goto 1
-    !
+!
     !   define clat,clon,rmin,wlat,wlon,gam
-    !
+!
     this%clat = rval(inpar,'SCHUNK_INVGRID_CLAT',iostat=ios)
     if(ios /= 0) then
        call add(errmsg,2,"could not read real value for 'SCHUNK_INVGRID_CLAT' from '"//&
             trim(inpar.sval.'SCHUNK_INVGRID_CLAT')//"'",myname)
        goto 1
     end if
-    !
+!
     this%clon = rval(inpar,'SCHUNK_INVGRID_CLON',iostat=ios)
     if(ios /= 0) then
        call add(errmsg,2,"could not read real value for 'SCHUNK_INVGRID_CLON' from '"//&
             trim(inpar.sval.'SCHUNK_INVGRID_CLON')//"'",myname)
        goto 1
     end if
-    !
+!
     this%rmax = rval(inpar,'SCHUNK_INVGRID_RMAX',iostat=ios)
     if(ios /= 0) then
        call add(errmsg,2,"could not read real value for 'SCHUNK_INVGRID_RMAX' from '"//&
             trim(inpar.sval.'SCHUNK_INVGRID_RMAX')//"'",myname)
        goto 1
     end if
-    !
+!
     wlat = rval(inpar,'SCHUNK_INVGRID_WLAT',iostat=ios)
     if(ios /= 0) then
        call add(errmsg,2,"could not read real value for 'SCHUNK_INVGRID_WLAT' from '"//&
@@ -170,7 +172,7 @@ contains
        call add(errmsg,2,errstr,myname)
        goto 1
     end if
-    !
+!
     wlon = rval(inpar,'SCHUNK_INVGRID_WLON',iostat=ios)
     if(ios /= 0) then
        call add(errmsg,2,"could not read real value for 'SCHUNK_INVGRID_WLON' from '"//&
@@ -182,16 +184,16 @@ contains
        call add(errmsg,2,errstr,myname)
        goto 1
     end if
-    !
+!
     this%gam = rval(inpar,'SCHUNK_INVGRID_ROT',iostat=ios)
     if(ios /= 0) then
        call add(errmsg,2,"could not read real value for 'SCHUNK_INVGRID_ROT' from '"//&
             trim(inpar.sval.'SCHUNK_INVGRID_ROT')//"'",myname)
        goto 1
     end if
-    !
+!
     !  rotation matrix
-    !
+!
     ctheta = 90.-this%clat
     cosgam = cos(this%gam*mc_deg2rad)
     singam = sin(this%gam*mc_deg2rad)
@@ -199,7 +201,7 @@ contains
     cosphi = cos(this%clon*mc_deg2rad)
     sintheta = sin(ctheta*mc_deg2rad)
     sinphi = sin(this%clon*mc_deg2rad)
-    !
+!
     this%tm_global2local(1,1) = cosgam*costheta*cosphi-singam*sinphi
     this%tm_global2local(1,2) = cosgam*costheta*sinphi+singam*cosphi
     this%tm_global2local(1,3) = -cosgam*sintheta
@@ -209,14 +211,14 @@ contains
     this%tm_global2local(3,1) = sintheta*cosphi
     this%tm_global2local(3,2) = sintheta*sinphi
     this%tm_global2local(3,3) = costheta
-    !
+!
     this%tm_gam(1,1) = cosgam
     this%tm_gam(1,2) = -singam
     this%tm_gam(2,1) = singam
     this%tm_gam(2,2) = cosgam
-    !
+!
     ! define nblock,nlay_block,nlay,z
-    !
+!
     nblock = ival(inpar,'SCHUNK_INVGRID_NREF_BLOCKS',iostat=ios)
     if(ios /= 0) then
        call add(errmsg,2,"could not read integer value for 'SCHUNK_INVGRID_NREF_BLOCKS' from '"//&
@@ -227,7 +229,7 @@ contains
        call add(errmsg,2,"'SCHUNK_INVGRID_NREF_BLOCKS' must be greater than zero",myname)
        goto 1
     end if
-    !
+!
     nlay_block => ivecp(inpar,'SCHUNK_INVGRID_NLAY',nblock,iostat=ios)
     if(ios /= 0) then
        write(errstr,*) "could not read SCHUNK_INVGRID_NREF_BLOCKS = ",nblock,&
@@ -240,7 +242,7 @@ contains
        goto 1
     end if
     nlay = sum(nlay_block)    
-    !
+!
     thickness => rvecp(inpar,'SCHUNK_INVGRID_THICKNESS',nblock,iostat=ios)
     if(ios /= 0) then
        write(errstr,*) "could not read SCHUNK_INVGRID_NREF_BLOCKS = ",nblock,&
@@ -252,7 +254,7 @@ contains
        call add(errmsg,2,"all values of SCHUNK_INVGRID_THICKNESS must be greater than zero",myname)
        goto 1
     end if
-    !
+!
     allocate(z(nlay+1))
     z(1) = this%rmax
     iz = 1
@@ -262,9 +264,9 @@ contains
           z(iz) = z(iz-1) - thickness(ibl)
        end do ! ilay
     end do ! ibl
-    !
+!
     ! define nlat,nlon
-    !
+!
     nlat => ivecp(inpar,'SCHUNK_INVGRID_NLAT',nblock,iostat=ios)
     if(ios /= 0) then
        write(errstr,*) "could not read SCHUNK_INVGRID_NREF_BLOCKS = ",nblock,&
@@ -276,7 +278,7 @@ contains
        call add(errmsg,2,"all values of SCHUNK_INVGRID_NLAT must be greater than zero",myname)
        goto 1
     end if
-    !
+!
     nlon => ivecp(inpar,'SCHUNK_INVGRID_NLON',nblock,iostat=ios)
     if(ios /= 0) then
        write(errstr,*) "could not read SCHUNK_INVGRID_NREF_BLOCKS = ",nblock,&
@@ -288,9 +290,9 @@ contains
        call add(errmsg,2,"all values of SCHUNK_INVGRID_NLON must be greater than zero",myname)
        goto 1
     end if
-    !
+!
     ! define vtk_projection,apply_vtk_coords_scaling_factor,vtk_coords_scaling_factor
-    !
+!
     this%vtk_projection = sval(inpar,'VTK_PROJECTION',iostat=ios)
     if(ios /= 0) then
        call add(errmsg,2,"keyword 'VTK_PROJECTION' is not present in parameter file",myname)
@@ -318,16 +320,16 @@ contains
           goto 1
        end if
     end if
-    !
+!
     !  create scartInversionGrid object
-    !
+!
     wx = 2.0*tan(0.5*wlat*mc_deg2rad)*this%rmax
     wy = 2.0*tan(0.5*wlon*mc_deg2rad)*this%rmax
     call createFromValuesScartInversionGrid(this%scart,nlat,nlon,wx,wy,0.,0.,0.,0.,nblock,nlay_block,z, &
          .false.,.false.,1.0,inpar.sval.'VTK_GEOMETRY_TYPE',errmsg)
     !   call createFromValuesScartInversionGrid(this%scart,nx,ny,wx,wy,cx,cy,zmax,rot,nblock,nlay_block,z,
     !       use_local_coords_for_vtk,apply_vtk_coords_scaling_factor,vtk_coords_scaling_factor)
-    !
+!
     if (.level.errmsg == 2) goto 1
     ! if everything was ok, indicate so and return
     this%is_defined = .true.
@@ -337,7 +339,7 @@ contains
     if(associated(nlat)) deallocate(nlat)
     if(associated(nlon)) deallocate(nlon)
     return
-    !
+!
     ! if there went anything wrong (i.e. there was a goto here), destroy whatever was created so far
 1   call deallocateSchunkInversionGrid(this)
     if(associated(thickness)) deallocate(thickness)
@@ -345,7 +347,7 @@ contains
     if(associated(z)) deallocate(z)
     if(associated(nlat)) deallocate(nlat)
     if(associated(nlon)) deallocate(nlon)
-    !
+!
   end subroutine createSchunkInversionGrid
 !--------------------------------------------------------------------
 !> \brief Deallocate createSchunkInversionGrid
@@ -605,7 +607,10 @@ contains
     integer, dimension(:), pointer, optional :: indx_map_out
     type (error_message) :: errmsg
 !
-   call addTrace(errmsg,'getGeometryVtkSchunkInversionGrid')
+    call addTrace(errmsg,'getGeometryVtkSchunkInversionGrid')
+    nullify(points,cell_connectivity,cell_type,cell_indx_out)
+    if(present(indx_map_out)) nullify(indx_map_out)
+!
     if(.not.this%is_defined) then
        call add(errmsg,2,"inversion grid not yet defined",'getGeometryVtkSchunkInversionGrid')
        return
@@ -680,6 +685,8 @@ contains
     real :: uf_correction
 !
     call addTrace(errmsg,'locateWpInsideSchunkInversionGrid')
+    nullify(wp_idx)
+!
     if(.not.this%is_defined) then
        call add(errmsg,2,"inversion grid not yet defined",'locateWpInsideSchunkInversionGrid')
        return

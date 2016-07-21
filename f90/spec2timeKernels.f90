@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 program spec2timeKernels
   use inversionBasics
@@ -77,6 +77,8 @@ program spec2timeKernels
        stop_after_command_line,next,terminate_program,&
        check_nt1_nt2,check_ipath
   integer :: npath,ipath1,ipath2,ipath,lu,j
+
+  nullify(str_vec,jf,nt1,nt2,comp_path,param,map_jf_2_filter_index,event_filter,station_comp_filter)
 !
 !------------------------------------------------------------------------
 !  preliminary processing
@@ -101,8 +103,6 @@ program spec2timeKernels
        "for 'way 2'",'ival','1')
    call addOption(ap,'-ipath2',.true.,"(way 2) last index of the path loop, optional for 'way 2'",'ival',&
         'max_number_of_paths')
-   call addOption(ap,'-wp',.false.,"If set, then 'ON-WP' spectral kernel files are transformed. If not set, "//&
-        "normal kernel files (pre-integrated) are transformed.")
   call addOption(ap,"-dt",.true.,"(mandatory) global time step of time discretization; must be > 0","rval","")
   call addOption(ap,"-nt1",.true.,"(mandatory) vector of length nwin, giving starting indices of nwin time "//&
        "windows (must have same length as vector given by -nt2)","ivec","")
@@ -110,6 +110,8 @@ program spec2timeKernels
        "windows (must have same length as vector given by -nt1)","ivec","")
   call addOption(ap,"-t0",.true.,"(optional) global time shift which is added to all times defined by dt,nt1,nt2",&
        "rval","0.0")
+   call addOption(ap,'-wp',.false.,"(optional) If set, then 'ON-WP' spectral kernel files are transformed. If not set, "//&
+        "normal kernel files (pre-integrated) are transformed.")
 !
    call parse(ap)
    if (.level.(.errmsg.ap) == 2) then

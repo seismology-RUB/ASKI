@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 program solveKernelSystem
   use inversionBasics
@@ -80,6 +80,8 @@ program solveKernelSystem
 !!$real, dimension(:,:), pointer :: data2
 !!$integer :: lu,i
 ! FS FS TEST
+
+  nullify(smoothing_scaling_values,damping_scaling_values,mdata_norm,sdata_norm,delta_mval,pparam,idx_dmspace,pcell)
 
 !------------------------------------------------------------------------
 !  preliminary processing
@@ -159,8 +161,7 @@ program solveKernelSystem
   end if
 !
   if((.not.add_smoothing).and.(ap.optset.'-smoothbnd')) then
-     write(*,*) "ERROR: -smoothbnd can only be set when adding smoothing equations by option -smoothing. In ",&
-          "any case, -smoothbnd is currently ignored!"
+     write(*,*) "ERROR: -smoothbnd can only be set when adding smoothing equations by option -smoothing."
      call usage(ap)
      goto 1
   end if
@@ -475,9 +476,10 @@ program solveKernelSystem
   call dealloc(errmsg)
 !
   write(*,*) "reading in kernel matrix now"
-  !subroutine readMatrixSerialKernelLinearSystem(this,path_event_filter,path_station_filter,df_measured_data,&
-  !  nfreq_measured_data,ifreq_measured_data,path_sensitivity_kernels,comptrans,ntot_invgrid,&
-  !  lu1,lu2,dmspace,errmsg)
+  !subroutine readMatrixSerialKernelLinearSystem(this,df_measured_data,&
+  !     nfreq_measured_data,ifreq_measured_data,path_sensitivity_kernels,ntot_invgrid,pcorr,&
+  !     lu1,lu2,errmsg,apply_event_filter,path_event_filter,apply_station_filter,path_station_filter,&
+  !     ignore_data_weights,apply_kernel_normalization)
   call new(errmsg,myname)
   lu1 = get(fuh)
   lu2 = get(fuh)
@@ -489,7 +491,8 @@ program solveKernelSystem
        apply_event_filter=lval(.inpar.invbasics,'APPLY_EVENT_FILTER'),&
        path_event_filter=sval(.inpar.invbasics,'PATH_EVENT_FILTER'),&
        apply_station_filter=lval(.inpar.invbasics,'APPLY_STATION_FILTER'),&
-       path_station_filter=sval(.inpar.invbasics,'PATH_STATION_FILTER'))
+       path_station_filter=sval(.inpar.invbasics,'PATH_STATION_FILTER'),&
+       apply_kernel_normalization=normalize_data)
   call add(fuh,lu1); call add(fuh,lu2)
   !if (.level.errmsg /= 0) call print(errmsg)
   call print(errmsg)
@@ -513,11 +516,11 @@ program solveKernelSystem
 !
   write(*,*) "reading in measured data now"
   !subroutine readMeasuredDataSerialKernelLinearSystem(this,nfreq_measured_data,ifreq_measured_data,&
-  !  path_measured_data,lu,errmsg)
+  !     path_measured_data,lu,errmsg,ignore_data_weights,apply_mdata_normalization)
   call new(errmsg,myname)
   call readMeasuredDataSerialKernelLinearSystem(KLSE,ival(.inpar.invbasics,'MEASURED_DATA_NUMBER_OF_FREQ'),&
        ivec(.inpar.invbasics,'MEASURED_DATA_INDEX_OF_FREQ',ival(.inpar.invbasics,'MEASURED_DATA_NUMBER_OF_FREQ')),&
-       sval(.inpar.invbasics,'PATH_MEASURED_DATA'),get(fuh),errmsg)
+       sval(.inpar.invbasics,'PATH_MEASURED_DATA'),get(fuh),errmsg,apply_mdata_normalization=normalize_data)
   call undo(fuh)
   !if (.level.errmsg /= 0) call print(errmsg)
   call print(errmsg)
@@ -539,9 +542,9 @@ program solveKernelSystem
   write(*,*) "reading in synthetic data now"
   call new(errmsg,myname)
   ! subroutine readSyntheticDataSerialKernelLinearSystem(this,nfreq_measured_data,ifreq_measured_data,&
-  !      nfreq_synthetic_data,ifreq_synthetic_data,path_synthetic_data,lu,errmsg,&
-  !      apply_event_filter,path_event_filter,apply_station_filter,path_station_filter,&
-  !      ignore_data_weights,apply_sdata_normalization,read_synthetic_corrections)
+  !     nfreq_synthetic_data,ifreq_synthetic_data,path_synthetic_data,lu,errmsg,&
+  !     apply_event_filter,path_event_filter,apply_station_filter,path_station_filter,&
+  !     ignore_data_weights,apply_sdata_normalization,read_synthetic_corrections)
   call readSyntheticDataSerialKernelLinearSystem(KLSE,ival(.inpar.invbasics,'MEASURED_DATA_NUMBER_OF_FREQ'),&
        ivec(.inpar.invbasics,'MEASURED_DATA_INDEX_OF_FREQ',ival(.inpar.invbasics,'MEASURED_DATA_NUMBER_OF_FREQ')),&
        ival(.inpar.iterbasics,'ITERATION_STEP_NUMBER_OF_FREQ'),&
@@ -550,7 +553,9 @@ program solveKernelSystem
        apply_event_filter=lval(.inpar.invbasics,'APPLY_EVENT_FILTER'),&
        path_event_filter=sval(.inpar.invbasics,'PATH_EVENT_FILTER'),&
        apply_station_filter=lval(.inpar.invbasics,'APPLY_STATION_FILTER'),&
-       path_station_filter=sval(.inpar.invbasics,'PATH_STATION_FILTER'),read_synthetic_corrections=.false.)
+       path_station_filter=sval(.inpar.invbasics,'PATH_STATION_FILTER'),&
+       apply_sdata_normalization=normalize_data,&
+       read_synthetic_corrections=.false.)
   call undo(fuh)
   !if (.level.errmsg /= 0) call print(errmsg)
   call print(errmsg)
@@ -574,9 +579,9 @@ program solveKernelSystem
 
      write(*,*) "reading in synthetics correction data now"
      ! subroutine readSyntheticDataSerialKernelLinearSystem(this,nfreq_measured_data,ifreq_measured_data,&
-     !      nfreq_synthetic_data,ifreq_synthetic_data,path_synthetic_data,lu,errmsg,&
-     !      apply_event_filter,path_event_filter,apply_station_filter,path_station_filter,&
-     !      ignore_data_weights,apply_sdata_normalization,read_synthetic_corrections)
+     !  nfreq_synthetic_data,ifreq_synthetic_data,path_synthetic_data,lu,errmsg,&
+     !  apply_event_filter,path_event_filter,apply_station_filter,path_station_filter,&
+     !  ignore_data_weights,apply_sdata_normalization,read_synthetic_corrections)
      call readSyntheticDataSerialKernelLinearSystem(KLSE,ival(.inpar.invbasics,'MEASURED_DATA_NUMBER_OF_FREQ'),&
           ivec(.inpar.invbasics,'MEASURED_DATA_INDEX_OF_FREQ',ival(.inpar.invbasics,'MEASURED_DATA_NUMBER_OF_FREQ')),&
           ival(.inpar.iterbasics,'ITERATION_STEP_NUMBER_OF_FREQ'),&
@@ -585,7 +590,9 @@ program solveKernelSystem
           apply_event_filter=lval(.inpar.invbasics,'APPLY_EVENT_FILTER'),&
           path_event_filter=sval(.inpar.invbasics,'PATH_EVENT_FILTER'),&
           apply_station_filter=lval(.inpar.invbasics,'APPLY_STATION_FILTER'),&
-          path_station_filter=sval(.inpar.invbasics,'PATH_STATION_FILTER'),read_synthetic_corrections=.true.)
+          path_station_filter=sval(.inpar.invbasics,'PATH_STATION_FILTER'),&
+          apply_sdata_normalization=normalize_data,&
+          read_synthetic_corrections=.true.)
      call undo(fuh)
      !if (.level.errmsg /= 0) call print(errmsg)
      call print(errmsg)
@@ -647,8 +654,8 @@ program solveKernelSystem
 !------------------------------------------------------------------------
 !  add smoothing constraints to kernel linear system
 !
-   if(add_smoothing) then
-      write(*,*) "adding linear smoothing constrains to kernel linear system now"
+   if(add_smoothing.or.add_damping) then
+      write(*,*) "adding linear regularization constrains to kernel linear system now"
       !subroutine addToKernelLinearSystemLinearModelSmoothing(this,KLSE,errmsg)
       call new(errmsg,myname)
       call addToKernelLinearSystemLinearModelRegularization(lmreg,KLSE,errmsg)

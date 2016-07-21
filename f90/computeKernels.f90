@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 program computeKernels
   use inversionBasics
@@ -74,6 +74,8 @@ program computeKernels
 !  PROGRAM STARTS HERE
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+  nullify(str_vec,comp_path,param)
+
   terminate_program = .false.
 
 !------------------------------------------------------------------------
@@ -81,7 +83,7 @@ program computeKernels
 !
   ! process command line
   call init(ap,myname,"Compute a set of kernels. The set can be characterized in two different ways: 'way 1' "//&
-       "(one path only, using options -evid , -stname , -comp and -param) and 'way 2' (from data model space "//&
+       "(one path only, using options -evid , -staname , -comp and -param) and 'way 2' (from data model space "//&
        "file take all model parameters and paths (with respective components), using options -dmspace , "//&
        "-ipath1 , -ipath2)")
   call addPosarg(ap,'main_parfile','sval','Main parameter file of inversion')

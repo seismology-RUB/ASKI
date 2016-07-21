@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief compute data weights which focus overall sensitivity
 !!
@@ -121,6 +121,7 @@ contains
     real, dimension(:,:), pointer :: sol
 !!$real, dimension(:,:), pointer :: KM !! FS FS REMOVE, FOR SETTING KERNEL MATRIX TO ABSOLUTE VALUES
 !
+    nullify(k,sol)
     call addTrace(errmsg,myname)
     if(.not.this%initiated) then
        call add(errmsg,2,"kernel focussing object not yet initiated",myname)
@@ -224,6 +225,7 @@ contains
     real, dimension(:,:), pointer :: rhs
     real, dimension(:,:), pointer :: sol
 !
+    nullify(K,indx_param_outside,indx,indxcell,A_packed,rhs,sol)
     call addTrace(errmsg,myname)
     if(.not.this%initiated) then
        call add(errmsg,2,"kernel focussing object not yet initiated",myname)
@@ -443,7 +445,10 @@ write(*,*) "ORIG B&G FOCUSSING: done"
     real, dimension(:,:), pointer :: KM
     integer :: m,k,n
 !
+    nullify(KM)
+!
     call addTrace(errmsg,myname)
+    nullify(kf)
 !
     if(.not.this%initiated) then
        call add(errmsg,2,"kernel focussing object not yet initiated",myname)
@@ -482,7 +487,10 @@ write(*,*) "ORIG B&G FOCUSSING: done"
     real, dimension(:,:), pointer :: KM
     integer :: nrow,i
 !
+    nullify(KM)
+!
     call addTrace(errmsg,myname)
+    nullify(k)
 !
     if(.not.this%initiated) then
        call add(errmsg,2,"kernel focussing object not yet initiated",myname)

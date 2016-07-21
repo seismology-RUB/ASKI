@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief program for transforming time-domain measured data to ASKI-conform frequency-domain measured data files
 !!
@@ -32,6 +32,7 @@ program createMeasuredData
   use string
   use inversionBasics
   use dataModelSpaceInfo
+  use complexKernelFrequency
   use inputParameter
   use asciiDataIO
   use dataSu
@@ -46,7 +47,7 @@ program createMeasuredData
   implicit none
 
   type (argument_parser) :: argparse
-  character(len=max_length_string) :: main_parfile,filename
+  character(len=max_length_string) :: main_parfile,filename,forward_method
   logical :: input_data_is_txt,input_data_is_su
 
   type (file_unit_handler) :: fuh
@@ -82,6 +83,7 @@ program createMeasuredData
   real :: df
   integer :: nfreq
   integer, dimension(:), pointer :: jf
+  complex, dimension(:), allocatable :: f_DFT
   real, dimension(:,:), pointer :: traces
   real, dimension(:), pointer :: trace
   complex, dimension(:), allocatable :: spectrum
@@ -89,12 +91,14 @@ program createMeasuredData
   type (error_message) :: errmsg
   character(len=18) :: prog_name = 'createMeasuredData'
 
-  logical :: terminate_program,next,file_exists,initiated_DFT
-  integer :: ios,icomp,ncomp,istat,nstat,nev
+  logical :: terminate_program,next,file_exists
+  integer :: ios,icomp,ncomp,istat,nstat,nev,j
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !  PROGRAM STARTS HERE
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  nullify(comp_path,jf,traces,trace)
 
   terminate_program = .false.
 
@@ -115,8 +119,6 @@ program createMeasuredData
   call addOption(argparse,'-htaper',.true.,&
        "apply cosign-hanning taper to time-domain traces before Fourier Transform. Argument gives portion of "//&
        "the end of the time-series (between 0.0 and 1.0) to which taper is applied",'rval','0.05')
-  !call addPosarg(argparse,'dmspace_file','sval',&
-  !     'data-model-space info file which defines the data paths and data components')
   call addPosarg(argparse,'main_parfile','sval',&
        'Main parameter file of ASKI inversion; defines PATH_MEASURED_DATA and frequency discretization')
   call parse(argparse)
@@ -167,7 +169,7 @@ program createMeasuredData
   call createFileUnitHandler(fuh,100)
 
 !------------------------------------------------------------------------
-!  setup basics
+!  setup basic stuff
 
   write(*,*) "initiating inversion basics"
   call new(errmsg,prog_name)
@@ -178,6 +180,37 @@ program createMeasuredData
   if (.level.errmsg == 2) goto 1
   call dealloc(errmsg)
   write(*,*) "done"
+  write(*,*) ""
+
+  ! setup frequency discretization to be used in Discrete Fourier Transform objects below
+  df = rval(.inpar.invbasics,'MEASURED_DATA_FREQUENCY_STEP')
+  jf => .ifreq.invbasics
+  nfreq = ival(.inpar.invbasics,'MEASURED_DATA_NUMBER_OF_FREQ')
+  forward_method = sval(.inpar.invbasics,'FORWARD_METHOD')
+
+  allocate(f_DFT(nfreq))
+  do j = 1,nfreq
+     ! also for forward methods which do NOT have complex frequencies, get the frequency by
+     ! module complexKernelFrequency (will return correct real-valued frequency in complex variable)
+     f_DFT(j) = getComplexKernelFrequency(forward_method,df,jf(j))
+  end do
+
+  write(*,*) "discrete Fourier transform operations will be done below at frequencies defined by main parfile:"
+  write(*,*) "   DF = ",df
+  write(*,*) "   number of frequencies = ",nfreq
+  write(*,*) "   frequency indices = ",jf
+  if(methodHasComplexKernelFrequency(forward_method)) then
+     write(*,*) "for forward method '",trim(forward_method),"', this corresponds to the following complex frequencies [Hz]:"
+     write(*,*) "     ",f_DFT
+  else
+     write(*,*) "   corresponding to real-valued frequencies [Hz] = ",real(f_DFT)
+  end if
+  if(apply_hanning_taper) then
+     write(*,*) "will apply cosign-hanning taper to the last ",portion_hanning_taper*100.0,&
+          " percent of the time-series"
+  else
+     write(*,*) "will not apply any taper to the time-series"
+  end if
   write(*,*) ""
 
 !------------------------------------------------------------------------
@@ -199,6 +232,8 @@ program createMeasuredData
   call dealloc(errmsg)
   call dealloc(argparse)
   call dealloc(fuh)
+  if(associated(jf)) deallocate(jf)
+  if(allocated(f_DFT)) deallocate(f_DFT)
 
   write(*,*) "good bye"
   write(*,*) ""
@@ -276,21 +311,12 @@ contains
     write(*,*) ""
 
     ! initiate DFT object
-    df = rval(.inpar.invbasics,'MEASURED_DATA_FREQUENCY_STEP')
-    jf => .ifreq.invbasics
-    nfreq = ival(.inpar.invbasics,'MEASURED_DATA_NUMBER_OF_FREQ')
-    write(*,*) "initiating discrete Fourier transform operations"
-    write(*,*) "   DF = ",df
-    write(*,*) "   number of frequencies = ",nfreq
-    write(*,*) "   frequencies [Hz] = ",df*jf
+    write(*,*) "initiating discrete Fourier transform operations using the above stated time and frequency discretization"
     call new(errmsg,prog_name)
     if(apply_hanning_taper) then
-       write(*,*) "   applying cosign-hanning taper to the last ",portion_hanning_taper*100.0,&
-            " percent of the time-series"
-       call initiateForwardDFT(DFT,dt,0,nstep-1,jf*df,errmsg,hanning_taper=portion_hanning_taper)
+       call initiateForwardDFT(DFT,dt,0,nstep-1,f_DFT,errmsg,hanning_taper=portion_hanning_taper)
     else
-       write(*,*) "   do not apply any taper to the time-series"
-       call initiateForwardDFT(DFT,dt,0,nstep-1,jf*df,errmsg)
+       call initiateForwardDFT(DFT,dt,0,nstep-1,f_DFT,errmsg)
     end if
     call addTrace(errmsg,prog_name)
     if (.level.errmsg /= 0) call print(errmsg)
@@ -370,7 +396,7 @@ contains
     write(*,*) "   ordered as ASKI receiver list, all having the same time discretization"
     write(*,*) ""
 
-    initiated_DFT = .false.
+    allocate(spectrum(nfreq))
 
     write(*,*) "iterating over all events and possible components now, writing output files '",&
          trim((.inpar.invbasics).sval.'PATH_MEASURED_DATA'),"data_EVID_STANAME_COMP'"
@@ -392,36 +418,24 @@ contains
                 goto 2
              end if
 
-             if(.not.initiated_DFT) then
-                su_sampint = su_file.sampint.1
-                nstep = su_file.numsamp.1
-                ! initiate DFT object
-                df = rval(.inpar.invbasics,'MEASURED_DATA_FREQUENCY_STEP')
-                jf => .ifreq.invbasics
-                nfreq = ival(.inpar.invbasics,'MEASURED_DATA_NUMBER_OF_FREQ')
-                write(*,*) "   initiating discrete Fourier transform operations for"
-                write(*,*) "      DT = ",su_sampint * 1.e-6
-                write(*,*) "      NSTEP = ",nstep
-                write(*,*) "      DF = ",df
-                write(*,*) "      number of frequencies = ",nfreq
-                write(*,*) "      frequencies [Hz] = ",df*jf
-                call new(errmsg,prog_name)
-                if(apply_hanning_taper) then
-                   write(*,*) "      applying cosign-hanning taper to the last ",portion_hanning_taper*100.0,&
-                        " percent of the time-series"
-                   call initiateForwardDFT(DFT,su_sampint * 1.e-6,0,nstep-1,jf*df,errmsg,&
-                        hanning_taper=portion_hanning_taper)
-                else
-                   write(*,*) "      do not apply any taper to the time-series"
-                   call initiateForwardDFT(DFT,su_sampint * 1.e-6,0,nstep-1,jf*df,errmsg)
-                end if
-                call addTrace(errmsg,prog_name)
-                if (.level.errmsg /= 0) call print(errmsg)
-                if (.level.errmsg == 2) goto 2
-                call dealloc(errmsg)
-                allocate(spectrum(nfreq))
-                initiated_DFT = .true.
-             end if ! .not.initiated_DFT
+             su_sampint = su_file.sampint.1
+             nstep = su_file.numsamp.1
+             ! initiate DFT object
+             write(*,*) "      initiating discrete Fourier transform operations for above stated frequency ",&
+                  "discretization and following time discretization (as defined by current su file):"
+             write(*,*) "         DT = ",su_sampint * 1.e-6
+             write(*,*) "         NSTEP = ",nstep
+             call new(errmsg,prog_name)
+             if(apply_hanning_taper) then
+                call initiateForwardDFT(DFT,su_sampint * 1.e-6,0,nstep-1,f_DFT,errmsg,&
+                     hanning_taper=portion_hanning_taper)
+             else
+                call initiateForwardDFT(DFT,su_sampint * 1.e-6,0,nstep-1,f_DFT,errmsg)
+             end if
+             call addTrace(errmsg,prog_name)
+             if (.level.errmsg /= 0) call print(errmsg)
+             if (.level.errmsg == 2) goto 2
+             call dealloc(errmsg)
 
              ! now loop on all receivers
              istat = 0
@@ -460,7 +474,10 @@ contains
                 call dealloc(errmsg)
              end do ! nextStation
 
-          else ! file_exists
+             call dealloc(DFT)
+             call deallocDataSu(su_file)
+ 
+         else ! file_exists
 
              write(*,*) "   su file '",trim(filename),"' for event '",trim(evid),"' and component '",&
                   trim(comp),"' does not exist, this file is skipped"
@@ -478,6 +495,7 @@ contains
     ! if subroutine comes here, deallocate stuff that was allocated here and return normally
 1   if(allocated(spectrum)) deallocate(spectrum)
     call dealloc(DFT)
+    call deallocDataSu(su_file)
     return
 
     ! due to an error, terminate program after return

@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief define and handle linear equations, which as smoothing or damping or similar conditions 
 !!  are added to a kernel_linear_system object
@@ -82,9 +82,11 @@ contains
     character(len=*), optional :: scaling_type
     ! local
     character(len=33) :: myname = 'initiateLinearModelRegularization'
-    character(len=character_length_param), dimension(:), pointer :: param_dmspace => null()
+    character(len=character_length_param), dimension(:), pointer :: param_dmspace
     character(len=character_length_param) :: param_name
     integer :: iparam_this
+!
+    nullify(param_dmspace)
 !
     call addTrace(errmsg,myname)
 !
@@ -179,7 +181,7 @@ contains
     type (inversion_grid) :: invgrid
     type (error_message) :: errmsg
     real, dimension(:), optional :: scaling_values
-    character(len=*), optional :: boundary_conditions ! IGNORE FOR NOW
+    character(len=*), optional :: boundary_conditions
     integer, optional :: neq_added
     ! locally allocated smoothing equations
     integer :: neq_total_smooth
@@ -205,6 +207,8 @@ contains
     character(len=character_length_pmtrz) :: parametrization
     character(len=character_length_param) :: param_name
     character(len=100) :: smoothing_boundary_conditions,invgrid_boundary_conditions
+!
+    nullify(tmp_idx,tmp_coef,tmp_rhs,idx_invgrid_nb,pparam,idx_param_cell,pcell,nb_idx_p,eq_idx,eq_coef)
 !
     call addTrace(errmsg,myname)
 !
@@ -586,6 +590,8 @@ contains
     character(len=character_length_pmtrz) :: parametrization
     character(len=character_length_param) :: param_name
 !
+    nullify(tmp_idx,tmp_coef,tmp_rhs,pparam,midx_param,eq_idx,eq_coef)
+!
     call addTrace(errmsg,myname)
 !
     if(.not.this%initiated) then
@@ -852,6 +858,8 @@ contains
     character(len=character_length_param), dimension(:), pointer :: pparam
     real, dimension(:,:), pointer :: K,rhs
 !
+    nullify(midx_param,idx,coef,pparam,K,rhs)
+!
     call addTrace(errmsg,myname)
 !
     if(.not.(this%initiated)) then
@@ -974,6 +982,8 @@ contains
     integer, dimension(:), pointer :: idx
     real, dimension(:), pointer :: coef
     real, dimension(:), allocatable :: eq_scale
+!
+    nullify(idx,coef)
 !
     call addTrace(errmsg,myname)
     nullify(eq_indx,eq_coef,eq_rhs)
@@ -1123,6 +1133,8 @@ contains
     integer, dimension(:), pointer :: idx
     real, dimension(:), pointer :: coef
     real, dimension(:), allocatable :: eq_scale
+!
+    nullify(idx,coef)
 !
     call addTrace(errmsg,myname)
     nullify(SA,Sb)

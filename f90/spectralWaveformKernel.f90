@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief module which computes integrated spectral waveform sensitivity kernels
 !!
@@ -346,11 +346,15 @@ contains
     real :: df_kd,uf_u,uf_ustr,df_kgt,uf_g,uf_gstr,uf_param,uf_intw
     double precision, dimension(:), allocatable :: uf_equation
     integer :: jfcur_kd,jfcur_kgt,nwp
+    double complex :: omega
+    complex :: f_complex_kd,f_complex_kgt
     complex, dimension(:,:), pointer :: ustr,u
     complex, dimension(:,:,:), pointer :: gstr,g
     double complex, dimension(:,:,:), allocatable :: kernel_on_wp
     integer :: iparam
     character(len=400) :: errstr
+!
+    nullify(ustr,u,gstr,g)
 !
     ! check if kd and kgt objects have same (positive) df and same jfcur (i.e. contain values for the very same frequency)
     df_kd = .df.kd; df_kgt = .df.kgt
@@ -360,7 +364,7 @@ contains
        call add(errmsg,2,errstr,myname)
        return
     end if
-    if( abs(df_kd-df_kgt)/df_kd > 1.e-4 ) then
+    if( abs(df_kd-df_kgt) > (1.e-4*df_kd) ) then
        write(errstr,*) "frequency step df of kernel displacement ( = ",df_kd,&
             ") differs from frequency step df of kernel green tensor ( = ",df_kgt,") by more "//&
             "than 0.01 percent"
@@ -377,6 +381,17 @@ contains
     if(jfcur_kd /= jfcur_kgt) then
        write(errstr,*) "current frequency index of kernel displacement ( = ",jfcur_kd,&
             ") differs from current frequency index of kernel green tensor ( = ",jfcur_kgt,")"
+       call add(errmsg,2,errstr,myname)
+       return
+    end if
+    ! Check if kd and kgt objects have SAME complex frequency representation (possibly allowing for some imaginary part > 0 )
+    ! Do not check if each value on its own is sensible (checks for df and jf above should have clearified
+    ! by now that the current frequency is valid, i.e. that the objects are initiated properly)
+    f_complex_kd = .fc.kd; f_complex_kgt = .fc.kgt
+    if( abs(f_complex_kd-f_complex_kgt) > (1.e-4*abs(f_complex_kd)) ) then
+       write(errstr,*) "complex frequency of kernel displacement ( = ",f_complex_kd,&
+            ") differs from complex frequency of kernel green tensor ( = ",f_complex_kgt,") by more "//&
+            "than 0.01 percent (in terms of euklidean metric in R^2, i.e. absolute values of complex numbers)"
        call add(errmsg,2,errstr,myname)
        return
     end if
@@ -481,9 +496,6 @@ contains
     call getUnitFactorStrainsKernelGreenTensor(kgt,uf_gstr,errmsg)
     if(.level.errmsg == 2) return
 !
-    ! communicate this frequency index to computing routines below via this object 
-    this%jfcur = jfcur_kd
-!
     ! Compute kernel factors which accounts for the rest of the kernel equation, outside the kernel expressions, 
     ! i.e. pre-integration, values of inverted model (i.e. need a vector of factors) and measured data
     ! These factors account for (1) unit factor of measured data (dividing by this factor), 
@@ -505,13 +517,19 @@ contains
        uf_equation(iparam) = uf_equation(iparam)*uf_param
     end do ! iparam
 !
+    ! now that everything seems alright, set current frequency index in this object (can be used by other routines below)
+    this%jfcur = jfcur_kd
+    ! furthermore, compute the complex angular frequency accounting for any possible imaginary part that a method assumes
+    omega = 2.d0*mc_pid*dcmplx(f_complex_kd)
+!
     allocate(kernel_on_wp(size(u,1),this%nparam,this%ncomp))
     select case(this%parametrization)
     case('isoLameSI')
-       call computeOnWpIsoLameSpectralWaveformKernel(this,u,uf_u,ustr,uf_ustr,g,uf_g,gstr,uf_gstr,uf_equation,kernel_on_wp,errmsg)
+       call computeOnWpIsoLameSpectralWaveformKernel(this,u,uf_u,ustr,uf_ustr,g,uf_g,gstr,uf_gstr,uf_equation,&
+            omega,kernel_on_wp,errmsg)
     case('isoVelocitySI','isoVelocity1000')
        call computeOnWpIsoVelocitySpectralWaveformKernel(this,krm,u,uf_u,ustr,uf_ustr,g,uf_g,gstr,uf_gstr,uf_equation,&
-            kernel_on_wp,errmsg)
+            omega,kernel_on_wp,errmsg)
        ! ADD YOUR NEW PARAMETRIZATION HERE, AND ADD A RESPECTIVE SUBROUTINE BELOW
        ! case('your_new_parametrization'); call computeYourNewParametrizationSpectralWaveformKernel(this,u,uf_u,ustr,uf_ustr,g,uf_g,gstr,uf_gstr,uf_equation,kernel_on_wp,errmsg)
     case default
@@ -557,26 +575,26 @@ contains
 !! \param gstr green tensor strains as returned by kernelGreenTensor object
 !! \param uf_gstr unit factor of kernel green tensor strains
 !! \param uf_equation array of unit factors, one factor for each prameter in this%param, containing all remaining unit factors of the kernel equation (integration weights, model perturbation, data residual)
-!! \param intw integration weights as given to computeSpectralWaveformKernel
+!! \param omega angular frequency which corresponds to current frequency (can include imaginary part used by method)
+!! \param kernel_on_wp return array containing the plain kernel values on wavefield points
 !! \param errmsg error message
 !
-  subroutine computeOnWpIsoLameSpectralWaveformKernel(this,u,uf_u,ustr,uf_ustr,g,uf_g,gstr,uf_gstr,uf_equation,kernel_on_wp,errmsg)
+  subroutine computeOnWpIsoLameSpectralWaveformKernel(this,u,uf_u,ustr,uf_ustr,g,uf_g,gstr,uf_gstr,uf_equation,&
+       omega,kernel_on_wp,errmsg)
     type (spectral_waveform_kernel) :: this
     real :: uf_u,uf_ustr,uf_g,uf_gstr
     double precision, dimension(:) :: uf_equation
-    complex, dimension(:,:), pointer :: ustr,u
-    complex, dimension(:,:,:), pointer :: gstr,g
+    complex, dimension(:,:) :: ustr,u
+    complex, dimension(:,:,:) :: gstr,g
+    double complex :: omega
     double complex, dimension(:,:,:), intent(inout) :: kernel_on_wp
     type (error_message) :: errmsg
     ! local
     integer :: icomp,iparam
-    real :: omega
     double precision :: uf_multiplied
     character(len=40) :: myname = 'computeOnWpIsoLameSpectralWaveformKernel'
 !
     call addTrace(errmsg,myname)
-!
-    omega = 2.*mc_pi*(this%jfcur*this%df)
 !
     do iparam = 1,this%nparam
 
@@ -586,8 +604,8 @@ contains
           uf_multiplied = uf_u*uf_g*uf_equation(iparam)
           ! compute kernel on wavefield points for parameter rho
           do icomp = 1,this%ncomp
-             kernel_on_wp(:,iparam,icomp) = uf_multiplied*(omega*omega)*(dcmplx(u(:,1))*dcmplx(g(:,1,icomp)) + &
-                  dcmplx(u(:,2))*dcmplx(g(:,2,icomp)) + dcmplx(u(:,3))*dcmplx(g(:,3,icomp)))
+             kernel_on_wp(:,iparam,icomp) = (uf_multiplied * omega*omega) * &
+                  (dcmplx(u(:,1))*dcmplx(g(:,1,icomp)) + dcmplx(u(:,2))*dcmplx(g(:,2,icomp)) + dcmplx(u(:,3))*dcmplx(g(:,3,icomp)))
           end do ! icomp
 
        case ('lambda')
@@ -628,22 +646,23 @@ contains
 !! \param gstr green tensor strains as returned by kernelGreenTensor object
 !! \param uf_gstr unit factor of kernel green tensor strains
 !! \param uf_equation array of unit factors, one factor for each prameter in this%param, containing all remaining unit factors of the kernel equation (integration weights, model perturbation, data residual)
-!! \param intw integration weights as given to computeSpectralWaveformKernel
+!! \param omega angular frequency which corresponds to current frequency (can include imaginary part used by method)
+!! \param kernel_on_wp return array containing the plain kernel values on wavefield points
 !! \param errmsg error message
 !
   subroutine computeOnWpIsoVelocitySpectralWaveformKernel(this,krm,u,uf_u,ustr,uf_ustr,g,uf_g,gstr,uf_gstr,uf_equation,&
-       kernel_on_wp,errmsg)
+       omega,kernel_on_wp,errmsg)
     type (spectral_waveform_kernel) :: this
     type (kernel_reference_model) :: krm
     real :: uf_u,uf_ustr,uf_g,uf_gstr
     double precision, dimension(:) :: uf_equation
-    complex, dimension(:,:), pointer :: ustr,u
-    complex, dimension(:,:,:), pointer :: gstr,g
+    complex, dimension(:,:) :: ustr,u
+    complex, dimension(:,:,:) :: gstr,g
+    double complex :: omega
     double complex, dimension(:,:,:), intent(inout) :: kernel_on_wp
     type (error_message) :: errmsg
     ! local
     integer :: icomp,iparam,nwp
-    double precision :: omega
     double precision :: uf_multiplied,uf_rho,uf_vp,uf_vs
     real, dimension(:), pointer :: rho,vp,vs
     double complex, dimension(:,:), allocatable :: krho,klambda,kmu
@@ -651,14 +670,14 @@ contains
     character(len=44) :: myname = 'computeOnWpIsoVelocitySpectralWaveformKernel'
     logical :: any_rho,any_vp,any_vs
 !
+    nullify(rho,vp,vs)
+!
     call addTrace(errmsg,myname)
     nwp = size(u,1)
 !
     any_rho = any(this%param == 'rho')
     any_vp = any(this%param == 'vp')
     any_vs = any(this%param == 'vs')
-!
-    omega = 2.d0*mc_pid*(this%jfcur*dble(this%df))
 !
     ! FIRST GET ALL REQUIRED KERNEL REFERENCE MODEL VALUES
 !
@@ -814,6 +833,8 @@ contains
     integer, dimension(:), pointer :: wp_idx
     real, dimension(:), pointer :: weight
     character(len=400) :: errstr
+!
+    nullify(wp_idx,weight)
 !
     ! IN THIS PRIVATE ROUTINE IT IS ASSUMED, THAT this%on_invgrid == .true. , i.e. this%ntot_kernel means 
     ! number of inversion grid cells (which must be consistent with object intw)
@@ -1224,7 +1245,12 @@ contains
     character(len=character_length_component), dimension(:), pointer :: comp_loc
     integer, dimension(:), pointer :: jf_loc
 !
+    nullify(param_loc,comp_loc,jf_loc)
+!
     call addTrace(errmsg,myname)
+    if(present(param)) nullify(param)
+    if(present(comp)) nullify(comp)
+    if(present(jf)) nullify(jf)
 !
     ! open stream access file
     ios = openFileStreamAccess(fsa,lu,filename)
@@ -1296,6 +1322,8 @@ contains
     type (flexible), dimension(:), pointer :: ft
     integer :: on_invgrid_int,iparam_in_file,icomp_in_file,ifreq
     character(len=400) :: errstr
+!
+    nullify(group,dset,ft)
 !
     nullify(param_in_file,comp_in_file,jf_in_file)
 !
@@ -1446,6 +1474,8 @@ contains
     character(len=character_length_component), dimension(:), pointer :: comp_in_file
     character(len=400) :: errstr
     character(len=33) :: myname = 'initialReadSpectralWaveformKernel'
+!
+    nullify(jf_in_file,comp_indx_in_file,param_indx_in_file,param_in_file,comp_in_file)
 !
     call addTrace(errmsg,myname)
 !
@@ -1613,6 +1643,8 @@ contains
     logical :: traverse_path_from_root
     character(len=400) :: errstr
     character(len=26) :: myname = 'readSpectralWaveformKernel'
+!
+    nullify(group,fgroup,dset,d)
 !
     call addTrace(errmsg,myname)
 !

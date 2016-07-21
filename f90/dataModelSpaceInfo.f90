@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 
 !############################################################################
@@ -185,7 +185,9 @@ contains
     integer, dimension(:), pointer :: ifreq_tmp
     character(len=2), dimension(:), pointer :: imre_tmp
     real, dimension(:), pointer :: wdata_tmp
-    !
+!
+    nullify(evid_tmp,staname_tmp,comp_tmp,ifreq_tmp,imre_tmp,wdata_tmp)
+!
     if(present(all_combinations)) then
        add_all_combinations = all_combinations
     else
@@ -301,7 +303,9 @@ contains
     logical :: add_all_combinations
     character(len=character_length_param), dimension(:), pointer :: param_tmp
     integer, dimension(:), pointer :: cell_tmp
-    !
+!
+    nullify(param_tmp,cell_tmp)
+!
     if(present(all_combinations)) then
        add_all_combinations = all_combinations
     else
@@ -364,8 +368,10 @@ contains
     ! local
     integer, dimension(:), allocatable :: indx,indx2
     integer :: nmval_reduced,imval
-    character(len=character_length_param), dimension(:), pointer :: param => null()
-    integer, dimension(:), pointer :: cell => null()
+    character(len=character_length_param), dimension(:), pointer :: param
+    integer, dimension(:), pointer :: cell
+!
+    nullify(param,cell)
 !
     if(this%nmval == 0) return
     if(that%nmval == 0) return
@@ -1498,6 +1504,8 @@ contains
     logical :: specific_cells,specific_param,line_model_values_found,raised_warning_invalid_cells
     integer, dimension(:), pointer :: indx
 !
+    nullify(indx)
+!
     call addTrace(errmsg,myname)
     iline = 0
     nmval_before = this%nmval
@@ -1825,6 +1833,7 @@ contains
     logical, dimension(:), allocatable :: mask_paths
 !
     nullify(paths)
+!
     if(this%ndata == 0) return
 !
     ! make local copies of evid and staname to modify
@@ -1894,6 +1903,8 @@ contains
     integer :: i,ipath,jf,nf,npath
     integer :: ipath_global_maxamp_mdata,ifreq_global_maxamp_mdata
     integer, dimension(1) :: maxloc_amp
+!
+    nullify(paths,all_comp_path,pimre,pstaname,pevid,pifreq,idx_data_path,idx_data_comp_jf,all_ifreq_path)
 !
     call addTrace(errmsg,myname)
 !
@@ -2189,6 +2200,7 @@ contains
     type (data_model_space_info), intent(in) :: this
     integer :: npath
     character(len=max_character_length_evid_staname), dimension(:,:), pointer :: paths
+    nullify(paths)
     npath = 0
     paths => getPathsDataModelSpaceInfo(this)
     if(.not.associated(paths)) return
@@ -2279,6 +2291,7 @@ contains
     type (data_model_space_info), intent(in) :: this
     integer, dimension(:), optional :: idata_in
     character(len=character_length_component), dimension(:), pointer :: comp
+    ! local
     character(len=character_length_component), dimension(:), allocatable :: comp_tmp
     integer :: idata,ncomp,ndata
     logical, dimension(:), allocatable :: mask
@@ -2334,6 +2347,7 @@ contains
     type (data_model_space_info), intent(in) :: this
     integer, dimension(:), optional :: idata_in
     integer, dimension(:), pointer :: ifreq
+    ! local
     integer, dimension(:), allocatable :: ifreq_tmp
     integer :: idata,nfreq,ndata
     logical, dimension(:), allocatable :: mask
@@ -2743,7 +2757,10 @@ contains
     integer, dimension(:), pointer :: ifreq_tmp
     character(len=2), dimension(:), pointer :: imre_tmp
 !
+    nullify(evid_tmp,staname_tmp,comp_tmp,ifreq_tmp,imre_tmp)
+!
     nullify(indx)
+    if(present(wdata)) nullify(wdata)
     if(present(success)) success = .false.
     if(this%ndata == 0) return
 !
@@ -2950,7 +2967,6 @@ contains
        imre => imre_tmp
     end if
     if(present(wdata)) then
-       if(associated(wdata)) deallocate(wdata)
        allocate(wdata(nindx_found))
        wdata = this%wdata(indx)
     end if
@@ -2981,6 +2997,8 @@ contains
     logical :: use_indx_in,search_param,search_cell
     character(len=character_length_param), dimension(:), pointer :: param_tmp
     integer, dimension(:), pointer :: cell_tmp
+!
+    nullify(param_tmp,cell_tmp)
 !
     nullify(indx)
 !
@@ -3270,6 +3288,8 @@ contains
     integer, dimension(:), pointer :: indx_data,indx
     character(len=max_character_length_evid_staname), dimension(:,:), pointer :: paths
 !
+    nullify(evid,staname,indx_data,indx,paths)
+!
     paths => getPathsDataModelSpaceInfo(that)
     if(.not.associated(paths)) return
     npath = size(paths,2)
@@ -3447,6 +3467,8 @@ contains
     integer, dimension(:), pointer :: idx_dmspace,pcell
     integer, dimension(:), allocatable :: indx_out_tmp,dmspace_indx_out_tmp
     logical, dimension(:), allocatable :: map
+!
+    nullify(pparam,idx_dmspace,pcell)
 !
     nullify(indx_out,dmspace_indx_out)
 !
@@ -3733,6 +3755,8 @@ contains
     integer, dimension(:), pointer :: indx_tmp
     character(len=character_length_evid), dimension(:), pointer :: evid_tmp
     character(len=character_length_staname), dimension(:), pointer :: staname_tmp
+!
+    nullify(indx_tmp,evid_tmp,staname_tmp)
 !
     ! if this iterator is to be reset, do so
     if(present(reset)) then

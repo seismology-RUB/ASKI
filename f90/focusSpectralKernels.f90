@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 program focusSpectralKernels
   use inversionBasics
@@ -72,6 +72,8 @@ program focusSpectralKernels
 
   real :: c1_foc_min, c1_foc_max, c2_foc_min, c2_foc_max, c3_foc_min, c3_foc_max
 
+  nullify(str_vec,km,kf,a,param,indx,cell)
+
 !------------------------------------------------------------------------
 !  preliminary processing
 !
@@ -84,18 +86,18 @@ program focusSpectralKernels
   call addPosarg(ap,"outfile_base","sval","base name of output files RELATIVE to iteration step output "//&
        "directory (used for all files, with suitable extensions)")
   call addPosarg(ap,"main_parfile","sval","Main parameter file of inversion")
-  call addOption(ap,"-c1min",.true.,"(mandatory) minimum first coordinate of focussing subvolume (in Cartesian "//&
-       "applications: X)","rval","1.0")
-  call addOption(ap,"-c1max",.true.,"(mandatory) maximum first coordinate of focussing subvolume (in Cartesian "//&
-       "applications: X)","rval","1.0")
-  call addOption(ap,"-c2min",.true.,"(mandatory) minimum second coordinate of focussing subvolume (in "//&
-       "Cartesian applications: Y)","rval","")
-  call addOption(ap,"-c2max",.true.,"(mandatory) maximum second coordinate of focussing subvolume (in "//&
-       "Cartesian applications: Y)","rval","")
-  call addOption(ap,"-c3min",.true.,"(mandatory) minimum third coordinate of focussing subvolume (in "//&
-       "Cartesian applications: Z)","rval","")
-  call addOption(ap,"-c3max",.true.,"(mandatory) maximum third coordinate of focussing subvolume (in "//&
-       "Cartesian applications: Z)","rval","")
+  call addOption(ap,"-c1min",.true.,"(mandatory) minimum first coordinate of focussing subvolume (Cartesian "//&
+       "X, or spherical lat in deg (-90<=lat<=90))","rval","")
+  call addOption(ap,"-c1max",.true.,"(mandatory) maximum first coordinate of focussing subvolume (Cartesian "//&
+       "X, or spherical lat in deg (-90<=lat<=90))","rval","")
+  call addOption(ap,"-c2min",.true.,"(mandatory) minimum second coordinate of focussing subvolume "//&
+       "(Cartesian Y or spherical lon in deg (0<=lon<=360))","rval","")
+  call addOption(ap,"-c2max",.true.,"(mandatory) maximum second coordinate of focussing subvolume "//&
+       "(Cartesian Y or spherical lon in deg (0<=lon<=360))","rval","")
+  call addOption(ap,"-c3min",.true.,"(mandatory) minimum third coordinate of focussing subvolume "//&
+       "(Cartesian Z or depth in km)","rval","")
+  call addOption(ap,"-c3max",.true.,"(mandatory) maximum third coordinate of focussing subvolume "//&
+       "(Cartesian Z or depth in km)","rval","")
   call addOption(ap,"-param",.true.,"(mandatory) list of model parameters which will be focussed on","svec","")
   ! call addOption(ap,"-ffactor",.true.,"(optional) a factor controlling the intensity of the focussing","rval","1.0") ! option for simple Backus Gilbert focussing (not used below)
 !
@@ -251,7 +253,7 @@ program focusSpectralKernels
   do icell = 1,.ncell.(.invgrid.iterbasics)
      ! get cell center of current cell
      call new(errmsg,myname)
-     call getCenterCellInversionGrid(.invgrid.iterbasics,icell,c1,c2,c3,errmsg)
+     call getCenterCellInversionGrid(.invgrid.iterbasics,icell,c1,c2,c3,errmsg,coords_type='event')
      if(.level.errmsg /= 0) call print(errmsg)
      if(.level.errmsg == 2) goto 1
      call dealloc(errmsg)

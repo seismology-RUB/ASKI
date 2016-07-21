@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief this module manages the inverted Earth model on the inversion grid
 !!
@@ -235,6 +235,7 @@ contains
     real :: max
     integer :: iparam
     real, dimension(:), pointer :: p
+    nullify(p)
     max = -huge(1.0) ! initiate to invalid value
     if(trim(this%parametrization)=='') return
     if(.not.validParamModelParametrization(this%parametrization,param)) return
@@ -250,6 +251,7 @@ contains
     real :: min
     integer :: iparam
     real, dimension(:), pointer :: p
+    nullify(p)
     min = huge(1.0) ! initiate to invalid value
     if(trim(this%parametrization)=='') return
     if(.not.validParamModelParametrization(this%parametrization,param)) return
@@ -282,9 +284,11 @@ contains
     real, dimension(:), pointer :: this_model_values,that_model_values
     real :: val
     logical :: compute_relative
-    !
+!
+    nullify(this_indx,that_indx,this_model_values,that_model_values)
+!
     call addTrace(errmsg,myname)
-    !
+!
     if(this%parametrization=='') then
        call add(errmsg,2,'model object, which is to be updated, is not initiated yet',myname)
        return
@@ -298,13 +302,13 @@ contains
             trim(that%parametrization)//"' parameters to '"//trim(this%parametrization)//"' parameters",myname)
        return
     endif
-    !
+!
     if(present(relative)) then
        compute_relative = relative
     else
        compute_relative = .false.
     endif
-    !
+!
     ! loop over all parameters of this (that has same parameters, as this and that have same parametrization)
     do iparam = 1,numberOfParamModelParametrization(this%parametrization)
        ! if there are no model values in that for current parameter, there is nothing to be added, 
@@ -322,31 +326,31 @@ contains
           endif
           cycle
        endif
-       !
+!
        ! if there are no model values yet in this for current parameter, interpret them as zero 
        ! and associate model values of that as the new model values of this (if not compute_relative!)
        if(.not.associated(getVectorPointer(this%model_values(iparam)))) then
           ! if compute_relative, DO NOTHING (cannot "relate" somenthing to nothing, would be "infinity")
           if(compute_relative) cycle
-          !
+!
           call addValuesKernelInvertedModel(this,getParamFromIndexModelParametrization(this%parametrization,iparam),&
                getVectorPointer(that%indx(iparam)),getVectorPointer(that%model_values(iparam)),errmsg)
           if(.level.errmsg == 2) return
-          !
+!
           if(present(c2)) then
              ! then that_model_values should have been scaled by c2 before adding to this
              ! hence, multiply now (after adding) this_model_values by c2
              this_model_values => getVectorPointer(this%model_values(iparam))
              this_model_values = c2*this_model_values
           endif
-          !
+!
           cycle
        endif
-       !
+!
        ! if loop comes here, there are model values in both objects (this,that) for current parameter.
        ! have to assure here to summate values only at the same inversion grid cells.
        ! append values for inversion grid cells which are new in this. just use value of that (assuming value 0. if it does not exist)
-       !
+!
        ! create index mapping for model values in this to be able to compare with values in that
        this_indx => getVectorPointer(this%indx(iparam))
        max_icell_in_this_indx = maxval(this_indx)
@@ -355,7 +359,7 @@ contains
           ! for each invgrid cell indx j present in this%indx, set modelval_indx(j) = i
           ! if modelval_indx(j) = -1 for some invgrid cell indx j, it indicates that j is not present in this%indx
           ! as this%indx>0 (checked in addValues), there is no problem with accessing array this_modelval_map
-          !
+!
           this_modelval_map(this_indx(i)) = i
        enddo
        !
@@ -383,7 +387,7 @@ contains
                 ! overwrite this_model_values(i)
                 this_model_values(i) = val
                 !this_model_values(i) = this_model_values(i) + that_model_values(j)
-                !
+!
                 ! remember i'th entry of array this_model_vales was treated here. 
                 ! if, in the end, there were any invgrid cell indices which were only
                 ! present in this, but not in that, (see below) then you have to treat those according
@@ -393,7 +397,7 @@ contains
              endif
           endif
           ! if loop comes here, either that_indx(i)>max_icell_in_this_indx, or modelval_indx(that_indx(i)) negative
-          !
+!
           ! if compute_relative, here is also the problem that we cannot relate something to nothing
           ! (no model value in this, but model value in that)
           if(compute_relative) cycle ! go to next index j
@@ -407,7 +411,7 @@ contains
              this_model_values_append(ival_append) = that_model_values(j)
           endif
        enddo ! j
-       !
+!
        ! check if there were any invgrid cell indices which were only
        ! present in this, but not present in that (i.e. which were not treated in j-loop above)
        ! for all those indices i, this_modelval_map(i) is still positive.
@@ -415,7 +419,7 @@ contains
        if(any(this_modelval_map>0) .and. (compute_relative.or.present(c1))) then
           n = count(this_modelval_map>0); allocate(indx_tmp(n))
           indx_tmp = pack(this_modelval_map,this_modelval_map>0)
-          !
+!
           if(compute_relative) then
              if(present(c1)) then
                 this_model_values(indx_tmp) = c1
@@ -425,23 +429,23 @@ contains
           else
              if(present(c1)) this_model_values(indx_tmp) = c1*this_model_values(indx_tmp)
           endif
-          !
+!
           deallocate(indx_tmp)
        endif
-       !
+!
        ! reallocate this_indx,this_model_values if there were any values appended
        if(ival_append > 0) then
           sze = size(this_indx)
           this_indx => reallocate(this_indx,sze+ival_append)
           call associateVectorPointer(this%indx(iparam),this_indx)
           call fillVectorPointer(this%indx(iparam),this_indx_append(1:ival_append),sze+1)
-          !
+!
           sze = size(this_model_values)
           this_model_values => reallocate(this_model_values,sze+ival_append)
           call associateVectorPointer(this%model_values(iparam),this_model_values)
           call fillVectorPointer(this%model_values(iparam),this_model_values_append(1:ival_append),sze+1)
        endif
-       !
+!
        ! clean up
        deallocate(this_modelval_map,this_model_values_append,this_indx_append)
     enddo ! iparam
@@ -520,6 +524,8 @@ contains
     integer, dimension(:), pointer :: wp_idx
     real, dimension(:), pointer :: weights
     integer :: icell,ncell,ntot_invgrid
+!
+    nullify(model_values_wp,wp_idx,weights)
 !
     call addTrace(errmsg,myname)
 !
@@ -754,43 +760,44 @@ contains
     character(len=character_length_param) :: param_name
     integer, dimension(:), pointer :: indx
     real, dimension(:), pointer :: model_values
-    !
+!
+    nullify(indx,model_values)
+!
     call addTrace(errmsg,myname)
     if(present(overwrite)) then
        overwrite_file = overwrite
     else
        overwrite_file = .false.
     end if
-    !
+!
     if(trim(this%parametrization) == '') then
        call add(errmsg,2,"object not initiated yet. please call initiateKernelInvertedModel first",myname)
        return
     endif
-    !
+!
     do while(nextParamModelParametrization(this%parametrization,param_name))
        iparam = indexOfParamModelParametrization(this%parametrization,param_name)
        model_values => getVectorPointer(this%model_values(iparam))
        indx => getVectorPointer(this%indx(iparam))
        ! create vtk file only, if there are any model values for this parameter
        if(associated(model_values) .and. associated(indx)) then
-          !
+!
           ! initiate vtk file
           vtk_filename = trim(basename)//'_'//trim(this%parametrization)//'-'//trim(param_name)
           vtk_title = trim(this%parametrization)//'-'//trim(param_name)//' model values on inversion grid'
           call init(invgrid_vtk,invgrid,vtk_filename,vtk_format,errmsg,trim(vtk_title),cell_indx_req=indx)
           if(.level.errmsg == 2) return
-          !
+!
           call add(errmsg,0,"creating vtk file with basename '"//trim(vtk_filename)//"'",myname)
-          !
+!
           ! write model values to file
           vtk_data_name = trim(this%parametrization)//'-'//trim(param_name)
           call writeData(invgrid_vtk,lu,model_values,errmsg,data_name=trim(vtk_data_name),overwrite=overwrite_file)
           if(.level.errmsg == 2) return
-          !
+!
           call dealloc(invgrid_vtk)
        endif
     enddo ! while (nextParam)
-    !
   end subroutine writeVtkKernelInvertedModel
 !------------------------------------------------------------------------
 !> \brief create kernel inverted model object as a copy of another object
@@ -800,6 +807,8 @@ contains
     integer :: size_that,i
     real, dimension(:), pointer :: rpthis,rpthat
     integer, dimension(:), pointer :: ipthis,ipthat
+!
+    nullify(rpthis,rpthat,ipthis,ipthat)
 !
     if(this%parametrization /= '') call deallocateKernelInvertedModel(this)
     if(that%parametrization == '') return
@@ -850,6 +859,8 @@ contains
     character(len=character_length_param) :: param_name
     character(len=character_length_param), dimension(:), pointer :: pparam
     integer, dimension(:), pointer :: idx_mspace,pcell
+!
+    nullify(pparam,idx_mspace,pcell)
 !
     call addTrace(errmsg,myname)
 !
@@ -907,6 +918,8 @@ contains
     character(len=character_length_param) :: param_name
     integer, dimension(:), pointer :: pcell,idx_mspace,idx_kim
     real, dimension(:), pointer :: pval
+!
+    nullify(pcell,idx_mspace,idx_kim,pval)
 !
     call addTrace(errmsg,myname)
     nullify(model_vector)

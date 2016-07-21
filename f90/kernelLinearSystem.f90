@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
-!   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.1.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.1 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.1 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! TODO
@@ -249,6 +249,9 @@ contains
     complex, dimension(:), allocatable :: filtered_kernel_values
     logical :: apply_parameter_correlation
     real :: c_corr
+!
+    nullify(comp,pcomp,pimre,idata_path,idata_path_ifreq,idata_path_ifreq_comp,pifreq,ifreq,pwdata,normalization_factors,&
+         pparam,param_dmspace,param_corr,idx_mval,idx_cell,pcell,event_filter,station_comp_filter,kernel_values)
 !
     call addTrace(errmsg,myname)
 !
@@ -783,6 +786,8 @@ contains
     character(len=28) :: myname = 'copyMatrixKernelLinearSystem'
     integer, dimension(:), pointer :: dindx,mindx
 !
+    nullify(dindx,mindx)
+!
     call addTrace(errmsg,myname)
 !
     if(.not.this%initiated) then
@@ -891,6 +896,9 @@ contains
     logical :: read_corrections
     complex, dimension(:), pointer :: sdata_cmplx
     real, dimension(:), pointer :: s_or_sc_data
+!
+    nullify(comp,pcomp,pimre,pwdata,idata_path,idata_path_comp,pifreq,normalization_factors,&
+         event_filter,station_comp_filter,sdata_cmplx,s_or_sc_data)
 !
     call addTrace(errmsg,myname)
 !
@@ -1244,6 +1252,8 @@ contains
     ! measured data
     complex, dimension(:), pointer :: mdata_cmplx
     integer, dimension(:), allocatable :: map_ifreq_to_measured_index
+!
+    nullify(comp,pcomp,pimre,pwdata,pifreq,idata_path,idata_path_comp,normalization_factors,mdata_cmplx)
 !
     call addTrace(errmsg,myname)
 !
@@ -1682,6 +1692,8 @@ contains
     ! linear system
     type (serial_linear_system) :: LSE
     real, dimension(:,:), pointer :: b,solution,residual
+!
+    nullify(b,solution,residual)
 !
     call addTrace(errmsg,myname)
 !
