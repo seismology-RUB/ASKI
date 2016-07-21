@@ -1,7 +1,7 @@
 % -*-LaTex-*-
 
 %-----------------------------------------------------------------------------
-%   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+%   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 %
 %   This file is part of the ASKI manual as a LaTeX document with main file
 %   manual.tex
@@ -17,12 +17,12 @@
 This chapter is intended to guide you, dependent on what you want to do, through all necessary steps
 to achieve your goals.
 
-If you don't know about \ASKI yet, we recommend you to quickly read through the next section, which 
-explains some basic terminology in \ASKI and the concepts it is based on.
+If you don't know about \ASKI{} yet, we recommend you to quickly read through the previous section 
+entitled ``What is \ASKI{}?'', which explains some basic terminology in \ASKI{} and the concepts it is based on.
 
-The sections below address possible operations you can conduct with \ASKI. For every operation, we only refer 
+The sections below address possible operations you can conduct with \ASKI{}. For every operation, we only refer 
 to the necessary basic steps (by $\rightarrow$), which are described in chapter~\myref{basic_steps}.\\
-Make sure to have a complete read through before hastily doing anything!
+Make sure to have a complete read-through before hastily doing anything!
 
 Good Luck!
 %
@@ -40,7 +40,7 @@ Good Luck!
 
 Iterative inversion scheme which uses waveform sensitivity kernels to gain model updates form data residua.
 
-In addition to \ASKI \myaref{basic_steps,sec:install_ASKI}, you will need to install a supported software which 
+In addition to \ASKI{} \myaref{basic_steps,sec:install_ASKI}, you will need to install a supported software which 
 solves the forward problem \myaref{basic_steps,sec:forward_problem}.
 %
 %----------------------------------------------------------
@@ -61,12 +61,13 @@ All other parameters can be adjusted later.
 \item Create a directory structure for the expected number of iteration steps of your inversion 
 \myaref{basic_steps,sec:create_dir}
 %
-\item Make yourself familiar with the form of data used in \ASKI \myaref{basic_steps,sec:data_general}. \\
+\item Make yourself familiar with the form of data used in \ASKI{} \myaref{basic_steps,sec:data_general}. \\
   Set \lcode{APPLY_EVENT_FILTER}, \lcode{APPLY_STATION_FILTER}, \lcode{PATH_MEASURED_DATA}, 
   \lcode{PATH_EVENT_FILTER}, \lcode{PATH_STATION_FILTER}, 
   \lcode{FILE_EVENT_LIST}, and \lcode{FILE_STATION_LIST}, as well as \lcode{MEASURED_DATA_FREQUENCY_STEP}, 
   \lcode{MEASURED_DATA_NUMBER_OF_FREQ} and \lcode{MEASURED_DATA_INDEX_OF_FREQ}  in your main 
-  parameter file, before preparing your data in the required form \myaref{basic_steps,sec:measured_data}.
+  parameter file, before preparing your data in the required form \myaref{basic_steps,sec:measured_data}, 
+  as well as any filters \myaref{basic_steps,sec:filters}.
 %
 \item Set \lcode{FORWARD_METHOD} in your main 
 parameter file to the value of your choice. If you want to use different methods in the course of 
@@ -112,7 +113,7 @@ Before the first iteration, however, you need to define some starting model \mya
 \begin{itemize}
 \item Compute forward wavefields and Green tensor components w.r.t.\ the current model 
 by your method. Refer to the respective documentation of your method.\\
-After that, you may prepare the synthetic data in the way \ASKI expects it (see sections~\myref{basic_steps,sec:data_general} 
+After that, you may prepare the synthetic data in the way \ASKI{} expects it (see sections~\myref{basic_steps,sec:data_general} 
 and~\myref{files,sec:synth_data}). Refer to the documentation of your method on how to do it.
 %
 \item Set \lcode{TYPE_INTEGRATION_WEIGHTS} in the iteration specific parameter file 
@@ -132,7 +133,12 @@ You could compute different types of weights and store them in different files, 
 \item Choose a specific data and model space. You may well play around with different subsets of data or
 smoothing (next step) in the course of inverting for different models \myaref{basic_steps,sec:dmspace}.
 %
-\item Finally compute the inverted model by solving the kernel system \myaref{basic_steps,sec:solve_kernel_system}.
+\item Finally compute the inverted model by solving the kernel system \myaref{basic_steps,sec:solve_kernel_system},
+  possibly varying the regularization constraints.
+%
+\item After deciding whether or not to do another iteration of full waveform inversion and choosing a model 
+  for the next iteration \myaref{basic_steps,sec:investigate_convergence}, repeat all operations beginning 
+  with ``Before Each Iteration Step (including the first one)''.
 \end{itemize}
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -147,7 +153,13 @@ This section describes the synthetic cross borehole example presented in Florian
 (section 4.1). It is an example of lull waveform inversion using pre-integrated spectral waveform sensitivity 
 kernels (as described in the first recipe of this chapter Guide (page~\pageref{guide}).
 
-Install \ASKI \myaref{basic_steps,sec:install_ASKI}. 
+The example files referred to in the following, were computed with \ASKI{} version 1.0, which however should
+not pose any problem since the changed from version 1.0 to 1.1 do not effect the computations or compatibility
+of any output files. It may, however, 
+occur that numbers might not be reproduced in a numerically equal way, which is also likely to happen
+when a different compiler (version) is used. 
+
+Install \ASKI{} \myaref{basic_steps,sec:install_ASKI}. 
 
 Then download the example
 files \lcode{ASKI_inversion_cross_borehole.tar.gz} via \url{http://www.rub.de/aski} (566 MB). 
@@ -169,8 +181,8 @@ should create a separate inversion directory from scratch~\myaref{basic_steps,se
  and leave \lcode{ASKI_inversion_cross_borehole/}
 as a reference only. 
 
-This example was generated using \lcode{SPECFEM3D_Cartesian 3.0} for \ASKI. Even if you intend
-to use a different forward method, you can still practice the operations of the main \ASKI
+This example was generated using \lcode{SPECFEM3D_Cartesian 3.0} for \ASKI{}. Even if you intend
+to use a different forward method, you can still practice the operations of the main \ASKI{}
 package and, thus, learn about how to conduct any steps in
 the full waveform inversion \emph{after} the forward problem is solved. Just read the description
 of the contained files in \\
@@ -190,19 +202,19 @@ you need to install it, of course~\myaref{basic_steps,sec:forward_problem}.
 %
 This section describes, how to compute time-domain waveform sensitivity kernels for a specific set 
 of sources receivers with respect to a certain background earth model as an operation seperate of any
-other \ASKI operations. The kernels in time-domain are much more intuitive to look at for human beings, 
+other \ASKI{} operations. The kernels in time-domain are much more intuitive to look at for human beings, 
 than the standard frequency-domain sensitivity kernels. You may, as well, compute time-domain sensitivity 
 kernels from the kernels produced in any iteration step of a full waveform inversion 
 (page \pageref{guide,sec:classic_inversion}). For this purpose, apply the steps 
 ``Transforming to Time-Domain Sensitivity Kernels'' (below) after you computed the spectral kernels in 
 you iteration step, as the time-domain waveform kernels are produced by an inverse Fourier transform 
-from the standard frequency-domain waveform sensitivity kernels on which \ASKI is based.
+from the standard frequency-domain waveform sensitivity kernels on which \ASKI{} is based.
 
 Please do not get confused by the general terminology of \emph{inversion} and \emph{iteration}, etc. 
 Technically you will be conducting an incomplete first iteration step of a full waveform inversion, 
 using all the program infrastructure which is also used for a full waveform inversion. 
 
-In addition to \ASKI \myaref{basic_steps,sec:install_ASKI}, you will need to install a supported software which 
+In addition to \ASKI{} \myaref{basic_steps,sec:install_ASKI}, you will need to install a supported software which 
 solves the forward problem \myaref{basic_steps,sec:forward_problem}.
 %
 %----------------------------------------------------------
@@ -223,7 +235,7 @@ All other parameters can be adjusted later.
 \item Create a directory structure for only one iteration step \myaref{basic_steps,sec:create_dir}
 %
 \item Even if you do not have any measured data, it might still be beneficial for you to make yourself 
-(roughly) familiar with the form of data used in \ASKI \myaref{basic_steps,sec:data_general}. \\
+(roughly) familiar with the form of data used in \ASKI{} \myaref{basic_steps,sec:data_general}. \\
 In your main parameter file, set the following values: 
   \begin{itemize}
   \item Set \lcode{FILE_EVENT_LIST} and \lcode{FILE_STATION_LIST} to define the sources and receivers which are
@@ -233,13 +245,13 @@ In your main parameter file, set the following values:
     \lcode{MEASURED_DATA_NUMBER_OF_FREQ} and \lcode{MEASURED_DATA_INDEX_OF_FREQ}.
   \end{itemize}
 In general, for the pure kernel computation you do not need any measured data. So, here you do not need to prepare
-data in the \ASKI required form.
+data in the \ASKI{} required form.
 %
 \item Set \lcode{APPLY_EVENT_FILTER}, \lcode{APPLY_STATION_FILTER} (and if required \lcode{PATH_EVENT_FILTER} and 
   \lcode{PATH_STATION_FILTER}) in your main parameter file. In case the forward wavefields were calculated w.r.t.\ an
-  impulse source time function (or the source-time function was deconvolved), you should apply filters that taper
-  down the amplitude spectrum before the maximum frequency used. Otherwise, the inverse Fourier transform below
-  can create artefacts.
+  impulse source time function (or the source-time function was deconvolved), you should apply filters 
+  \myaref{basic_steps,sec:filters} that taper down the amplitude spectrum before the maximum frequency used. 
+  Otherwise, the inverse Fourier transform below can create artefacts.
 %
 \item Set \lcode{FORWARD_METHOD} in your main parameter file to the value of your choice. 
 %
@@ -249,10 +261,17 @@ to a value of your choice (which is supported by your forward method).
 \item Set \lcode{CURRENT_ITERATION_STEP} in your main parameter file to value \lcode{1}, as you are technically
 starting to conduct the first (and only) iteration step of a full waveform inversion.
 %
+\item It is highly recommended to set \lcode{DEFAULT_VTK_FILE_FORMAT} to \lcode{BINARY} in the main parameter file, 
+  since a lot of \lcode{vtk} files might be generated (one for every time step). Using the binary format significantly
+  reduces storage.
+
 \item Define the inversion grid \myaref{basic_steps,sec:invgrid}, which controls the spacial volumetric discretization 
 (resolution) of the computed sensitivity kernels. In case of just computing (time) kernels to look at, it is not
 crucial to regard this resolution as the resolution of some inverted model, as no inversion will be conducted on the 
-inversion grid. 
+inversion grid. Since there might be a lot of \lcode{vtk} files generated (one for every time step), it is highly recommended to set\\
+\lcode{VTK_GEOMETRY_TYPE = CELL_CENTERS} in the inversion grid parameter file (if your type of inversion grid
+supports that functionality). This significantly reduces the amount of geometry information written to the 
+\lcode{vtk} files, hence their size.
 %
 \item Set all parameters in the specific iteration step parameter file to correct values 
 \myaref{basic_steps,sec:iter_parfile}, including the correct reference to the inversion grid. Set 
@@ -274,7 +293,7 @@ a starting model, see \myaref{basic_steps,sec:start_model}.
 \begin{itemize}
 \item Compute forward wavefields and Green tensor components w.r.t.\ the current model 
 by your method. Refer to the respective documentation of your method.\\
-After that, you may prepare the synthetic data in the way \ASKI expects it (see sections~\myref{basic_steps,sec:data_general} 
+After that, you may prepare the synthetic data in the way \ASKI{} expects it (see sections~\myref{basic_steps,sec:data_general} 
 and~\myref{files,sec:synth_data}). Refer to the documentation of your method on how to do it.
 %
 \item Set \lcode{TYPE_INTEGRATION_WEIGHTS} in the iteration specific parameter file 
@@ -323,9 +342,17 @@ You could compute different types of weights and store them in different files, 
 %
 {\bf THIS SECTION IS WORK IN PROGRESS!}
 
-Short introduction as to what ``Optimization of Acquisition Geometry using Kernel Focussing'' actually is:
+%Short introduction as to what ``Analysis of Acquisition Geometry using Kernel Focussing'' actually is:
+The general concept of Backus-Gilbert-based focussing of sensitivity kernels on a defined focussing region 
+in the model space is published in \cite{_743d334d-dfa4-4a16-8cc5-91cdadc95271}, Chapter 7.1. On the basis
+of this way of finding linear combinations of data which are sensitive only to changes in a model subspace, 
+the dataset can be analysed w.r.t.\ finding event-station paths (and components / frequencies) which optimally
+illuminate the model subspace. 
 
-todo list:
+Executable \lcode{focusSpectralKernels} \myaref{programs_scripts,sec:bin_prog,sec:focus_spec_kernel} produces the coefficients of the linear combination of data required
+for the analysis. However, this section does not yet give a detailed list of steps how to conduct such 
+an analysis. 
+
 \begin{itemize}
 \item step 1
 \item step 2
@@ -341,7 +368,20 @@ todo list:
 %
 {\bf THIS SECTION IS WORK IN PROGRESS!}
 
-Short introduction as to what ``Full Waveform Inversion using Focused Data for Maximum Resolution'' actually is:
+%Short introduction as to what ``Full Waveform Inversion using Focused Data for Maximum Resolution'' actually is:
+The general concept of Backus-Gilbert-based focussing of sensitivity kernels on a defined focussing region 
+in the model space is published in \cite{_743d334d-dfa4-4a16-8cc5-91cdadc95271}, Chapter 7.1. On the basis
+of this way of finding linear combinations of data which are sensitive only to changes in a model subspace, 
+different disjoint subdivisions of the model space can be chosen, finding the finest subdivision that
+is resolved by the data (i.e.\ where focussing of sensitivity on each subdivision cell is still successfull).
+This gives the finest model space that the data can resolve. Also this gives a set of ``new'' data consisting of
+linear combinations of the original data, for which each of this new data is sensitive only to a certain
+spot in the model space. Doing inversion steps of full waveform inversion with the focussed kernels and the 
+focussed data, the hope is to overall conduct a waveform inversion at the maximum resolving power of the data. 
+This can also be seen as a sophisticated form of regularizing the overall inverse problem. 
+
+Such a ``focussed waveform inversion'' still remains an idea and was not yet approached to be implemented
+in \ASKI{}. Please don't hesitate to implement and test this concept.
 
 todo list:
 \begin{itemize}

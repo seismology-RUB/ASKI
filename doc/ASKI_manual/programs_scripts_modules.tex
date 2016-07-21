@@ -1,7 +1,7 @@
 % -*-LaTex-*-
 
 %-----------------------------------------------------------------------------
-%   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+%   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 %   and Phillip Gutt (Ruhr-Universitaet Bochum, Germany)
 %
 %   This file is part of the ASKI manual as a LaTeX document with main file
@@ -16,27 +16,77 @@
 %-----------------------------------------------------------------------------
 %
 This chapter collects scripts, binary programs or modular program components contained 
-in the \ASKI package. It is not refered to any code, here, but give details on application
+in the \ASKI{} package. It is not refered to any code, here, but give details on application
 by the user or background knowledge.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-\section{binary programs} \label{programs_scripts,sec:bin_prog}
+\section{Executable Programs} \label{programs_scripts,sec:bin_prog}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
-The commands are written in the form:
+The commands are executed in the form:
 \begin{itemize}
-\item[]{\bf command} [-optional arguments]...[positional arguments]
+\item[]{\bf command} [-options]...[positional arguments]
 \end{itemize}
-Commands with several positional argumentes have to be written with all positional arguments in the right order (the order given in the subsection).
+Commands with several positional arguments have to be executed with positional arguments in correct 
+order (the order given in the subsections ``Positional arguments'').
+
+In front of positional arguments, there can be options, for which the order is not relevant
+since they are indicated by some keyword starting with ``-''. The name ``option'' should, however,
+not be taken literally, since some of these arguments might be required and are therefore
+called ``Mandatory options''. Others, that are actually optional, are referred to as ``Optional options''
+below.
+
+Calling an executable without arguments will print a very short help message on how to use it.
 %
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+%
+\subsection{\lcode{addSpikeCheckerToKim}} \label{programs_scripts,sec:bin_prog,sec:addSpikeCheckerToKim}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\emph{This is a hard-coded preliminary tool! Do not expect to see a help message when executing} 
+\lcode{addSpikeCheckerToKim} \emph{without arguments, execution of the source code will start 
+immediately!}
+
+This excecutable adds checkerboard or spike-like anomalies to a given \lcode{.kim} model file. All 
+specifcations about the current inversion grid and any filenames must be given in a \emph{hard-coded}
+way by modifying the source file \lcode{f90/addSpikeCheckerToKim.f90} accordingly. Some documenting
+commentary is given there. 
+
+This executable is intended to serve the experienced user and must be compiled separately by\\
+\lcode{make addSpikeCheckerToKim}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
 \subsection{\lcode{combineInvertedModels}} \label{programs_scripts,sec:bin_prog,sec:combine_inverted_models}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Compute linear combination   \lcode{coef1 * kim1 + coef2 * kim2}   of two models on inversion grid kim1, kim2.
-
-This manual section is still to be written, sorry. I hope to provide it soon in a new manual version. %% FS FS CONTINUE
-Calling the executable without arguments will print a very short help message on how to use it.
+Compute linear combination   \lcode{ coef1 * kim1 + coef2 * kim2 }   of two models on inversion grid
+\lcode{kim1}, \lcode{kim2}.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Positional arguments}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{kim1_file}}
+\lcode{.kim} file of the first model \lcode{kim1}.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{kim2_file}}
+\lcode{.kim} file of the second model \lcode{kim2}.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{kim_outfile}}
+Output file basename (will be extended by \lcode{.kim}) of resulting combined model.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{main_parfile}}
+Main parameter file of inversion.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Optional options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-c1} \lcode{coef1}}
+If set, it defines the first coefficient \lcode{coef1} by which the first model is multiplied in the linear 
+combination. If not set, the default value \lcode{coef1 = 1.0} is used.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-c2} \lcode{coef2}}
+If set, it defines the second coefficient \lcode{coef2} by which the second model is multiplied in the linear 
+combination. If not set, the default value \lcode{coef2 = 1.0} is used.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-rel}}
+If set, the program computes relative to \lcode{kim1}, i.e.\ \\
+\lcode{(coef1*kim1 + coef2*kim2) / kim1}
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
@@ -46,7 +96,7 @@ Computes additional files in iteration-step-specific subdirectory \lcode{SYNTHET
 \lcode{corr_EVENTID_STATIONNAME_COMPONENT}. These files contain the quantities $c_i^0$ (as defined in our GJI paper
 eq.\ (26)), which are corrections to synthetic data due to change from path to global reference model.
  %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{positional arguments}
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{dmsi_file}}
 Data-model-space-info file
@@ -63,7 +113,7 @@ Computes the 'measured' data d in the equation  d-s(-sc) = K (m1 - mref)  for gi
 Can be used for (old-fashioned) linear computation of checkerboard data by forward multiplication of the sensitivity 
 matrix with an artificial model vector containing checker anomalies.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{positional arguments}
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{dmsi_file}}
 Data-model-space-info file
@@ -81,9 +131,10 @@ Main parameter file of inversion.
 %
 \subsection{\lcode{computeFocussedMisfit}} \label{programs_scripts,sec:bin_prog,sec:comp_focus_misfit}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-compute focussed misfit of a dataset applying the focussing coefficients produced by program focusSpectralKernels
+Compute focussed misfit of a dataset applying the focussing coefficients produced by executable 
+\lcode{focusSpectralKernels}.
 
-\subsubsection{positional arguments}
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{dmspace_file}}
 Data model space input file which defines data and model space.
@@ -98,16 +149,40 @@ Main parameter file of inversion.
 %
 \subsection{\lcode{computeKernelCoverage}} \label{programs_scripts,sec:bin_prog,sec:compute_kernel_coverage}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-summate the absolute values of the column vectors of a given kernel matrix (for a given number of 
-frequency windows)
-
-This manual section is still to be written, sorry. I hope to provide it soon in a new manual version. %% FS FS CONTINUE
-Calling the executable without arguments will print a very short help message on how to use it.
+Summate the absolute values of the column vectors of a given kernel matrix (for a given number \lcode{nwin} of 
+frequency windows).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Positional arguments}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{dmspace_file}}
+Data-model-space-info file to set up the kernel linear system.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{vtk_outfile_base}}
+Base name for output files (vtk output is produced on inversion grid only).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{main_parfile}}
+Main parameter file of inversion.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Mandatory options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-jf1}}
+Vector of starting indices of \lcode{nwin} frequency windows. It must have the same length \lcode{nwin} 
+as \lcode{-jf2} and \lcode{jf1 <= jf2} for all windows.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-jf2}}
+Vector of end indices of \lcode{nwin} frequency windows. It must have the same length \lcode{nwin} 
+as \lcode{-jf1} and \lcode{jf1 <= jf2} for all windows.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Optional options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-overwr}}
+If set, the output files will be overwritten (if existing). By default, nothing is overwritten.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
 \subsection{\lcode{computeKernels}} \label{programs_scripts,sec:bin_prog,sec:com_kernel}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+This executable computes (and pre-integrates) spectral sensitivity kernels. 
 There are two possibele ways to define a set of spectral kernels that are computed:
 \begin{itemize}
 \item[(way 1):] compute kernel for only one path, defined by eventID and station name using options \lcode{-evid}, \lcode{-staname}, \lcode{-comp} and \lcode{-param}
@@ -115,12 +190,12 @@ There are two possibele ways to define a set of spectral kernels that are comput
 in order to define a subset of the paths contained in the given data-model-space description. If the upper (lower) limit of the path range is not defined (i.e. \lcode{-ipath1} (\lcode{-ipath2}) not set), the maximum (minimum) possible value is used. Then, all kernels for the defined range of paths in the given data-model-space description are computed.
 \end{itemize}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{positional arguments}
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{main_parfile}}
 Main parameter file of inversion.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{optional arguments}
+\subsubsection{Mandatory options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-evid} \lcode{event_id}} 
 Defines the event id of the one path (must belong to an event in main event list). (way 1)
@@ -129,19 +204,24 @@ Defines the event id of the one path (must belong to an event in main event list
 Defines the station name of the one path (must belong to a station in main station list). (way 1)
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-comp} \lcode{"comp_1 ... comp_n"}}
-Vector of receiver components for which the kernel should be computed. For valid components see \myref{basic_steps,sec:data_general}. (way 1)
+Vector of station components for which the kernel should be computed. 
+For valid components see \myref{basic_steps,sec:data_general}. (way 1)
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-param} \lcode{"param_1 ... param_n"}}
-Vector of parameter names for which the kernel should be computed. Only valid parameter names of the chosen model parametrization are accepted. (way 1)
+Vector of parameter names for which the kernel should be computed. 
+Only valid parameter names of the chosen model parametrization are accepted. (way 1)
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-dmspace} \lcode{dmspace_file}}
 Data model space input file to define a set of paths. (way 2)
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Optional options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-ipath1} \lcode{path1}}
 \lcode{path1} is the first index of the path loop. By default, \lcode{path1 = 1} (way 2)
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-ipath2} \lcode{path2}}
-\lcode{path2} is the last index of the path loop. By default, \lcode{path2 = max_number_of_paths} as to data-model-space description. (way 2)
+\lcode{path2} is the last index of the path loop. By default, 
+\lcode{path2 = max_number_of_paths} as to data-model-space description. (way 2)
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-wp}}
 If set, then plain kernel values on WAVEFIELD POINTS are produced. Otherwise (if not set), pre-integrated kernels on inversion grid cells are computed
@@ -150,32 +230,256 @@ If set, then plain kernel values on WAVEFIELD POINTS are produced. Otherwise (if
 %
 \subsection{\lcode{computeMisfit}} \label{programs_scripts,sec:bin_prog,sec:comp_misfit}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-reads in measured and synthetic data characterized by data model space info file and computes the data misfit
+Reads in measured and synthetic data characterized by data model space info file and computes the data misfit.
 
-\subsubsection{positional arguments}
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{dmspace_file}}
-Data model space input file which defines data and model space.
+Data model space info file which defines data and model space.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{main_parfile}}
 Main parameter file of inversion.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{optional arguments}
+\subsubsection{Optional options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-jf "jf1..jfn"}}
-Vector of \lcode{nf} frequency indices. Additionally to the misfit of the whole dataset defined by \lcode{dmspace_file}, the misfit is computed for data subsets restricted to these individual frequencies.
+Vector of \lcode{nf} frequency indices. Additionally to the misfit of the whole dataset defined by 
+\lcode{dmspace_file}, the misfit is computed for data subsets restricted to these individual frequencies.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
 \subsection{\lcode{createMeasuredData}} \label{programs_scripts,sec:bin_prog,sec:create_measured_data}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Fourier transform of time-domain data to ASKI-conform frequency-domain measured data; frequency discretization of measured data as defined in main parfile
+Fourier transform of time-domain data to \ASKI{}-conform frequency-domain measured data; frequency 
+discretization of measured data as defined in main parfile.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Positional arguments}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{main_parfile}}
+Main parameter file of inversion.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Mandatory options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-txt parfile_txt}}
+Input data files are plain text files, containing one time series per file. \lcode{parfile_txt} is the filename
+of a parameter file with details on location, naming and content of the files, as provided by \\
+\lcode{template/createMeasuredData_parfile_txt_template} .
+The content of this parameter file is described below.
+Exactly one of options \lcode{-txt}, \lcode{-su} must be set.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-su su_files_path}}
+Input data files are seismic unix. \lcode{su_files_path} is the path where seismic unix files can be found which 
+have filenames of form \lcode{eventID_COMP.su}. Every such seismic unix file is assumed to contain the same 
+number of data traces, one trace for each station as defined in the \ASKI{} stations file (in that order).
+The time discretization of the time series will be taken from each file separately, but it is assumed that
+all traces contained in a seismic unix file have the very same time discretization (time step and number of samples
+are always taken from the first trace of a file).
+Exactly one of options \lcode{-txt}, \lcode{-su} must be set.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Optional options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-htaper taper_portion}}
+If set, a cosign-hanning taper is applied to time-domain traces before Fourier Transform. The argument 
+\lcode{taper_portion} gives the portion of the end of the time-series (between 0.0 and 1.0) to which the
+taper is applied. If not set, a taper \emph{is} applied with default portion of 0.05 (i.e.\ 5 percent).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{The parameter file for option \lcode{-txt}}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+In the following, the required keywords of the parameter file for option \lcode{-txt} are described 
+(documenting commentary is also contained in the template parfile\\
+\lcode{template/createMeasuredData_parfile_txt_template}).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{PATH_TXT_TRACES}}\\
+Path where all \lcode{.txt} trace files can be found (must end on \lcode{/}).
+The trace files in that path are expected to have filenames of form \lcode{EVID_STANAME_COMP.txt} .
 
-This manual section is still to be written, sorry. I hope to provide it soon in a new manual version. %% FS FS CONTINUE
-Calling the executable without arguments will print a very short help message on how to use it.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{FILE_DATA_MODEL_SPACE_INFO}}\\
+Data model space info file defining the set of data samples for which the conversion will be done:
+For all receiver components (present in the file) of all data paths (present in the file), the 
+complete spectrum will be generated as defined by global frequency discretization from main parfile.
+I.e.\ any specific frequency definition in the data model space info file will be ignored.
 
-(see \lcode{template/createMeasuredData_parfile_txt_template} for the required parfile for \lcode{-txt} input data)
- %% FS FS CONTINUE: ADD LIST OF REQUIRED KEYWORDS IN -txt PARFILE (AND THEIR MEANING) AND CONFER TO TEMPLATE FILE IN template/
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{DT,NSTEP}}\\
+Global time discretization (timestep and number of samples) for \emph{all} \lcode{.txt} trace files.
+If some of your data have other time discretizations than others, you would need to 
+re-run this executable for each time discretization, properly re-defining the data subset 
+through the data model space info file file.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{COLUMN_OF_TRACE}}\\
+Integer value defining the column of the \lcode{.txt} trace files in which the actual time-series
+is found. E.g.\ if the files contain the time as first column and amplitude values as second column, set
+\lcode{COLUMN_OF_TRACE = 2}; if only one column with amplitude values is contained in the files, 
+set \lcode{COLUMN_OF_TRACE = 1}.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+%
+\subsection{\lcode{createSpectralFilters}} \label{programs_scripts,sec:bin_prog,sec:create_spec_filters}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Generate spectral filter files as used in \ASKI{} from source wavelets or as Butterworth
+high-/low-/bandpass filters (de)convolved by other wavelets or spectral filters.
+
+The filter coefficients are computed in the frequency discretization of the ``measured data'' as defined
+in the main parameter file. The files are directly written to the designated paths specified in the main parameter
+file, having the correct filenames. This exectuable \emph{ignores} the flags \lcode{APPLY_EVENT_FILTER, APPLY_STATION_FILTER}
+in the main parameter file! 
+
+In order for the executable to work, only the measured-data frequency discretiation, the filter paths and the filenames
+of event and station file are used from the main parameter file. All other entries need to have sensible values (for consistency
+checks), which however are not used.
+Furthermore, the station and event file need to be defined correctly. Any other (iteration-specific) information is not
+required by the executable.
+
+In case a forward method (such as e.g.\ Gemini) in general uses complex frequencies with an imaginary part $> 0$, 
+the complex filter values as well must be computed at these complex frequencies.
+This executable automatically takes care of that dependent on which forward method is set by 
+keyword \lcode{FORWARD_METHOD} in the main parameter file. Only the main parameter file is used by
+this executable and must be set correctly, the iteration step specific parameter file is not used by
+this executable. 
+
+Option \lcode{stationf} is not yet supported by this executable. ``station filters'' somehow relate to
+instrument responses, which so far are assumed to be already deconvolved from the data
+before inverting it by \ASKI{}. Setting the station filters to the respective (inverse) instrument responses,
+one could invert raw data by \ASKI{}.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Positional arguments}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{main_parfile}}
+Main parameter file of inversion.
+
+\subsubsection{Mandatory options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-eventf event_filter_parfile}}
+By setting option \lcode{-eventf}, event filters are generated. Argument
+\lcode{event_filter_parfile} is the filename of a parameter file as provided by \\
+\lcode{template/createSpectralFilters_parfile_event-filter_template} . The content of this parameter file is described below.
+At least one of options \lcode{-eventf}, \lcode{-stationf} must be set; they can both be set at the same time.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-stationf station_filter_parfile}}
+\emph{This option is not yet supported and cannot actually be used!}\\
+Once implemented, by setting option \lcode{-stationf} station filters can be generated. Argument
+\lcode{station_filter_parfile} will be the filename of a parameter file as provided by \\
+\lcode{template/createSpectralFilters_parfile_eventstation-filter_template} . The content of this 
+parameter file will be described below.
+At least one of options \lcode{-eventf}, \lcode{-stationf} must be set; they can both be set at the same time.
+
+\subsubsection{The parameter file for option \lcode{-eventf}}
+In the following, the required keywords of the parameter file for option \lcode{-eventf} are described 
+(documenting commentary is also contained in the template parfile\\
+\lcode{template/createSpectralFilters_parfile_event-filter_template}).
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{CREATE_FILTERS_BY_SOURCE_WAVELET, CREATE_FILTERS_BY_SPECTRAL_BUTTERWORTH}}\\
+These logical flags decide if the event filters should be created by a source wavelet (defined by other keywords below),
+or by a spectral butterworth low-/high-/bandpass filter (defined by other keywords below).
+\emph{Exactly} one of these two flags must be \lcode{.true.}, the other must be \lcode{.false.} 
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{NUMBER_OF_EVENTS, EVENT_IDS}}\\
+Define those event ID's for which an event filter file should be generated (filter will be the \emph{same}
+for all events, if you need different filters for different events, you need to re-run this executable
+appropriately). There are two valid formats of the value of keyworkd \lcode{EVENT_IDS}:\\
+
+\lcode{ EVENT_IDS = ALL } (all event ID's will be used and the value of \lcode{NUMBER_OF_EVENTS} is ignored)
+
+\lcode{ EVENT_IDS = source01 source02 source204 } (white-space-separated vector of valid event ID's, 
+\lcode{NUMBER_OF_EVENTS} gives the number of values in the vector)
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{CONVOLVE_WITH_OTHER_WAVELET, MULTIPLY_BY_OTHER_SPECTRAL_FILTER}}\\
+Decide whether the resulting spectral event filters should be \emph{convolved} by some other wavelet
+of multiplied by some other spectral filter (defined below by other keywords).
+This functionality is sensible to use, e.g.\ if you want to create a butterworth filter
+which should be convolved with some finite source moment-rate function. Note, that the resulting
+event filters should describe the \emph{source} contribution to the filter that brings the synthetic
+displacement wavefield to the measured data. Hence, the functionality of \lcode{CONVOLVE_WITH_OTHER_WAVELET}
+or \lcode{MULTIPLY_BY_OTHER_SPECTRAL_FILTER} should \emph{not} be used to deconvolve the Gaussian that was used to
+generate synthetics in some iteration step, since the resulting event filters are not intended
+to be modified throughout an inversion. However, if you know what you're doing, you are (of course) welcome
+to ``abuse'' this functionality for your own purposes.
+The logical flags \lcode{CONVOLVE_WITH_OTHER_WAVELET} and \lcode{MULTIPLY_BY_OTHER_SPECTRAL_FILTER} can both be 
+\lcode{.true.} (in that case accounting for both contributions).
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{STF_FILE, STF_COLUMN_OF_TRACE, STF_DT, STF_NSTEP}}\\
+Define by \lcode{STF_FILE} the \emph{absolute} filename of the source time function text file which should be 
+used to generate the filters in case of \lcode{CREATE_FILTERS_BY_SOURCE_WAVELET = .true.} . 
+The integer value \lcode{STF_COLUMN_OF_TRACE} defines the column of the file that is used as the wavelet trace.
+For instance, if the file contains the time as first column and amplitude values as second column, set
+\lcode{STF_COLUMN_OF_TRACE = 2} . If only one column with amplitude values is contained in the files, set 
+\lcode{STF_COLUMN_OF_TRACE = 1}, etc. All other columns are ignored!
+\lcode{STF_DT} and \lcode{STF_NSTEP} define the time discretization by which the selected column will be interpreted.
+The first sample is interpreted to have time $0.0$ . This should not pose a problem, since program
+createMeasuredData makes the very same assumption and all forward methods should produce their 
+spectral synthetics in the same way (as displacement wavefields w.r.t.\ a Dirac impuls at time 0.0
+and with the Fourier transform starting with the first time-sample at time 0.0).
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{BTW_LOW_PASS_APPLY, BTW_LOW_PASS_ORDER, BTW_LOW_PASS_FC}}\\
+Decide whether a low-pass butterworth filter should be applied (logical \lcode{BTW_LOW_PASS_APPLY}) and 
+define order (integer \lcode{BTW_LOW_PASS_ORDER}) and corner frequency (real \lcode{BTW_LOW_PASS_FC}).
+If \lcode{BTW_LOW_PASS_APPLY = .false.}, then any values given for \lcode{BTW_LOW_PASS_ORDER} and 
+\lcode{BTW_LOW_PASS_FC} are ignored.
+
+If you want to define a Butterworth band-pass filter, please define \emph{both}, a suitable low-pass \emph{and} 
+a suitable high-pass filter. If above \lcode{CREATE_FILTERS_BY_SPECTRAL_BUTTERWORTH = .true.} , at least 
+one of \lcode{BTW_LOW_PASS_APPLY} or \lcode{BTW_HIGH_PASS_APPLY} must be set to \lcode{.true.} 
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{BTW_HIGH_PASS_APPLY, BTW_HIGH_PASS_ORDER, BTW_HIGH_PASS_FC}}\\
+Decide whether a high-pass butterworth filter should be applied (logical \lcode{BTW_HIGH_PASS_APPLY}) and 
+define order (integer \lcode{BTW_HIGH_PASS_ORDER}) and corner frequency (real \lcode{BTW_HIGH_PASS_FC}).
+If \lcode{BTW_HIGH_PASS_APPLY = .false.}, then any values given for \lcode{BTW_HIGH_PASS_ORDER} and 
+\lcode{BTW_HIGH_PASS_FC} are ignored.
+
+If you want to define a Butterworth band-pass filter, please define \emph{both}, a suitable low-pass \emph{and} 
+a suitable high-pass filter. If above \lcode{CREATE_FILTERS_BY_SPECTRAL_BUTTERWORTH = .true.} , at least 
+one of \lcode{BTW_LOW_PASS_APPLY} or \lcode{BTW_HIGH_PASS_APPLY} must be set to \lcode{.true.} 
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{CONV_WAVEL_FILE, CONV_WAVEL_COLUMN_OF_TRACE, CONV_WAVEL_DT, CONV_WAVEL_NSTEP}}\\
+Define by \lcode{CONV_WAVEL_FILE} the \emph{absolute} filename of the wavelet text file which should be 
+used for convolution in case of \lcode{CONVOLVE_WITH_OTHER_WAVELET = .true.} . 
+The integer value \lcode{CONV_WAVEL_COLUMN_OF_TRACE} defines the column of the file that is used as the 
+wavelet trace. For instance, if the file contains the time as first column and amplitude values as second column, set
+\lcode{CONV_WAVEL__COLUMN_OF_TRACE = 2} . If only one column with amplitude values is contained in the files, set 
+\lcode{CONV_WAVEL__COLUMN_OF_TRACE = 1}, etc. All other columns are ignored!
+\lcode{CONV_WAVEL_DT} and \lcode{CONV_WAVEL_NSTEP} define the time discretization by which the selected column will be interpreted.
+The first sample is interpreted to have time $0.0$ . This should not pose a problem, since executable
+createMeasuredData makes the very same assumption and all forward methods should produce their 
+spectral synthetics in the same way (as displacement wavefields w.r.t.\ a Dirac impuls at time 0.0
+and with the Fourier transform starting with the first time-sample at time 0.0).
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{DECONVOLVE_WAVEL_INSTEAD}}\\
+Logical flag \lcode{DECONVOLVE_WAVEL_INSTEAD} controls whether instead of \emph{con}volving with the wavelet, 
+it should be \emph{de}convolved.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{CONV_SPEC_FILE}}\\
+\lcode{CONV_SPEC_FILE} gives the \emph{absolute} file name of a text file in the format of a filter file, 
+containing the spectral filter which is in the end to be multiplied onto the event filters. 
+The file must contain \lcode{MEASURED_DATA_NUMBER_OF_FREQ} many rows, 
+each of which corresponds to the frequency as defined by \lcode{MEASURED_DATA_INDEX_OF_FREQ} and 
+\lcode{MEASURED_DATA_FREQUENCY_STEP} (in the \ASKI{} main parameter file) and on each row a complex 
+value must define the filter coefficient as understood by Fortran, i.e.\ in the format:\\
+\lcode{  ( real_part , imag_part ) }
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{DECONVOLVE_SPEC_INSTEAD}}\\
+Logical flag \lcode{DECONVOLVE_SPEC_INSTEAD} controls whether instead of multiplying with the spectrum (i.e.\ 
+convolving with the filter), it should be \emph{divided} by it (i.e.\ \emph{de}convolvolving the filter)
+
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+\subsubsection{The parameter file for option \lcode{-stationf}}
+Option \lcode{stationf} is not yet supported by this executable.
+
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
 \subsection{\lcode{createStartmodelKim}} \label{programs_scripts,sec:bin_prog,sec:create_startmod_kim}
@@ -261,7 +565,7 @@ END DO
 \paragraph{\lcode{-mfile model_file}}
 \lcode{model_file} is the model input file of type defined by \lcode{model_type}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{optional arguments}
+\subsubsection{Optional options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-o outbase}}
 \lcode{outbase} is output base name (default is \lcode{start_model}).
@@ -273,7 +577,11 @@ If set, the output vtk files will be binary, otherwise they will be ascii.
 %
 \subsection{\lcode{exportKim}} \label{programs_scripts,sec:bin_prog,sec:exp_Kim}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Program exportKim produces a text file (option \lcode{-otxt}) containing information of cell centers and radii (i.e. rough expansion) of all inversion grid cells and all cell neighbours, as well as model values and respective invgrid cell indices for each model parameter, as contained in a given kernelInvertedModel file. This text file may be used by any forward method to define the simulation model for the next iteration step, or by any tool handling final models.\\
+Program exportKim produces a text file (option \lcode{-otxt}) containing information of cell centers and radii 
+(i.e\. rough expansion) of all inversion grid cells and all cell neighbours, as well as model values and 
+respective invgrid cell indices for each model parameter, as contained in a given kernelInvertedModel file. 
+This text file may be used by any forward method to define the simulation model for the next iteration step, 
+or by any tool handling final models.\\
 The format of the produced text file is as follows:\\
 The first 3 lines contain:
 \begin{itemize}
@@ -285,19 +593,26 @@ The next \lcode{number_of_invgrid_cells} lines contain for each inversion grid c
 \begin{itemize}
 \item[]\lcode{c1 c2 c3 r nnb inb1} ... \lcode{inbn}
 \end{itemize} 
-where \lcode{c1,c2,c3} are the 3 coordinates of the cell center (in wavefield point coords), \lcode{r} is the cell radius (i.e. rough expansion of cell), \lcode{nnb} is the number of cell neighbours and \lcode{inb1},...,\lcode{inbn} are their nnb cell indices (if \lcode{nnb}\(>\)\lcode{0}, otherwise line ends on \lcode{nnb=0}). Then \lcode{number_of_parameters} blocks are following in the file, each having the following format:
+where \lcode{c1,c2,c3} are the 3 coordinates of the cell center (in wavefield point coords), \lcode{r} 
+is the cell radius (i.e. rough expansion of cell), \lcode{nnb} is the number of cell neighbours and 
+\lcode{inb1},...,\lcode{inbn} are their nnb cell indices (if \lcode{nnb}\(>\)\lcode{0}, otherwise line 
+ends on \lcode{nnb=0}). Then \lcode{number_of_parameters} blocks are following in the file, each having 
+the following format:
 \begin{itemize}
 \item[]\lcode{name_param}
 \item[]\lcode{nval}
 \item[]\lcode{cell_indx}
 \item[]\lcode{model_values}
 \end{itemize}
-where \lcode{name_param} is the name of the parameter to which the following model values belong, \lcode{nval} is the number of model values following, \lcode{cell_indx} is a vector of \lcode{nval} cell indices to which the model values belong (space separated on one line) and \lcode{model_values} is an vector of the actual \lcode{nval} model values (space separated on one line).\\
+where \lcode{name_param} is the name of the parameter to which the following model values belong, 
+\lcode{nval} is the number of model values following, \lcode{cell_indx} is a vector of \lcode{nval} 
+cell indices to which the model values belong (space separated on one line) and \lcode{model_values} 
+is an vector of the actual \lcode{nval} model values (space separated on one line).\\
 \\
 Additionally (or alternatively) the program converts the .kim file to vtk files (option \lcode{-ovtk}).\\
 The two options \lcode{-otxt} , \lcode{-ovtk} can be used independently of each other.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{positional arguments}
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{main_parfile}}
 Main parameter file of inversion.
@@ -308,48 +623,80 @@ Main parameter file of inversion.
 \lcode{kernel_inverted_mode_file} is the binary file containing the inverted model, which is to be exported.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-otxt outfile_txt}}
-\lcode{outfile_txt} is the text output file to which inversion grid and model information will be written.
+\lcode{outfile_txt} is the text output file to which inversion grid and model information will be written. 
+At least one of \lcode{-otxt},  \lcode{-ovtk} must be set.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-ovtk outfile_vtk}}
 \lcode{outfile_vtk} is the output file base to which standard vtk files of the .kim file will be written.
+At least one of \lcode{-otxt},  \lcode{-ovtk} must be set.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
 \subsection{\lcode{focusSpectralKernels}} \label{programs_scripts,sec:bin_prog,sec:focus_spec_kernel}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-compute Backus-Gilbert focussing of sensitivity kernels on a defined focussing region in the model space
+Compute Backus-Gilbert focussing of sensitivity kernels on a defined focussing region in the model space. 
 
-This manual section is still to be written, sorry. I hope to provide it soon in a new manual version. %% FS FS CONTINUE
-Calling the executable without arguments will print a very short help message on how to use it.
+The concept of this kernel focussing is published in \cite{_743d334d-dfa4-4a16-8cc5-91cdadc95271}, Chapter 7.1. 
 
-%% \subsubsection{positional arguments}
-%% %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-%% \paragraph{\lcode{dmspace_file}}
-%% Data model space input file which defines data and model space.
-%% %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-%% \paragraph{\lcode{outfile_base}}
-%% Base name of output files relative to output directory (will be used for all files, with suitable extensions).
-%% %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-%% \paragraph{\lcode{main_parfile}}
-%% Main parameter file of inversion.
-%% %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-%% \subsubsection{optional arguments}
-%% %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-%% \paragraph{\lcode{-param "param_1 .. param_n"}}
-%% Vector of \lcode{nparam} parameter names which will be focussed on
+It might get problematic in spherical settings to use focussing regions (refined by mandatory options 
+\lcode{c1min}, \lcode{c1max}, \lcode{c2min}, ...) which overlap the zero meridian or include the poles. 
+Furthermore, a region defined by minimum/maximum of latitude/longitude/depth (or Cartesian X/Y/Z) 
+might not meet your requirements. In this respect, this executable could be improved, since basically any
+subset of the model space can be focussed on.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Positional arguments}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{dmspace_file}}
+Data model space indo file which defines the rows and columns of the kernel matrix.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{outfile_base}}
+Base name of output files \emph{relative} to iteration step output directory (used for all files, with 
+suitable extensions).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{main_parfile}}
+Main parameter file of inversion.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Mandatory options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-c1min c1min_value}}
+Minimum first coordinate of focussing subvolume. In case of a Cartesian inversion grid, ``first coordinate''
+means Cartesian X, in case of spherical inversion grids it means latitude in degrees (value between -90 and 90).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-c1max c1max_value}}
+Maximum first coordinate of focussing subvolume. In case of a Cartesian inversion grid, ``first coordinate''
+means Cartesian X, in case of spherical inversion grids it means latitude in degrees (value between -90 and 90).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-c2min c2min_value}}
+Minimum second coordinate of focussing subvolume. In case of a Cartesian inversion grid, ``second coordinate''
+means Cartesian Y, in case of spherical inversion grids it means longitude in degrees (value between 0 and 360).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-c2max c2max_value}}
+Maximum second coordinate of focussing subvolume. In case of a Cartesian inversion grid, ``second  coordinate''
+means Cartesian Y, in case of spherical inversion grids it means longitude in degrees (value between 0 and 360).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-c3min c3min_value}}
+Minimum third coordinate of focussing subvolume. In case of a Cartesian inversion grid, ``third coordinate''
+means Cartesian Z, in case of spherical inversion grids it means depth in km.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-c3max c3max_value}}
+Maximum third coordinate of focussing subvolume. In case of a Cartesian inversion grid, ``third  coordinate''
+means Cartesian Z, in case of spherical inversion grids it means depth in km.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-param "param_1 ... param_n"}}
+List of model parameters which will be focussed on, e.g.\ \lcode{"vp vs"} . 
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
 \subsection{\lcode{initBasics}} \label{programs_scripts,sec:bin_prog,sec:in_basics}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Initiating and testing all basic requirements for ASKI programs (parameter files, event and station list, inversion grid, wavefield points, integration weights, reference model)
+Initiating and testing all basic requirements for ASKI programs (parameter files, event and station list, inversion grid, wavefield points, integration weights, reference model).
 
-\subsubsection{positional arguments}
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{main_parfile}}
 Main parameter file of inversion.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{optional arguments}
+\subsubsection{Optional options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-recr}}
 If set, existing files will be recreated with current parfile specifications (overwrites existing files will be read in and not newly created). Affected files are:
@@ -358,7 +705,10 @@ If set, existing files will be recreated with current parfile specifications (ov
 \item[-]\lcode{stations.vtk}, \lcode{events.vtk}
 \item[-]kernel reference model files (on wavefield points, and as interpolation on inversion grid)
 \end{itemize}
-IF NOT SET (default), EXISTING FILES (especially \lcode{inversion_grid}, \lcode{integration_weights}) WILL BE READ IN ONLY, REGARDLESS OF ANY CHANGES IN PARFILES! So, if you change the specification of inversion grid, or integration weights (or stations, events which is only relevant for \lcode{station.vtk} \lcode{events.vtk}), after having already created the respective files, you should set \lcode{-recr}.
+IF NOT SET (default), EXISTING FILES (especially \lcode{inversion_grid}, \lcode{integration_weights}) WILL BE READ IN ONLY, 
+POSSIBLY WITHOUT ANY EFFECT OF POTENTIAL CHANGES IN PARFILES! So, if you change the specification of inversion grid, 
+or integration weights (or stations, events which is only relevant for \lcode{station.vtk} \lcode{events.vtk}), 
+after having already created the respective files, you should set \lcode{-recr}.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
@@ -366,7 +716,7 @@ IF NOT SET (default), EXISTING FILES (especially \lcode{inversion_grid}, \lcode{
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Gets some statistics about the data residuals of a given data (sub)set.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{positional arguments}
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{dmsi_file}}
 Data-model-space-info file
@@ -377,7 +727,7 @@ Output directory where residual files per path and component will written.
 \paragraph{\lcode{main_parfile}}
 Main parameter file of inversion.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{optional arguments}
+\subsubsection{Optional options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-ovtk outfile_vtk}}
 \lcode{outfile_vtk} of output vtk files. If not set, no vtk files will be produced. (Default = dataset)
@@ -386,7 +736,7 @@ Main parameter file of inversion.
 %
 \subsection{\lcode{invgrid2vtk}} \label{programs_scripts,sec:bin_prog,sec:invgrid_vtk}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Create vtk file(s) of the given inversion grid (useful to look at, to see if the specifications are correct)
+Create vtk file(s) of the given inversion grid (useful to look at, to see if the specifications are correct).
 
 \subsubsection{Mandatory options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -407,9 +757,10 @@ Create vtk file(s) of the given inversion grid (useful to look at, to see if the
 \paragraph{\lcode{-overwr}}
 If set, existing output files will be overwritten.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{\lcode{-nb "idx_1 ... idx_n}}
-Vecotr of \lcode{n} cell indices, indicating a set of cells the neighbours of which will be written as 
+\paragraph{\lcode{-nb "idx_1 ... idx_n"}}
+Vector of \lcode{n} cell indices, indicating a set of cells the neighbours of which will be written as 
 vtk files. IN THE FUTURE: may be helpful to also accept ranges like "20:40".
+Must not be set simultaneously along with \lcode{-all_nb}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-all_nb}}
 Indicating to use all cell indices to write neighbours for. Must not be set simultaneously along with \lcode{-nb}.
@@ -418,16 +769,47 @@ Indicating to use all cell indices to write neighbours for. Must not be set simu
 If set, the output vtk files will be binary, otherwise they will be ascii.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-recr}}
-If set, the existing inversion grid file(s) (if any existing, and if type creates any) will be recreated with current invgrid parfile specifications. If not set (default), existing inversion grid will be read in only, REGARDLESS OF ANY CHANGES IN THE PARFILE!
+If set, the existing inversion grid file(s) (if any existing, and if type creates any) will be recreated with 
+current invgrid parfile specifications. If not set (default), existing inversion grid will be read in only, 
+POSSIBLY WITHOUT ANY EFFECT OF POTENTIAL CHANGES IN THE PARFILE!
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
 \subsection{\lcode{kdispl2vtk}} \label{programs_scripts,sec:bin_prog,sec:kdispl_2_vtk}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Extract kernel displacement spectra to vtk files for certain wavefield and strain components and frequencies
-
-This manual section is still to be written, sorry. I hope to provide it soon in a new manual version. %% FS FS CONTINUE
-Calling the executable without arguments will print a very short help message on how to use it.
+Extract kernel displacement spectra to vtk files for certain wavefield and strain components and frequencies.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Positional arguments}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{main_parfile}}
+Main parameter file of inversion.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Mandatory options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-evid} \lcode{event_id}}
+Defines the event ID of the kernel displacement object (must belong to an event in main event list).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-ifreq "idx_1 ... idx_n"}}
+Vector of \lcode{n} frequency indices at which the wavefield output is extracted and 
+vtk files are generated. Exactly one of options \lcode{-ifreq} , \lcode{-all_ifreq} must be set.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-all_ifreq}}
+If set, for all frequency indices of the current iteration wavefield output is extracted and 
+vtk files are generated. Exactly one of options \lcode{-ifreq} , \lcode{-all_ifreq} must be set.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-ucomp "comp_1 ... comp_n"}}
+Vector of \lcode{n} wavefield components for which the wavefield output is extracted and 
+vtk files are generated. 
+Wavefield components are denoted by \lcode{ux}, \lcode{uy}, \lcode{uz} (meaning underived \lcode{x}, \lcode{y}, 
+\lcode{z} components of the wavefield) and \lcode{exx}, \lcode{eyy}, \lcode{ezz}, \lcode{eyz}, \lcode{exz}, \lcode{exy} 
+(meaning strain components). 
+Exactly one of options \lcode{-ucomp}, \lcode{-all_ucomp} must be set.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-all_ucomp}}
+If set, for all underived wavefield components \lcode{ux}, \lcode{uy}, \lcode{uz} and
+strains \lcode{exx}, \lcode{eyy}, \lcode{ezz}, \lcode{eyz}, \lcode{exz}, \lcode{exy} wavefield output is extracted and 
+vtk files are generated. 
+Exactly one of options \lcode{-ucomp}, \lcode{-all_ucomp} must be set.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
@@ -435,12 +817,12 @@ Calling the executable without arguments will print a very short help message on
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Program kernel2vtk writes the pre-integrated spectral sensitivity kernels as vtk files for specific paths, parameters, components and frequencies.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{positional arguments}
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{main_parfile}}
 Main parameter file of inversion.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{optional arguments}
+\subsubsection{Mandatory options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-evid} \lcode{event_id}}
 Defines the event id of the one path. (must belong to an event in main event list)
@@ -449,16 +831,20 @@ Defines the event id of the one path. (must belong to an event in main event lis
 Defines the station name of the one path. (must belong to a station in main station list)
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-comp "comp_1 ... comp_n"}}
-Vector of receiver components for which vtk files should be generated. For valid components see \myref{basic_steps,sec:data_general}.
+Vector of station components for which vtk files should be generated. For valid components see \myref{basic_steps,sec:data_general}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-param "param_1 ... param_n"}}
 Vector of parameter names for which vtk files should be generated. Only valid parameter names of the chosen model parametrization are accepted. 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-ifreq "idx_1 ... idx_n"}}
 Vector of \lcode{n} frequency indices for which vtk files should be generated. 
+Exactly one of options \lcode{-ifreq} , \lcode{-all_ifreq} must be set.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-all_ifreq}}
 If set, for all frequency indices of current iteration vtk files will be generated. Must not be set simultaneously along with \lcode{-ifreq}.
+Exactly one of options \lcode{-ifreq} , \lcode{-all_ifreq} must be set.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Optional options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-wp}}
 If set, then the original kernels on the wavefield points are produced (recalculated!) INSTEAD of the pre-integrated ones on the inversion grid.
@@ -467,29 +853,65 @@ If set, then the original kernels on the wavefield points are produced (recalcul
 %
 \subsection{\lcode{kgt2vtk}} \label{programs_scripts,sec:bin_prog,sec:kgt_2_vtk}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Extract kernel green tensor spectra to vtk files for certain wavefield and strain components and frequencies
-
-This manual section is still to be written, sorry. I hope to provide it soon in a new manual version. %% FS FS CONTINUE
-Calling the executable without arguments will print a very short help message on how to use it.
-%
+Extract kernel green tensor spectra to vtk files for certain wavefield and strain components and frequencies.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-%
-\subsection{\lcode{krm2kim}} \label{programs_scripts,sec:bin_prog,sec:krm_kim}
-interpolate kernel reference model onto inversion grid and produce a .kim file of it
-
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{positional arguments}
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{\lcode{outfile_base}}
-Basename of output model files - will additionally be written as vtk.
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{main_parfile}}
 Main parameter file of inversion.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{optional arguments}
+\subsubsection{Mandatory options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-staname} \lcode{station_name}}
+Defines the station name of the kernel green tensor object (must belong to a station in main station list).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-scomp} \lcode{"scomp_1 ... scomp_n"}}
+Vector of \lcode{n} station components of station \lcode{station_name} for which wavefield output is
+extracted and vtk files are generated. 
+For valid components see \myref{basic_steps,sec:data_general}.
+%Valid names of components are \lcode{CX}, \lcode{CY}, \lcode{CZ}, \lcode{N}, \lcode{S}, \lcode{E}, \lcode{W}, \lcode{UP}, \lcode{DOWN}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-ifreq "idx_1 ... idx_n"}}
+Vector of \lcode{n} frequency indices at which the wavefield output is extracted and 
+vtk files are generated. Exactly one of options \lcode{-ifreq} , \lcode{-all_ifreq} must be set.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-all_ifreq}}
+If set, for all frequency indices of the current iteration wavefield output is extracted and 
+vtk files are generated. Exactly one of options \lcode{-ifreq} , \lcode{-all_ifreq} must be set.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-ucomp "comp_1 ... comp_n"}}
+Vector of \lcode{n} wavefield components for which the wavefield output is extracted and 
+vtk files are generated. 
+Wavefield components are denoted by \lcode{ux}, \lcode{uy}, \lcode{uz} (meaning underived \lcode{x}, \lcode{y}, 
+\lcode{z} components of the wavefield) and \lcode{exx}, \lcode{eyy}, \lcode{ezz}, \lcode{eyz}, \lcode{exz}, \lcode{exy} 
+(meaning strain components). 
+Exactly one of options \lcode{-ucomp}, \lcode{-all_ucomp} must be set.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-all_ucomp}}
+If set, for all underived wavefield components \lcode{ux}, \lcode{uy}, \lcode{uz} and
+strains \lcode{exx}, \lcode{eyy}, \lcode{ezz}, \lcode{eyz}, \lcode{exz}, \lcode{exy} wavefield output is extracted and 
+vtk files are generated. 
+Exactly one of options \lcode{-ucomp}, \lcode{-all_ucomp} must be set.
+%
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+%
+\subsection{\lcode{krm2kim}} \label{programs_scripts,sec:bin_prog,sec:krm_kim}
+Interpolate kernel reference model onto inversion grid and produce a \lcode{.kim} file of it.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Positional arguments}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{outfile_base}}
+Basename of output model files -- will additionally be written as vtk.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{main_parfile}}
+Main parameter file of inversion.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Optional options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-krm kernel_reference_mode_file}}
-If set, then instead of using the kernel reference model file defined by the iteration step parfile, the given file \lcode{kernel_reference_mode_file} is used to read in the kernel reference model.
+If set, then instead of using the kernel reference model file defined by the iteration step parfile, 
+the given file \lcode{kernel_reference_mode_file} is used to read in the kernel reference model.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
@@ -497,7 +919,7 @@ If set, then instead of using the kernel reference model file defined by the ite
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Plots all paths contained in the data space definition as vtk lines. 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{positional arguments}
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{dmsi_file}}
 Data-model-space-info file   
@@ -510,7 +932,6 @@ Main parameter file of inversion.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-
 \subsection{\lcode{solveCglsKernelSystem}} \label{programs_scripts,sec:bin_prog,sec:solve_cgls_kernel_sys}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Solves linear system of sensitivity kernel equations in parallel by a conjugate-gradient method.
@@ -525,28 +946,51 @@ This executable is parallelized using \lcode{MPI}. Hence, it should be called li
 \lcode{mpirun -np 8 solveCglsKernelSystem} (with respective arguments)\\
 The executable uses the maximum number of parallel slots being available in the \lcode{MPI} environment, in 
 the above example this would be 8.
+
+There is a mechanism implemented that allows you to terminate the algorithm at any time without just killing
+the process, but with the current solution of the CG algorithm actually being written out as if the termination
+criteria of the alorithm were met. 
+This can be useful, e.g.\ if you notice that the algorithm actually has converged, but the termination
+criteria were defined in an unsuitable way, or if the convergence is very slow and you want to continue
+the process later by restarting the executable with passing the intermediate solution to option \lcode{-startsol}. 
+This kind of save termination of the algorithm is executed if the existence of a file with filename
+\lcode{outfile_base_TERMINATE.txt} is detected. So you can manually create a file with this name, i.e.\ 
+output file base as defined by positional argument \lcode{outfile_base}, plus extension \lcode{_TERMINATE.txt}
+(case sensitive). This file can be empty, e.g.\ use command \lcode{touch} to create it.
+
+If there is an error that some values become \lcode{NaN} , you should try to use double precision
+variables for vectors and scalars in the CG algorithm. This might be 
+helpful if the kernel matrix contains values which are so low that certain summations 
+become not representable in single prercision.
+In order to use double precision, you need to set\\
+\lcode{CUSTOM_REAL = SIZE_DOUBLE}\\
+at the very beginning of the declarations in source file \lcode{solveCglsKernelSystem.f90} .
+In this case, more memory will be required. For single precision, use \lcode{SIZE_REAL} there instead (default
+setting).
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{positional arguments}
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{dmsi_file}}
-Data-model-space-info file.
+Data-model-space-info file which defines data and model space.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{outfile_base}}
-Base name of output files (will be used for all files, with suitable extensions)
+Base name of output files (will be used for all files, with suitable extensions) -- output model will additionally be written as vtk.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{CG_parfile}}
-Parameter file defining details related to the conjugate gradient algorithm used to solve the linear system
-(a template is provided: \lcode{template/solveCglsKernelSystem_parfile_template}).
-%% FS FS CONTINUE: ADD LIST OF REQUIRED KEYWORDS IN PARFILE (AND THEIR MEANING) AND CONFER TO TEMPLATE FILE IN template/
+Parameter file defining details related to the conjugate gradient algorithm used to solve the linear system.
+A description of its content can be found at the end of this subsection and a template is provided:\\
+\lcode{template/solveCglsKernelSystem_parfile_template}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{main_parfile}}
 Main parameter file of inversion.
- %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{optional arguments}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Optional options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-regscal type_regul_scaling}}
 \lcode{type_regul_scaling} is the type of scaling of regularization constraints, at the moment only 
-\lcode{absmax_per_param,overall_factor}, \lcode{absmax_per_param,param_factors} and \lcode{none} are supported
+\lcode{absmax_per_param,overall_factor}, \lcode{absmax_per_param,param_factors} and \lcode{none} are supported. 
+Option \lcode{-regscal} can only be requested when adding damping or smoothing conditions by options 
+\lcode{-smooth} or \lcode{-damp}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-smoothing scaling_values}}
 If set, smoothing conditions are applied. \lcode{scaling_values} is a vector of scaling values consistent 
@@ -561,6 +1005,7 @@ boundaries of the inversion grid. Supported types:\\
 \lcode{zero_all_outer_bnd}: apply zero smoothing conditions at \emph{all} outer boundaries.\\
 \lcode{zero_burried_outer_bnd,cont_free_surface}: apply zero smoothing conditions at all outer boundaries \emph{except} on free surfaces. \\
 If not set, standard average is used everywhere (equivalent to continuity boundary conditions).
+Option \lcode{-smoothbnd} is only allowed to be set, if option \lcode{-smoothing} was set.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-damping scaling_values}}
 If set, damping conditions are applied. \lcode{scaling_values} is a vector of scaling values consistent 
@@ -576,33 +1021,103 @@ If set, \lcode{outfile_base} will be assumed relatively to iteration step output
 The \lcode{.kim} file \lcode{file_name_starting_solution} defines the starting solution of linear system.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-normalize type_data_normalization}}
-Optionally, \lcode{type_data_normalization} defines the type of data normalization. Supported types:\\
-\lcode{maxamp_mdata_by_paths}: (description follows)\\ %% FS FS CONTINUE
-\lcode{maxamp_mdata_by_paths_and_frequency}: (description follows)\\ %% FS FS CONTINUE
-\lcode{scale_maxamp_mdata_by_paths}: (description follows) %% FS FS CONTINUE
+\emph{For now, this feature is only supported if your dataset contains only a single station component 
+(e.g.\ only vertical ``UP'' components for all event-station paths)!}\\
+If set, each equation of the linear system is scaled by a specific factor and thus normalized in a certain sense.
+\lcode{type_data_normalization} defines the type of normalization. \emph{This 
+functionality has not yet been applied in field studies, but don't hesitated to experiment.}\\
+Supported types and their descriptions:\\
+\textbf{\lcode{maxamp_mdata_by_paths}}: Separately for each event-station path, find the datum of maximum amplitude, say
+datum \lcode{i_max}. All 
+measured data of this path are then divided through by this amplitude, hence, normalized w.r.t.\ this amplitude.
+All synthetic data and all kernel value of this path are divided through by the amplitude of the synthetic datum
+ \lcode{i_max}, i.e.\ the synthetic data and kernel values are scaled w.r.t.\ the synthetics amplitude at 
+\lcode{i_max}, which does not necessarily represents the synthetics maximum amplitude of the path!\\
+\textbf{\lcode{maxamp_mdata_by_paths_and_frequency}}: Separately for each event-station path and each frequency,
+the measured data is divided through by its amplitude and the synthetic data and the kernels are divided through
+by the amplitude of the synthetic data.\\
+\textbf{\lcode{scale_maxamp_mdata_by_paths}}: Separately for each event-station path, the measured data, the synthetic
+data and the kernels are divided through by the maximum amplitude of the measured data. Hence, for this type of 
+normalization, all scaling factors (for measured data, synthetic data and kernels) are the same, normalizing 
+w.r.t.\ the maximum amplitude of the measured data.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{The parameter file \lcode{CG_parfile} (third positional argument)}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+In the following, the required keywords of the parameter file given as third positional argument is described 
+(documenting commentary is also contained in the template parfile\\
+\lcode{template/solveCglsKernelSystem_parfile_template}).
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{MAX_NUM_CG_ITERATIONS}}\\
+This integer gives the upper limit of number of iterations (CG algorithm will stop then, even if convergence 
+criterion is not yet met).
+This mechanism cannot be switched off! So, set to a ridiculously high value if you don't want to use it. 
+The maximum possible value that can be used is approx.\ $2\,147\,483\,647$ (4 byte signed integer)
+If you require more iterations, you should modify the source code. Alternatively, you need to continue the 
+algorithm by passing the solution to option \lcode{-startsol}, as described above.
+
+\textbf{\lcode{NITER_WINDOW_STA,NITER_WINDOW_LTA}}\\
+These two integers define window sizes of short-term average (\lcode{sta}) and long-term average (\lcode{lta}) 
+of the residual norm of the linear system, which are used to evaluate a termination criterion of the 
+conjugate-gradient algorithm. The algorithm assumes a monotonically decreasing residual norm, 
+i.e.\ \lcode{sta < lta}.
+It terminates when \lcode{sta}/\lcode{lta} equals 1 (in terms of single precision), i.e.\ when \lcode{sta} 
+becomes close enough to \lcode{lta}, or when \lcode{lta} is not monotonically decreasing anymore, i.e.\ starts 
+to increase.
+The numbers \lcode{NITER_WINDOW_STA, NITER_WINDOW_LTA} define the number of iterations over which the averrages are 
+computed. Which values are sensible actually depends on the linear system. 
+The termination checks based on \lcode{sta}, \lcode{lta} cannot be taken into account before iteration 
+\lcode{NITER_WINDOW_LTA + 1}. It is required to define\\
+\lcode{NITER_WINDOW_STA < NITER_WINDOW_LTA}.
+A ratio of \\
+\lcode{NITER_WINDOW_LTA/NITER_WINDOW_STA = 10} was experienced to be feasible. E.g.\ define \lcode{NITER_WINDOW_STA = 20}
+and \lcode{NITER_WINDOW_LTA = 200}.
+
+\textbf{\lcode{USE_BLAS_LEVEL_1,USE_BLAS_LEVEL_2}}\\
+Logicals indicating whether to use BLAS Level 1 and Level 2 routines for vector and
+matrix-vector operations in the course of the CG algorithm. If \lcode{.false.}, intrinsic Fortran
+functionality will be used for those kinds of operations (e.g.\ \lcode{matmul} and explicit summation etc.),
+which for small problems might be more efficient than using BLAS. For large problems, at least
+BLAS Level 2 routines are recommended, i.e.\ \lcode{USE_BLAS_LEVEL_2 = .true.}. You might aswell test the 
+performance of your particular application by profiling runs with and without these flages switched on.
+
+\textbf{\lcode{NITER_RECOMPUTE_RESIDUAL}}\\
+\emph{This feature seems not to work, hence it is disabled in the code so 
+that the value of} \lcode{NITER_RECOMPUTE_RESIDUAL} \emph{does not have any effect at al!}
+If you want to use it anyway, you need to enable it in the source code. It should
+be easy to find for you. If you cannot find it easily, it is probably best 
+for you not to use it (no offense). Description of the parameter (if enabled):\\
+\lcode{NITER_RECOMPUTE_RESIDUAL} gives the number of iterations after which (circularly repeating) a true 
+residual vector should be computed from the current solution of the system, instead of only updating it 
+(i.e.\ approximating it) as defined by the original algorithm by \cite{bjorck1998stability}.
+If \emph{no} recomputation should be done (i.e.\ original algorithm), set \lcode{NITER_RECOMPUTE_RESIDUAL}
+to some value $\le 0$.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
 \subsection{\lcode{solveKernelSystem}} \label{programs_scripts,sec:bin_prog,sec:sol_Ker_Sys}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Do inversion step by solving the kernel linear system defined by data model space info and regularization constraints. Serial programm using LAPACK library.
+Do inversion step by solving the kernel linear system defined by data model space info and regularization constraints. 
+This program is executed in a serial way using the LAPACK library.
 
-\subsubsection{positional arguments}
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{dmspace_file}}
-Data model space input file which defines data and model space.
+Data-model-space-info file which defines data and model space.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{outfile}}
-Basename of output model files -- output model will additionally be written as vtk.
+Basename of output model files (will be used for all files, with suitable extensions) -- output model will additionally be written as vtk.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{main_parfile}}
 Main parameter file of inversion.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{optional arguments}
+\subsubsection{Optional options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-regscal type_regul_scaling}}
 \lcode{type_regul_scaling} is the type of scaling of regularization constraints, at the moment only 
 \lcode{absmax_per_param,overall_factor}, \lcode{absmax_per_param,param_factors} and \lcode{none} are supported
+Option \lcode{-regscal} can only be requested when adding damping or smoothing conditions by options 
+\lcode{-smooth} or \lcode{-damp}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-smoothing scaling_values}}
 If set, smoothing conditions are applied. \lcode{scaling_values} is a vector of scaling values consistent 
@@ -617,6 +1132,7 @@ boundaries of the inversion grid. Supported types:\\
 \lcode{zero_all_outer_bnd}: apply zero smoothing conditions at \emph{all} outer boundaries.\\
 \lcode{zero_burried_outer_bnd,cont_free_surface}: apply zero smoothing conditions at all outer boundaries \emph{except} on free surfaces. \\
 If not set, standard average is used everywhere (equivalent to continuity boundary conditions).
+Option \lcode{-smoothbnd} is only allowed to be set, if option \lcode{-smoothing} was set.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-damping scaling_values}}
 If set, damping conditions are applied. \lcode{scaling_values} is a vector of scaling values consistent 
@@ -629,10 +1145,15 @@ with \lcode{-regscal}:\\
 If set, \lcode{outfile_base} will be assumed relatively to iteration step output files directory.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-normalize type_data_normalization}}
-Optionally, \lcode{type_data_normalization} defines the type of data normalization. Supported types:\\
-\lcode{maxamp_mdata_by_paths}: (description follows)\\ %% FS FS CONTINUE
-\lcode{maxamp_mdata_by_paths_and_frequency}: (description follows)\\ %% FS FS CONTINUE
-\lcode{scale_maxamp_mdata_by_paths}: (description follows) %% FS FS CONTINUE
+\emph{For now, this feature is only supported if your dataset contains only a single station component 
+(e.g.\ only vertical ``UP'' components for all event-station paths)!}\\
+If set, each equation of the linear system is scaled by a specific factor and thus normalized in a certain sense.
+\lcode{type_data_normalization} defines the type of normalization. \emph{This 
+functionality has not yet been applied in field studies, but don't hesitated to experiment.}\\
+Supported types are (see for descriptions above in section about executable \lcode{solveCglsKernelSystem}):\\
+\lcode{maxamp_mdata_by_paths}\\
+\lcode{maxamp_mdata_by_paths_and_frequency}\\
+\lcode{scale_maxamp_mdata_by_paths}
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
@@ -642,13 +1163,13 @@ Solves linear system of sensitivity kernel equations in parallel by ScaLAPACK li
 
 This executable is parallelized using \lcode{BLACS} libraries which usually are based on \lcode{MPI}. 
 Hence, it should probably be called like\\
-\lcode{mpirun -np 8 solveParKernelSystem} (with respective arguments)\\
+\lcode{mpirun -np 8 solveParKernelSystem} (followed by respective arguments)\\
 The executable uses the maximum number of parallel slots being available in the \lcode{MPI} environment, in 
 the above example this would be 8. \lcode{solveParKernelSystem} minimally requires \lcode{NPROC_ROWS*NPROC_COLUMNS} parallel
 slots, as defined by the \lcode{mpi_parfile}. \emph{If there are less slots availble than required, the program will 
 raise an error}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{positional arguments}
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{dmsi_file}}
 Data-model-space-info file
@@ -657,18 +1178,20 @@ Data-model-space-info file
 Base name of output files (will be used for all files, with suitable extensions)
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{mpi_parfile}}
-Parameter file defining everything related to the ScaLAPACK parallelization of the linear system
-(a template is provided: \lcode{template/solveParKernelSystem_parfile_template}).
-%% FS FS CONTINUE: ADD LIST OF REQUIRED KEYWORDS IN PARFILE (AND THEIR MEANING) AND CONFER TO TEMPLATE FILE IN template/
+Parameter file defining everything related to the ScaLAPACK parallelization of the linear system.
+A description of its content can be found at the end of this subsection and a template is provided:\\
+\lcode{template/solveParKernelSystem_parfile_template}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{main_parfile}}
 Main parameter file of inversion.
  %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{optional arguments}
+\subsubsection{Optional options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-regscal type_regul_scaling}}
 \lcode{type_regul_scaling} is the type of scaling of regularization constraints, at the moment only 
 \lcode{absmax_per_param,overall_factor}, \lcode{absmax_per_param,param_factors} and \lcode{none} are supported
+Option \lcode{-regscal} can only be requested when adding damping or smoothing conditions by options 
+\lcode{-smooth} or \lcode{-damp}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-smoothing scaling_values}}
 If set, smoothing conditions are applied. \lcode{scaling_values} is a vector of scaling values consistent 
@@ -683,6 +1206,7 @@ boundaries of the inversion grid. Supported types:\\
 \lcode{zero_all_outer_bnd}: apply zero smoothing conditions at \emph{all} outer boundaries.\\
 \lcode{zero_burried_outer_bnd,cont_free_surface}: apply zero smoothing conditions at all outer boundaries \emph{except} on free surfaces. \\
 If not set, standard average is used everywhere (equivalent to continuity boundary conditions).
+Option \lcode{-smoothbnd} is only allowed to be set, if option \lcode{-smoothing} was set.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-damping scaling_values}}
 If set, damping conditions are applied. \lcode{scaling_values} is a vector of scaling values consistent 
@@ -695,10 +1219,52 @@ with \lcode{-regscal}:\\
 If set, \lcode{outfile_base} will be assumed relatively to iteration step output files directory.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-normalize type_data_normalization}}
-Optionally, \lcode{type_data_normalization} defines the type of data normalization. Supported types:\\
-\lcode{maxamp_mdata_by_paths}: (description follows)\\ %% FS FS CONTINUE
-\lcode{maxamp_mdata_by_paths_and_frequency}: (description follows)\\ %% FS FS CONTINUE
-\lcode{scale_maxamp_mdata_by_paths}: (description follows) %% FS FS CONTINUE
+\emph{For now, this feature is only supported if your dataset contains only a single station component 
+(e.g.\ only vertical ``UP'' components for all event-station paths)!}\\
+If set, each equation of the linear system is scaled by a specific factor and thus normalized in a certain sense.
+\lcode{type_data_normalization} defines the type of normalization. \emph{This 
+functionality has not yet been applied in field studies, but don't hesitated to experiment.}\\
+Supported types are (see for descriptions above in section about executable \lcode{solveCglsKernelSystem}):\\
+\lcode{maxamp_mdata_by_paths}\\
+\lcode{maxamp_mdata_by_paths_and_frequency}\\
+\lcode{scale_maxamp_mdata_by_paths}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{The parameter file \lcode{mpi_parfile} (third first positional argument)}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+In the following, the required keywords of the parameter file given as third positional argument is described 
+(documenting commentary is also contained in the template parfile\\
+\lcode{template/solveParKernelSystem_parfile_template}).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{NPROC_ROWS,NPROC_COLUMNS}}\\
+Number of processes in the rows/columns of the 2D process grid as used by the \lcode{BLACS} libraries.
+The total number of required MPI processes is \lcode{NPROC_ROWS * NPROC_COLUMNS} (if the MPI environment 
+provides more ranks, those are ignored).
+
+\textbf{\lcode{NROW_PER_BLOCK,NCOL_PER_BLOCK}}\\
+Integer values giving the number of rows and columns per submatrix block-
+\lcode{ScaLAPACK} subdivides the linear system matrix into a block matrix, each block being a submatrix of size
+\lcode{NROW_PER_BLOCK}-times-\lcode{NCOL_PER_BLOCK}.
+The total numbers of rows (columns) of the global system matrix, however, does not need to be a multiple of 
+\lcode{NROW_PER_BLOCK} (\lcode{NCOOL_PER_BLOCK}), there will be fractional blocks at the bottom (or right end) 
+of the matrix. There is not yet an automated \lcode{ScaLAPACK} functionality telling you the optimal block 
+sizes, which are dependent on the linear system and your parallel environment. Anything from 200 to 500 should 
+be sensible (?!). For more information, browse the web, 
+e.g.\ \\
+\url{http://www.netlib.org/utk/papers/scalapack/node19.html}
+
+\textbf{\lcode{NROW_TO_PROCESS_AT_ONCE}}\\
+Integer value giving the number of rows of the kernel matrix which are handled by the master process at a time.
+The larger this number is, the more memory is required for the master process to keep those rows in the memory,
+e.g.
+\begin{itemize}
+\item The master process will read this number of rows of the kernel matrix from the kernel files before 
+  distributing it onto the process grid. For this operation it is efficient if \lcode{NROW_TO_PROCESS_AT_ONCE}
+  is a multiple of the number of data samples per data path (in case all data paths have the same number of 
+  data samples, i.e.\ the same number of frequencies and components). Otherwise kernel files might be opened 
+  and closed several times, which could cost extra performance.
+\item The regularization equations will also be requested by the master process and then distributed onto the 
+  process grid. This will be done in sections of rows, each containing \lcode{NROW_TO_PROCESS_AT_ONCE} rows.
+\end{itemize}
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
@@ -714,73 +1280,74 @@ There are two possibele ways to define a set of kernels that are transformed:
 \begin{itemize}
 \item[(way 1):] compute kernel for only one path, defined by eventID and station name using options \lcode{-evid}, \lcode{-staname}, \lcode{-comp} and \lcode{-param}
 \item[(way 2):] use flag \lcode{-dmsapce} in connection with optional range definition of the path index (flags \lcode{-ipath1} \lcode{-ipath2})\\
-in order to define a subset of the paths contained in the given data-model-space description. If the upper (lower) limit of the path range is not defined (i.e. \lcode{-ipath1} (\lcode{-ipath2}) not set), the maximum (minimum) possible value is used. Then, all kernels for the defined range of paths in the given data-model-space description are computed.
+in order to define a subset of the paths contained in the given data-model-space description. If the upper (lower) limit of the path range is not defined 
+(i.e.\ \lcode{-ipath1} (\lcode{-ipath2}) not set), the maximum (minimum) possible value is used. Then, all kernels for the defined range of paths in the 
+given data-model-space description are computed.
 \end{itemize}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{positional arguments}
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{main_parfile}}
 Main parameter file of inversion.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{optional arguments}
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{set of kernels to be transformed}
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{way 1}
+\subsubsection{Mandatory options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-evid} \lcode{event_id}}
-Defines the event id of the one path. (must belong to an event in main event list)
+Defines the event id of the one path (must belong to an event in main event list). (way 1)
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-staname} \lcode{station_name}}
-Defines the station name of the one path. (must belong to a station in main station list)
+Defines the station name of the one path (must belong to a station in main station list). (way 1)
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-comp "comp_1 ... comp_n"}}
-Vector of receiver components for which time kernel should be transformed. For valid components see \myref{basic_steps,sec:data_general}.
+Vector of station components for which time kernel should be transformed. 
+For valid components see \myref{basic_steps,sec:data_general}. (way 1)
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-param "param_1 ... param_n"}}
-Vector of parameter names for which time kernel should be transformed. Only valid parameter names of the chosen model parametrization are accepted. 
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{way 2}
+Vector of parameter names for which time kernel should be transformed. 
+Only valid parameter names of the chosen model parametrization are accepted. (way 1)
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-dmspace}}
-Data model space input file to define a set of paths.
+Data model space input file to define a set of paths. (way 2)
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-dt time_step}}
+Global time step of time discretization of time kernels.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-nt1 "idx_1 .. idx_n"}}
+Vector of \lcode{n} time indices defining the start indices of the \lcode{n} time windows 
+within which time kernels will be computed.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-nt2 "idx_1 .. idx_n"}}
+Vector of \lcode{n} time indices defining the start indices of the \lcode{n} time windows
+within which time kernels will be computed.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Optional options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-ipath1} \lcode{path1}}
-path1 is the first index of the path loop. By default, \lcode{path1 = 1}
+\lcode{path1} is the first index of the path loop. By default, \lcode{path1 = 1} (way 2)
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-ipath2} \lcode{path2}}
-path2 is the last index of the path loop. By default, \lcode{path2 = max_number_of_paths} as to data-model-space description.
+\lcode{path2} is the last index of the path loop. By default, 
+\lcode{path2 = max_number_of_paths} as to data-model-space description. (way 2)
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-t0 tzero}}
+Optional global time shift which is added to all times defined by \lcode{dt}, \lcode{nt1}, \lcode{nt2} (default \lcode{t0=0})
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-wp}}
 If set, then 'ON-WP' spectral kernel files are produced, containing plain kernel values on wavefield 
 points. If not set, normal kernel files (pre-integrated) are transformed.
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{time waveform kernels}
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{\lcode{-dt time_step}}
-Global time step of time discretization.
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{\lcode{-nt1 "idx_1 .. idx_n"}}
-Vector of \lcode{n} time indices defining the start indices of the \lcode{n} time windows.
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{\lcode{-nt2 "idx_1 .. idx_n"}}
-Vector of \lcode{n} time indices defining the start indices of the \lcode{n} time windows.
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{\lcode{-t0 tzero}}
-Optional global time shift which is added to all times defined by \lcode{dt}, \lcode{nt1}, \lcode{nt2} (default \lcode{t0=0})
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
 \subsection{\lcode{timeKernel2vtk}} \label{programs_scripts,sec:bin_prog,sec:timeKernel_2_vtk}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Produces vtk files from \emph{one existing} binary time sensitivity kernel file for a selection of time steps defined by vectors of starting and end indices \lcode{-nt1} , \lcode{-nt2}
+Produces vtk files from \emph{one existing} binary time sensitivity kernel file for a selection of time steps defined by vectors of starting and end indices \lcode{-nt1} , \lcode{-nt2}.
 
-\subsubsection{positional arguments}
+\subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{main_parfile}}
 Main parameter file of inversion.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{optional arguments}
+\subsubsection{Mandatory options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-evid} \lcode{event_id}}
 Defines the event id of the one path. (must belong to an event in main event list)
@@ -789,7 +1356,7 @@ Defines the event id of the one path. (must belong to an event in main event lis
 Defines the station name of the one path. (must belong to a station in main station list)
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-comp "comp_1 ... comp_n"}}
-Vector of receiver components for which vtk files should be generated. For valid components see \myref{basic_steps,sec:data_general}.
+Vector of station components for which vtk files should be generated. For valid components see \myref{basic_steps,sec:data_general}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-param "param_1 ... param_n"}}
 Vector of parameter names for which vtk files should be generated. Only valid parameter names of the chosen model parametrization are accepted. 
@@ -803,6 +1370,12 @@ should be generated (the resulting set of time indices must be contained in the 
 Vector of \lcode{n} time indices defining the start indices of the \lcode{n} time windows within which vtk files 
 should be generated (the resulting set of time indices must be contained in the binary time kernel files generated by 
 \lcode{spec2timeKernels}.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Optional options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-wp}}
+If set, time waveform kernel files 'ON-WP' (plain kernel values on wavefield points) will be read (assuming these files 
+exist!) and writte as vtk files. If not set, normal time kernel files (pre-integrated) are read in and written as vtk files.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
@@ -810,7 +1383,7 @@ should be generated (the resulting set of time indices must be contained in the 
 \section{Integration Weights} \label{programs_scripts,sec:fmod_intw}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
-The \ASKI module \lcode{integrationWeights} computes integration weights for the set of wavefield points 
+The \ASKI{} module \lcode{integrationWeights} computes integration weights for the set of wavefield points 
 in order to integrate the kernels over the inversion grid. As we need to calculate the integrals of the 
 kernels over each inversion grid cell separately, the integration weights are computed for each cell in 
 such a way that weighting the summation of the kernel values yields the desired integral value:
@@ -1013,7 +1586,8 @@ $\mathbf{t}_1,\dots,\mathbf{t}_4$, is computed by $\mathrm{vol}\left(\mathcal{T}
 %----------------------------------------------------------
 %
 In case of \lcode{intw_type = 6}, function \lcode{createIntegrationWeights} does not actually compute
-any integration weights. Instead, it calls function \lcode{transformToStandardCellInversionGrid} of module 
+any integration weights. Instead, it calls function \\
+\lcode{transformToStandardCellInversionGrid} of module 
 \lcode{inversionGrid} with dummy variable \lcode{type_standard_cell} set to value \lcode{-1}, which 
 requests the routine to return the total integration weights in variable \lcode{jacobian} instead the 
 jacobian values. These returned values are then stored as the integration weights.

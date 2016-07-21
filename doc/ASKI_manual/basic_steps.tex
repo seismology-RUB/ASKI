@@ -1,7 +1,7 @@
 % -*-LaTex-*-
 
 %-----------------------------------------------------------------------------
-%   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+%   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 %
 %   This file is part of the ASKI manual as a LaTeX document with main file
 %   manual.tex
@@ -22,9 +22,9 @@ specific steps or objects, we always refer to the respective sections below in t
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 \begin{itemize}
-\item Download main package \lcode{ASKI_1.0.tar.gz} from \url{http://www.rub.de/aski}
-\item Unpack tar ball (containing the directory \lcode{ASKI_1.0/}) somewhere
-\item Follow the directions in file \lcode{ASKI_1.0/README}
+\item Download main package \lcode{ASKI_1.1.tar.gz} from \url{http://www.rub.de/aski}
+\item Unpack tar ball (containing the directory \lcode{ASKI_1.1/}) somewhere
+\item Follow the directions in file \lcode{ASKI_1.1/README}
 \end{itemize}
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -72,27 +72,27 @@ created. Recalling this script with a smaller number of steps will not delete an
 \section{Data in \ASKI} \label{basic_steps,sec:data_general}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
-One certain data sample in \ASKI is characterized by a seismic \emph{source}, a \emph{component} 
-of a seismic \emph{receiver}, and a \emph{frequency}, as well as if it is \emph{real} or \emph{imaginary} part 
+One certain data sample in \ASKI{} is characterized by a seismic \emph{source}, a \emph{component} 
+of a seismic \emph{station} (receiver), and a \emph{frequency}, as well as if it is \emph{real} or \emph{imaginary} part 
 of the complex spectral values. It has the value of displacement of the ground in the unit of meters.
 %
 %----------------------------------------------------------
-\subsection*{Events and Receivers}
+\subsection*{Events and Stations}
 %----------------------------------------------------------
 %
 The events file (\myref{files,sec:event_list}) and stations file (\myref{files,sec:station_list}) constitute a
-collection of \emph{all} events (stations) which will be involved \emph{in any way} in your \ASKI operation.\\
+collection of \emph{all} events (stations) which will be involved \emph{in any way} in your \ASKI{} operation.\\
 All programs/scripts will refer to a specific event (station) by its event-ID (station-name).
 %
 %----------------------------------------------------------
-\subsection*{Receiver Components}
+\subsection*{Station Components}
 %----------------------------------------------------------
 %
-All programs/scripts will refer to a specific receiver component by the following abbreviatory names.\\
-Dependent on the coordinate system in which the receivers are defined (Cartesian or spherical, which is 
-defined by the first line of the station list file), the supported names of receiver components may have a 
+All programs/scripts will refer to a specific station component by the following abbreviatory names.\\
+Dependent on the coordinate system in which the stations are defined (Cartesian or spherical, which is 
+defined by the first line of the station list file), the supported names of station components may have a 
 different meaning:
-\subsubsection{Cartesian receivers}
+\subsubsection{Cartesian stations}
 \begin{itemize}
 \item[] \lcode{CX}: Cartesian \lcode{X}-coordinate (first Cartesian coordinate)
 \item[] \lcode{CY}: Cartesian \lcode{Y}-coordinate (second Cartesian coordinate)
@@ -104,7 +104,7 @@ different meaning:
 \item[] \lcode{UP}: same as \lcode{CZ}
 \item[] \lcode{DOWN}: same as \lcode{-CZ}
 \end{itemize}
-\subsubsection{Spherical receivers}
+\subsubsection{Spherical stations}
 \begin{itemize}
 \item[] \lcode{CX}: Cartesian \lcode{X}-coordinate with \lcode{X}-axis through equator and $0^\circ$-meridian
 \item[] \lcode{CY}: Cartesian \lcode{Y}-coordinate with \lcode{Y}-axis through equator and $90^\circ$E-meridian
@@ -121,30 +121,67 @@ different meaning:
 \subsection*{Frequency Discretization}
 %----------------------------------------------------------
 %
-In \ASKI, frequencies are given by a frequency step $\Delta f$[Hz] and by a set of integer valued 
+In \ASKI{}, frequencies are given by a frequency step $\Delta f$[Hz] and by a set of integer valued 
 frequency indices.
 
-For specific frequency index $i\in\mathbb{N}$, the corresponding frequency $f_i$ [Hz] computes as $f_i \,=\, i \,\cdot\, \Delta f$.
-E.g.\ $\Delta f \,=\, 10$ Hz and frequency indices $i \,=\, 2,\; 3,\; 5,\; 7,\; 10$ define the set of 
-discrete frequencies $f_i \,=\, 20.0,\; 30.0,\; 50.0,\; 70.0,\; 100.0$ [Hz].
+For specific frequency index $k\in\mathbb{N}$, the corresponding real-valued frequency $f_k$ [Hz] computes as
+$f_k \,=\, k \,\cdot\, \Delta f$.
+E.g.\ $\Delta f \,=\, 10$ Hz and frequency indices $k \,=\, 2,\; 3,\; 5,\; 7,\; 10$ define the set of 
+discrete frequencies $f_k \,=\, 20.0,\; 30.0,\; 50.0,\; 70.0,\; 100.0$ [Hz].
+
+Some forward methods (at the moment only Gemini) implicitely use \emph{complex} frequencies, which are related
+to the above definition of real-valued frequencies $f_k \,=\, k \,\cdot\, \Delta f$.
+Gemini, e.g., adds to these real-valued frequencies a constant imaginary part $\sigma = -5\Delta f/2\pi$,
+thus implicitely using the complex frequencies $f_k \,=\, k \cdot \Delta f \,+\,i\cdot \sigma$,
+where $i$ is the imaginary unit.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Prepare Measured Data} \label{basic_steps,sec:measured_data}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 For measured data given in some basic data formats like Seismic Unix and time-series given as textfiles per trace,
-the binary program \lcode{createMeasuredData} \myaref{programs_scripts,sec:bin_prog,sec:create_measured_data} 
+the executable \lcode{createMeasuredData} \myaref{programs_scripts,sec:bin_prog,sec:create_measured_data} 
 converts the time-domain data to the special frequency-domain
-form required by \ASKI. Call \lcode{createMeasuredData} (without arguments), then a help message will be printed how to use it.
+form required by \ASKI{}. Executing \lcode{createMeasuredData} (without arguments), will print a short help message how to use it.
 
-Otherwise you might well prepare measured data files on your own as required by \ASKI, see sections~\myref{basic_steps,sec:data_general} 
+Otherwise you might well prepare measured data files on your own as required by \ASKI{}, see sections~\myref{basic_steps,sec:data_general} 
 and~\myref{files,sec:measured_data}. 
+%
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\section{Prepare Frequency-Domain Filters} \label{basic_steps,sec:filters}
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+%
+In \ASKI{}, synthetic wavefields (for synthetic data and sensitivity kernels) are preferred to 
+be modelled as impulse responses, i.e.\ w.r.t.\ an impulsive Dirac source-time-function, and filtered afterwards
+in the frequency domain (by multiplication of wavefield spectra and spectral filter) before being compared to 
+measured data. Therefore, \ASKI{} uses spectral filters,
+independently associated with each seismic source and each station component. This way, independent 
+source-time-functions for each event, as well as independent instrument responses for each station component
+can be modelled. Whether or not to use event-associated filters or station-associated filters at all, is 
+controlled in the main parameter file via flags \lcode{APPLY_EVENT_FILTER, APPLY_STATION_FILTER} 
+\myaref{files,sec:main_parfile,itm:path_mdata_filters}.
+
+Executable \lcode{createSpectralFilters} \myaref{programs_scripts,sec:bin_prog,sec:create_spec_filters} 
+provides means to generate event filters from time-domain wavelets
+(i.e.\ specific source-time-functions) or as Butterworth filters. Executing \lcode{createSpectralFilters}
+(without arguments) will print a short help message how to use it.
+For now, there is no possibility to 
+generate station filters by this executable, since it is assumed that instrument responses were 
+already deconvolved from the data. 
+
+If you need station filters, or require filters that cannot be generated by \lcode{createSpectralFilters}, 
+you would have to generate filter files by yourself in the required format, see section~\myref{files,sec:filters}.
+Even if you want to use the same filter for each event (station component), you would need to create a filter file
+for each event (station component), e.g.\ by copy-paste-rename operations.
+
+At the moment, \ASKI{} does \emph{not} support to have an independent filter for each event-station path (i.e.\ for
+each seismogram seperately). 
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Define an Inversion Grid} \label{basic_steps,sec:invgrid}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
-There are different types of \ASKI inversion grids suitable for different geometries, 
+There are different types of \ASKI{} inversion grids suitable for different geometries, 
 forward methods, hence, applications.
 
 All inversion grids are defined by setting parameters \lcode{TYPE_INVERSION_GRID} and 
@@ -238,8 +275,8 @@ will be read if it exists and if not recreating the inversion grid.
 \subsubsection{\lcode{VTK_GEOMETRY_TYPE}}
 Select the geometry type. \lcode{VTK_GEOMETRY_TYPE} is one of:
 \begin{itemize}
-\item[]'\lcode{CELLS}': data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as \lcode{UNSTRUCTURED_GRID} datasets) -> intuitive volumetric view
-\item[]'\lcode{CELL_CENTERS}': data on inversion grids will be written on the cell center POINTS to vtk files (as \lcode{POLYDATA} datasets) -> smaller files, better to apply filters in ParaView
+\item[]'\lcode{CELLS}': data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as \lcode{UNSTRUCTURED_GRID} datasets) $\rightarrow$ intuitive volumetric view
+\item[]'\lcode{CELL_CENTERS}': data on inversion grids will be written on the cell center POINTS to vtk files (as \lcode{POLYDATA} datasets) $\rightarrow$ smaller files, better to apply filters in ParaView
 \end{itemize}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{\lcode{SCALE_VTK_COORDS}, \lcode{VTK_COORDS_SCALING_FACTOR}}
@@ -322,8 +359,8 @@ Number of cells in latitude/longitude direction for each layer block.\\
 \subsubsection{\lcode{VTK_GEOMETRY_TYPE}}
 Select the geometry type. \lcode{VTK_GEOMETRY_TYPE} is one of:
 \begin{itemize}
-\item[]'\lcode{CELLS}': data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as \lcode{UNSTRUCTURED_GRID} datasets) -> intuitive volumetric view
-\item[]'\lcode{CELL_CENTERS}': data on inversion grids will be written on the cell center POINTS to vtk files (as \lcode{POLYDATA} datasets) -> smaller files, better to apply filters in ParaView
+\item[]'\lcode{CELLS}': data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as \lcode{UNSTRUCTURED_GRID} datasets) $\rightarrow$ intuitive volumetric view
+\item[]'\lcode{CELL_CENTERS}': data on inversion grids will be written on the cell center POINTS to vtk files (as \lcode{POLYDATA} datasets) $\rightarrow$ smaller files, better to apply filters in ParaView
 \end{itemize}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{\lcode{SCALE_VTK_COORDS}, \lcode{VTK_COORDS_SCALING_FACTOR}}
@@ -433,8 +470,8 @@ Example:\\
 \subsubsection{\lcode{VTK_GEOMETRY_TYPE}}
 Select the geometry type. \lcode{VTK_GEOMETRY_TYPE} is one of:
 \begin{itemize}
-\item[]'\lcode{CELLS}': data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as \lcode{UNSTRUCTURED_GRID} datasets) -> intuitive volumetric view
-\item[]'\lcode{CELL_CENTERS}': data on inversion grids will be written on the cell center POINTS to vtk files (as \lcode{POLYDATA} datasets) -> smaller files, better to apply filters in ParaView
+\item[]'\lcode{CELLS}': data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as \lcode{UNSTRUCTURED_GRID} datasets) $\rightarrow$ intuitive volumetric view
+\item[]'\lcode{CELL_CENTERS}': data on inversion grids will be written on the cell center POINTS to vtk files (as \lcode{POLYDATA} datasets) $\rightarrow$ smaller files, better to apply filters in ParaView
 \end{itemize}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \subsubsection{\lcode{SCALE_VTK_COORDS,VTK_COORDS_SCALING_FACTOR}}
@@ -450,11 +487,11 @@ Example:\\
 \subsection{\lcodetitle{ecartInversionGrid}} \label{basic_steps,sec:invgrid,sub:ecart}
 %----------------------------------------------------------
 %
-{\bf WARNING, EXPERIMENTAL FEATURE:} \emph{so far, this type of inversion grid works for tetrahedral cells only,
+{\bf EXPERIMENTAL FEATURE:} \emph{so far, this type of inversion grid works for tetrahedral cells only,
 since support for hexahedreal cells is not completed throughout. However, even for tetrahedra the automatic detection 
 of neighbours did not work properly in some test cases! So if you intend to use this inversion grid, please have a look 
 at the grid and all neighbours (neighbours only required for model smoothing in case of solving the Kernel system of equations).
-You can do that by using binary program} \lcode{invgrid2vtk} \emph{along with option} \lcode{-nb} \emph{. Call} 
+You can do that by using executable} \lcode{invgrid2vtk} \emph{along with option} \lcode{-nb} \emph{. Execute} 
 \lcode{invgrid2vtk} \emph{(without arguments)} \myaref{programs_scripts,sec:bin_prog,sec:invgrid_vtk} \emph{for further details on how to use it.}
 
 An \lcode{E}xternal \lcode{CART}esian inversion grid is defined by several text files containing the definintion 
@@ -463,7 +500,7 @@ definition of cells by refering to the nodes. At the moment, 4-node tetrahedral 
 hexahedral cells are partly supported. 
 Those files may be produced by any meshing tool. In case you are interested to export meshes your own way, 
 section~\myref{files,sec:ecart_invgrid} defines the required file formats.\\
-\ASKI provides the \lcode{python} module \lcode{cubit2ASKIecartInversionGrid.py} which can be used with the 
+\ASKI{} provides the \lcode{python} module \lcode{cubit2ASKIecartInversionGrid.py} which can be used with the 
 meshing software \lcode{Cubit} in a \lcode{python} script by first importing the module:\\
 \lcode{import cubit2ASKIecartInversionGrid}\\
 and at the very end of your meshing process calling:\\
@@ -540,8 +577,8 @@ Logical value to indicate whether \lcode{ECART_INVGRID_FILE_NEIGHBOURS} should b
 \subsubsection{\lcode{VTK_GEOMETRY_TYPE}}
 Select the geometry type. \lcode{VTK_GEOMETRY_TYPE} is one of:
 \begin{itemize}
-\item[]'\lcode{CELLS}': data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as \lcode{UNSTRUCTURED_GRID} datasets) -> intuitive volumetric view
-\item[]'\lcode{CELL_CENTERS}': data on inversion grids will be written on the cell center POINTS to vtk files (as \lcode{POLYDATA} datasets) -> smaller files, better to apply filters in ParaView
+\item[]'\lcode{CELLS}': data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as \lcode{UNSTRUCTURED_GRID} datasets) $\rightarrow$ intuitive volumetric view
+\item[]'\lcode{CELL_CENTERS}': data on inversion grids will be written on the cell center POINTS to vtk files (as \lcode{POLYDATA} datasets) $\rightarrow$ smaller files, better to apply filters in ParaView
 \end{itemize}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \subsubsection{\lcode{SCALE_VTK_COORDS,VTK_COORDS_SCALING_FACTOR}}
@@ -567,7 +604,40 @@ Every type of integration weights is supported by this type of inversion grid, i
 uses to integrate over spectral elements).
 
 Please refer to the documentation of your \lcode{SPECFEM3D} forward method (\myref{basic_steps,sec:forward_problem})
-on how to define an inversion grid of type \lcode{specfem3dInversionGrid}.
+on how to generate any files required for using an inversion grid of type \lcode{specfem3dInversionGrid}.
+
+As with all other types of inversion grids, a parameter file defines any details of the grid, a template 
+of which is file \lcode{template/specfem3dInversionGrid_parfile_template}.
+In the following, the particular parameters are explained.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\subsubsection{\lcode{SPECFEM3D_ASKI_MAIN_FILE}}
+File name relative to \lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH/} of file from \lcode{SPECFEM3D}
+containing all information about the inversion grid (any \lcode{.main} output file)\\
+Example:\\
+\lcode{SPECFEM3D_ASKI_MAIN_FILE = kernel_displacements/kernel_displ_S001.main}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{VTK_GEOMETRY_TYPE}}
+Select the geometry type. \lcode{VTK_GEOMETRY_TYPE} is one of:
+\begin{itemize}
+\item[]'\lcode{CELLS}': data on inversion grids will be written on the volumetric inversion grid CELLS (hexahedral) to vtk files (as \lcode{UNSTRUCTURED_GRID} datasets) $\rightarrow$ intuitive volumetric view
+\item[]'\lcode{CELL_CENTERS}': data on inversion grids will be written on the cell center POINTS to vtk files (as \lcode{POLYDATA} datasets) $\rightarrow$ smaller files, better to apply filters in ParaView
+\end{itemize}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\subsubsection{\lcode{SCALE_VTK_COORDS,VTK_COORDS_SCALING_FACTOR}}
+Scale vtk geometry coordinates by factor \lcode{VTK_COORDS_SCALING_FACTOR} (real number), if 
+\lcode{SCALE_VTK_COORDS = .true.}. This may be helpful if coordinate values (e.g.\ in meters) 
+get so large that they cause problems when plotting in paraview.\\
+Example:\\
+\lcode{SCALE_VTK_COORDS = .false.}\\
+\lcode{VTK_COORDS_SCALING_FACTOR = 1.0}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\subsubsection{\lcode{SPECFEM3D_R_EARTH_KM}}
+In case of using \lcode{SPECFEM3D_GLOBE}, define here the maximum radius [km] of the sphere, by which 
+Earth is approximated (only used to interpret ``depth'' and ``altitude'' of events and stations when 
+plotting to vtk files; ignored for \lcode{SPECFEM3D_Cartesian} applications).\\
+Example:\\
+\lcode{SPECFEM3D_R_EARTH_KM = 6371.0}
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Define a Starting Model} \label{basic_steps,sec:start_model}
@@ -577,10 +647,10 @@ There are two possibilities to define an earth model for the forward wave propag
 
 On the one hand you may use any (standard) earth model provided by the forward method you are using, if appropriate.
 
-If this is not possible, or the models provided do not meet your needs, you may use binary 
+If this is not possible, or the models provided do not meet your needs, you may use executable 
 \lcode{createStartmodelKim} along with the inversion grid of your first iteration (which you should 
 have already defined) to produce an inverted model file containing some simple model on this inversion grid. 
-Executing \lcode{createStartmodelKim} (without arguments) will print a help message how to use the program 
+Executing \lcode{createStartmodelKim} (without arguments) will print a short help message how to use the program 
 \myaref{programs_scripts,sec:bin_prog,sec:create_startmod_kim}. Afterwards you may 
 export the produced model file to your forward method as explained in section~\myref{basic_steps,sec:export_kim}.
 Template files of starting model descriptions may be found in \lcode{template/}.
@@ -592,31 +662,30 @@ Template files of starting model descriptions may be found in \lcode{template/}.
 The executable \lcode{exportKim} exports an inverted model file (``kim'' stands for ``K''ernel 
 ``I''nverted ``M''odel) along with the respective inversion grid specifications to a text file, 
 which may be used to communicate such a model to a forward method or postprocess the model values in any way. 
-Executing \lcode{exportKim} (without argument) will print a help message how to use it 
+Executing \lcode{exportKim} (without argument) will print a short help message how to use it 
 \myaref{programs_scripts,sec:bin_prog,sec:exp_Kim}.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Solving the Forward Problem} \label{basic_steps,sec:forward_problem}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
-In the following, all wave propagation codes which are supported by \ASKI are listed.
-Refer to the given documentation on any details regarding the interaction of the forward codes with \ASKI.
+In the following, all wave propagation codes which are supported by \ASKI{} are listed.
+Refer to the given documentation on any details regarding the interaction of the forward codes with \ASKI{}.
 \subsection*{\lcode{Gemini II}}
-\lcode{Gemini II} is supported in this release version, for Cartesian as well as spherical setting. 
-The \lcode{Gemini} routines producing spectral output for \ASKI, however, might not yet be available. 
+\lcode{Gemini II} (by \cite{friederich_wd1995}) is supported in this release version, for Cartesian as well as spherical setting. 
+The \lcode{Gemini} routines producing spectral output for \ASKI{}, however, might not yet be available. 
 We hope to be able to provide them in due time. Until now, please contact us via \url{http://www.rub.de/aski}
-if you want to use \lcode{Gemini II} as a forward solver for \ASKI.
+if you want to use \lcode{Gemini II} as a forward solver for \ASKI{}.
 \subsection*{\lcode{SPECFEM3D_Cartesian}}
-The Cartesian spectral element code \lcode{SPECFEM3D_Cartesian}, version \lcode{3.0} is supported by \ASKI, 
-cf.~\cite{Specfem3D_Cartesian_for_ASKI}.
+The Cartesian spectral element code \lcode{SPECFEM3D_Cartesian} (by \cite{TrKoLi08}), 
+version \lcode{3.0} is fully supported by this \ASKI{} release version, cf.~\cite{Specfem3D_Cartesian_for_ASKI}.
 \subsection*{\lcode{SPECFEM3D_GLOBE}}
-The global spectral element code \lcode{SPECFEM3D_GLOBE}, version \lcode{7.0}, is fully supported in 
-this release version. However, the extension package for \lcode{SPECFEM3D_GLOBE} will not be available 
-until the beginning of 2016. 
+The global spectral element code \lcode{SPECFEM3D_GLOBE} (by \cite{TrKoLi08}), 
+version \lcode{7.0.0}, is fully supported by this \ASKI{} release version, cf.~\cite{Specfem3D_Globe_for_ASKI}.
 \subsection*{\lcode{NEXD}}
-Support for the nodal discontinous Galerkin code \lcode{NEXD} by Lasse Lambrecht (Ruhr-University Bochum, Germany)
-is being implemented and tested at the moment. \lcode{NEXD}, including \ASKI support, will be available 
-under terms of the GPL soon.
+The nodal discontinous Galerkin code \lcode{NEXD} (by \cite{Lambrecht.2015}) is fully supported by this 
+\ASKI{} release version. \lcode{NEXD}, including \ASKI{} support, will be available 
+under terms of the GPL in the near future via \url{http://www.rub.de/nexd}.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Choose Integration Weights} \label{basic_steps,sec:intw}
@@ -650,30 +719,30 @@ section~\myref{programs_scripts,sec:fmod_intw}.
 \section{Create a Data and Model Space} \label{basic_steps,sec:dmspace}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
-In order to choose a set of data samples which to invert and a set of model parameters which to invert for, 
+In order to choose a set of data samples which to invert and a set of model values which to invert for, 
 you need to define a data space and a model space. Essentially, if you have $m$ data samples, the space in which 
-the data live is just \R m (analogously, for $n$ model parameters, the model lives in \R n ). You only need to define which
-data sample (model parameter) refers to which dimension (i.e.\ entry in vector) of the data space (model space).\\
+the data live is just \R m (analogously, for $n$ model values, the model lives in \R n ). You only need to define which
+data sample (model value) refers to which dimension (i.e.\ entry in vector) of the data space (model space), respectively.\\
 The $m\times n$ sensitivity kernel matrix will then connect a vector of model updates from model space in \R n 
 to your specific data vector from \R m.
 
-In the following, we describe how data samples and model parameters are characterized in this software package and how you can 
-choose specific subsets to be used. 
+In the following, it is described how data samples and model values are characterized in this software package and 
+how you can choose specific subsets to be used. 
 %----------------------------------------------------------
 \subsection{How Data Samples are Characterized}
 %----------------------------------------------------------
 As the sensitivities are calculated in frequency domain, the data live in frequency domain, too.\\
 A data sample is uniquely characterized by a seismic \emph{source}, a \emph{component} 
-of a seismic \emph{receiver}, and a \emph{frequency}, as well as whether it is the \emph{real} or \emph{imaginary} part 
-of the complex spectral values. Refer to \myref{basic_steps,sec:data_general} for details on data in \ASKI.
+of a seismic \emph{station}, and a \emph{frequency}, as well as whether it is the \emph{real} or \emph{imaginary} part 
+of the complex spectral values. Refer to \myref{basic_steps,sec:data_general} for details on data in \ASKI{}.
 %----------------------------------------------------------
-\subsection{How Model Parameters are Characterized} \label{basic_steps,sec:dmspace,sub:mparam}
+\subsection{How Model Values are Characterized} \label{basic_steps,sec:dmspace,sub:mparam}
 %----------------------------------------------------------
-A model parameter is uniquely  characterized by a parameter name (must be a valid parameter name of the model
+A model value is uniquely  characterized by a parameter name (must be a valid parameter name of the model
 parametrization as defined by \lcode{MODEL_PARAMETRIZATION} \myref{files,sec:main_parfile,itm:mod_pmtrz}) 
 and an inversion grid cell index in valid range.
 %----------------------------------------------------------
-\subsection{How to Define Data and Model Space: Choosing a Set of Data Samples and Model Parameters}
+\subsection{How to Define Data and Model Space: Choosing a Set of Data Samples and Model Values}
 %----------------------------------------------------------
 Create a text file as described in section \myref{files,sec:dmspace}, e.g.\ by adjusting the provided
 template files in \lcode{template/}.
@@ -683,10 +752,10 @@ template files in \lcode{template/}.
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 Use the executable \lcode{initBasics}. Executing \lcode{initBasics} (without arguments) 
-will print a help message how to use it \myaref{programs_scripts,sec:bin_prog,sec:in_basics}.
+will print a short help message how to use it \myaref{programs_scripts,sec:bin_prog,sec:in_basics}.
 
 It first checks if all parameters needed are present in the parameter files and then creates all
-basic requirements for \ASKI operations:\\
+basic requirements for \ASKI{} operations:\\
 It reads in required files like event list and station list files, the wavefield points and the 
 kernel reference model. \\
 Furthermore, it creates the inversion grid (possibly storing some inversion grid files, dependent 
@@ -702,7 +771,7 @@ Also a lot of \lcode{.vtk} files with statistics are produced having base filena
 defined in the parameter file of the current iteration step. Those files mainly regard the inversion grid, 
 the wavefield points and the integration weights, where the respective filenames are extended (by something 
 with ``.vtk''). It is \emph{highly recommended} to call \lcode{initBasics -recr} in order to assure that all
-those \lcode{.vtk} files are produced and to actually have a look at them before continuing any \ASKI operation!
+those \lcode{.vtk} files are produced and to actually have a look at them before continuing any \ASKI{} operation!
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Compute Spectral Waveform Sensitivity Kernels} \label{basic_steps,sec:compute_kernels}
@@ -711,22 +780,22 @@ those \lcode{.vtk} files are produced and to actually have a look at them before
 The kernels are computed by combining green tensor component(s) and forward wavefield for a given event-station
 pair (called ``path'' below. By default, the kernels are integrated over the inverison grid cells. I.e.\ there is one sensitivity 
 kernel file for a specific event-station path. This file contains sensitivity values of the requested 
-receiver components for the requested model parameters of your model parametrization, with 
+station components for the requested model parameters of your model parametrization, with 
 the values living on the inverison grid cells. Alternatively, kernels can be computed on the wavefield points,
 without pre-integration (for inspection only, cannot be used for waveform inversion in that case).
 
 Use executable \lcode{computeKernels}. Executing \lcode{computeKernels} (without arguments) 
-will print a help message how to use it \myaref{programs_scripts,sec:bin_prog,sec:com_kernel}.
+will print a short help message how to use it \myaref{programs_scripts,sec:bin_prog,sec:com_kernel}.
 It makes sense, to only compute kernel files for those event-station paths that you are going to use (defined by
 your data-model-space file).
 
-You can define the set of event-station paths, receiver components and model parameters for which 
+You can define the set of event-station paths, station components and model parameters for which 
 sensitivities should be computed in two ways:
 \begin{itemize}
 \item[way 1] compute a kernel for only one event-station path, defined by eventID and station name using options 
 \lcode{-evid}, \lcode{-stname}, \lcode{-comp}, \lcode{-param}
 \item[way 2] input a data-model-space file (as defined by \myref{basic_steps,sec:dmspace}) by option 
-\lcode{-dmspace}, defining all event-station paths and respective receiver components and model parameters 
+\lcode{-dmspace}, defining all event-station paths and respective station components and model parameters 
 for which kernels should be computed; optionally define range of path index
 by \lcode{-ipath1}, \lcode{-ipath2}
 \end{itemize}
@@ -741,10 +810,10 @@ on inversion grid}.
 The time kernels are computed from the standard frequency-domain kernels (which were computed path-wise)
 by applying an inverse Fourier transform. 
 
-Use executable \lcode{spec2timeKernels}. Executing \lcode{spec2timeKernels} (without arguments) will print a 
+Use executable \lcode{spec2timeKernels}. Executing \lcode{spec2timeKernels} (without arguments) will print a short
 help message how to use it \myaref{programs_scripts,sec:bin_prog,sec:spec_time_kernels}.
 
-The set of event-station paths, receiver components and model parameters for which time kernels should be produced
+The set of event-station paths, station components and model parameters for which time kernels should be produced
 are defined in the same ``two ways'' (by the same options) as computing spectral waveform kernels 
 \myaref{basic_steps,sec:compute_kernels}.
 
@@ -757,7 +826,7 @@ Additionally, you need to define the time discretization of the produced time ke
 %
 One way to plot a specific sensitivity Kernel in frequency domain, i.e.\ the sensitivity spectra for a specific
 event-station path, is to procuce vtk files using executable \lcode{kernel2vtk}. 
-Executing \lcode{kernel2vtk} will print a help message how to use it \myaref{programs_scripts,sec:bin_prog,sec:kernel_2_vtk}.
+Executing \lcode{kernel2vtk} will print a short help message how to use it \myaref{programs_scripts,sec:bin_prog,sec:kernel_2_vtk}.
 
 Please note, that the output \lcode{.vtk} files (one for every frequency) might get large, dependent on the resolution 
 of the inversion grid, since the geometry information of the inversion grid cells is contained in each \lcode{.vtk} file.
@@ -769,13 +838,13 @@ main parameter file.
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 One way to plot a specific sensitivity Kernel in time domain, is to procuce vtk files using executable \lcode{timeKernel2vtk}. 
-Executing \lcode{timeKernel2vtk} (without arguments) will print a help message how to use it \myaref{programs_scripts,sec:bin_prog,sec:timeKernel_2_vtk}.\\
+Executing \lcode{timeKernel2vtk} (without arguments) will print a short help message how to use it \myaref{programs_scripts,sec:bin_prog,sec:timeKernel_2_vtk}.\\
 
 Please note, that the output \lcode{.vtk} files (one for every time step) might get large, dependent on the resolution 
 of the inversion grid, since the geometry information of the inversion grid cells is contained in each \lcode{.vtk} file.
 If the files become too large for you, you might consider setting \lcode{DEFAULT_VTK_FILE_FORMAT = BINARY} in your 
 main parameter file.
-For a lot of time steps, the \lcode{.vtk} file format is actually not optimally chosen by \ASKI, since the complete geometry
+For a lot of time steps, the \lcode{.vtk} file format is actually not optimally chosen by \ASKI{}, since the complete geometry
 information is contained in every time-step file (a lot of redundant information is written to hard disc).
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -788,7 +857,7 @@ At the moment, there are 3 executable programs implemented which solve the kerne
 \lcode{solveKernelSystem} is a serial program which sets up the kernel matrix, 
 reads in synthetic and measured data, adds regularization condutions to the system if 
 requested (smoothing, damping) and solves the system based on \lcode{LAPACK} libraries.\\
-Executing \lcode{solveKernelSystem} (without arguments) will print a help message how to use it 
+Executing \lcode{solveKernelSystem} (without arguments) will print a short help message how to use it 
 \myaref{programs_scripts,sec:bin_prog,sec:sol_Ker_Sys}.
 \item 
 \lcode{solveParKernelSystem} does essentially the same as \lcode{solveKernelSystem}, but uses
@@ -796,7 +865,7 @@ parallelized \lcode{ScaLAPACK} libraries to solve the (regularized) kernel linea
 must compile executable \lcode{solveParKernelSystem} separately (\lcode{make all} does not
 compile it, make sure you have \lcode{ScaLAPACK} libraries installed and linked in the 
 \lcode{Makefile}).
-Executing \lcode{solveParKernelSystem} (without arguments) will print a help message how to use it 
+Executing \lcode{solveParKernelSystem} (without arguments) will print a short help message how to use it 
 \myaref{programs_scripts,sec:bin_prog,sec:solve_par_kernel_sys}.
 This executable requires an additional parameter file, see template file\\
 \lcode{templated/solveParKernelSystem_parfile_template}.
@@ -806,7 +875,54 @@ excecutables do, but the uses a conjugate gradient algorithm to solve the kernel
 in a least-squares sense \myaref{programs_scripts,sec:bin_prog,sec:solve_cgls_kernel_sys}.
 This executable requires an additional parameter file, see template file\\
 \lcode{templated/solveCglsKernelSystem_parfile_template}.\\
-Executing \lcode{solveCglsKernelSystem} (without arguments) will print a help message how to use it 
+Executing \lcode{solveCglsKernelSystem} (without arguments) will print a short help message how to use it 
 \myaref{programs_scripts,sec:bin_prog,sec:solve_cgls_kernel_sys}.
 \end{itemize}
+%
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\section{Investigate State of Convergence of Waveform Inversion} \label{basic_steps,sec:investigate_convergence}
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+%
+These kinds of operations probalby still need further development in \ASKI{}. 
 
+Whenever solving the linear system of kernel equations in an interation step of full waveform inversion
+(see above section~\myref{basic_steps,sec:solve_kernel_system}), the current linear misfit is
+printed to output files or on screen, i.e.\ the
+the sum of residual squares of the linear system of equations. Also the current misfit between synthetics 
+and measured data can be computed by executable \lcode{computeMisfit}
+\myaref{programs_scripts,sec:bin_prog,sec:comp_misfit}.
+However, comparing these two during variation of the regularization parameters does not give sensible
+information on which regularization to choose. The development of the non-linear misfit, i.e.\ comparing
+synthetic data based on the new models with the measured data, can only be observed after solving the
+forward problem for each of the models to choose from. There is not yet an automated way implemented in
+\ASKI{} that does this. Evaluating the non-linear misfit, i.e.\ conducting suitable forward calculations, 
+would have to be done by hand for the selected models resulting from the selected regularization parameters.
+
+If you would like to do traditional resolution tests, 
+executable \lcode{computeDataFromKernelSystem} \myaref{programs_scripts,sec:bin_prog,sec:comp_data_kernel_sys}
+computes the ``measured'' data $d$ in the equation $d-s = K (m1 - mref)$ for any given model m1.
+This can be used for traditional linear computation of checkerboard data by forward multiplication 
+of the sensitivity matrix with an artificial model vector containing checker anomalies.
+A model containing checker or spike-like anomalies can be produced by the preliminary hard-coded executable
+\lcode{addSpikeCheckerToKim} \myaref{programs_scripts,sec:bin_prog,sec:addSpikeCheckerToKim}.
+%
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\section{Path-Specific Approach to an Iteration of Waveform Inversion} \label{basic_steps,sec:path_specific}
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+%
+\ASKI{} supports a ``path-specific'' approach to an iteration of full waveform inversion, which is enabled
+by flag \lcode{USE_PATH_SPECIFIC_MODELS} in the iteration step parameter file \myaref{files,sec:iter_parfile}.
+
+This approach was applied by \cite{Lamara.2015b} in his first iteration of full waveform inversion
+using the 1D code Gemini as a forward solver. Due to the complex structure of the investigated region
+(Aegean), it was infeasible to choose a single 1D background model for solving the total forward problem. 
+Therefore, an individual 1D background model was chosen for each event-station path which explained
+the particular seismogram of that path very well. 
+
+This path-specific concept requires to account for different kernel reference models and to introduce a
+correction term in the linear system of kernel equations in order to invert for a global 3D model. Any 
+required functionality is implemented in \ASKI{} and was successfully applied. We refer to \cite{Lamara.2015b}
+and \cite{Schumacher16} on a more detailed description of the concept.
+
+The required quantity of the correction term, called synthetic correction, can be computed in \ASKI{} by 
+executable \lcode{computeCorrectionSyntheticData} \myaref{programs_scripts,sec:bin_prog,sec:comp_correct_syn_data}.

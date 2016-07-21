@@ -1,7 +1,7 @@
 % -*-LaTex-*-
 
 %-----------------------------------------------------------------------------
-%   Copyright 2015 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+%   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 %
 %   This file is part of the ASKI manual as a LaTeX document with main file
 %   manual.tex
@@ -14,7 +14,7 @@
 %   Free Documentation License''. 
 %-----------------------------------------------------------------------------
 %
-This chapter collects documentation on file formats involved in \ASKI.
+This chapter collects documentation on file formats involved in \ASKI{}.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Parameter Files} \label{files,sec:parfiles}
@@ -67,11 +67,6 @@ For details on the methods and references to their documentation, refer to secti
   $v_s$ (\lcode{vs}) [km/s]
 \end{itemize}
 Nothing other parameterization supported yet.
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{\lcode{MAIN_PATH_INVERSION}} \label{files,sec:main_parfile,itm:main_path}
-All subpaths for filenames are considered relative to this main path. This
-directory is thought to contain all your relevant output and (temporary) data.\\
-Example: \lcode{MAIN_PATH_INVERSION = /data/inversions/Aegean1/}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \subsubsection{\lcode{PARAMETER_CORRELATION_MODE}} \label{files,sec:main_parfile,itm:par_cor_mode}
 Any model parameters can be correlated to others which are not inverted for. So far supported correlation modes:
@@ -84,6 +79,11 @@ Any model parameters can be correlated to others which are not inverted for. So 
 \subsubsection{\lcode{PARAMETER_CORRELATION_FILE}} \label{files,sec:main_parfile,itm:par_cor_file}
 File (relative to \lcode{MAIN_PATH_INVERSION}) containing the definition of the correlation and the correlation coefficients. 
 The given filename is ignored in case of \lcode{PARAMETER_CORRELATION_MODE = NONE}.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{MAIN_PATH_INVERSION}} \label{files,sec:main_parfile,itm:main_path}
+All subpaths for filenames are considered relative to this main path. This
+directory is thought to contain all your relevant output and (temporary) data.\\
+Example: \lcode{MAIN_PATH_INVERSION = /data/inversions/Aegean1/}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{\lcode{CURRENT_ITERATION_STEP}} \label{files,sec:main_parfile,itm:cur_iter_step}
 Example: \lcode{CURRENT_ITERATION_STEP = 3}
@@ -126,12 +126,12 @@ Example: \\
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \subsubsection{\lcode{FILE_EVENT_LIST}} \label{files,sec:main_parfile,itm:file_event_list}
-Absolute filename where \ASKI finds a text file defining a set of events in the required format 
+Absolute filename where \ASKI{} finds a text file defining a set of events in the required format 
 (\ref{files,sec:event_list})\\
 Example: \lcode{FILE_EVENT_LIST = /mydata/your_name_of_inversion/ASKI_events}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \subsubsection{\lcode{FILE_STATION_LIST}} \label{files,sec:main_parfile,itm:file_station_list}
-Absolute filename where \ASKI finds a text file defining a set of stations in the required format 
+Absolute filename where \ASKI{} finds a text file defining a set of stations in the required format 
 (\ref{files,sec:station_list})\\
 Example: \lcode{FILE_STATION_LIST = /mydata/your_name_of_inversion/ASKI_stations}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -150,7 +150,7 @@ which corresponds to the 5 frequencies $20,30,50,70,100$ Hz
 \subsubsection{\lcode{UNIT_FACTOR_MEASURED_DATA}} 
 Indicate the unit factor of the measured data. The definition of the factor is:\\
 Multiplication of the measured data (displacement) with this factor gives values in the SI unit of meters [m].\\
-Example: If you use seismic time-domain data for ASKI in the unit of nano meters [nm], then \lcode{UNIT_FACTOR_MEASURED_DATA}
+Example: If you use seismic time-domain data for \ASKI{} in the unit of nano meters [nm], then \lcode{UNIT_FACTOR_MEASURED_DATA}
 must be set to \lcode{1.0e-9} , because the data values in nano meters [nm] must be divided by $1.0\cdot 10^9$ in order to get meters [m].
 If you use seismic displacement data in the SI unit of meters, then \lcode{UNIT_FACTOR_MEASURED_DATA} must be set to \lcode{1.0}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -169,7 +169,10 @@ These parameter files are created automatically by script \lcode{py/create_ASKI_
 Alternatively, you can look at the template file \lcode{template/iter_parfile_template}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \subsubsection{\lcode{USE_PATH_SPECIFIC_MODELS}}
-Set the flag to .true. if you intend to use the ASKI functionality of path specific kernel reference models (usually only for the very first iteration and a 1D method). If you want to use one global kernel reference model (for all paths, i.e. kernels) set this flag to .false. .
+Set the flag to \lcode{.true.} if you intend to use the \ASKI{} functionality of path specific kernel 
+reference models (usually only for the very first iteration and a 1D method, as described in 
+section~\myref{basic_steps,sec:path_specific}). For a regular iteration, i.e.\ using one 
+global kernel reference model (for all paths, i.e.\ kernels) set this flag to \lcode{.false.}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \subsubsection{\lcode{ITERATION_STEP_NUMBER_OF_FREQ, ITERATION_STEP_INDEX_OF_FREQ}} \label{files,sec:iter_parfile,itm:iter_freq}
 Frequency discretization of this iteration step, must be a subset of global frequency discretization 
@@ -293,18 +296,38 @@ Please find the template station list file \lcode{template/file_station_list_tem
 \section{Measured Data Files} \label{files,sec:measured_data}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
-All measured data files are expected to be in the directory \lcode{PATH_MEASURED_DATA} as defined
+All measured data files are expected to be located in the directory \lcode{PATH_MEASURED_DATA} as defined
 in the main parameter file.
 
-One measured data file contains all data values for one specific receiver component and a specific event.
+One measured data file contains all data values for one specific station component and a specific event.
 Its filename is by convention \lcode{data_EVENTID_STATIONNAME_COMP}
 
 The files are text files containing $1$ column of \lcode{MEASURED_DATA_NUMBER_OF_FREQ} complex numbers, 
-which can be understood by \lcode{FORTRAN} \lcode{read} command, i.e.\ of form \lcode{( real_part , imag_part)} .
+which can be understood by \lcode{FORTRAN} \lcode{read} command, i.e.\ of form \lcode{( real_part , imag_part )} .
 
 Line \lcode{i} contains the measured data value for the \lcode{i}\textsuperscript{th} frequency, as defined by vector
 of indices \lcode{MEASURED_DATA_INDEX_OF_FREQ} and frequency step \lcode{MEASURED_DATA_FREQUENCY_STEP}. \\
 In particular, this means that \emph{all} measured data files must contain the \emph{same} frequency discretization, given
+by parameters \lcode{MEASURED_DATA_INDEX_OF_FREQ}, \lcode{MEASURED_DATA_FREQUENCY_STEP} of the main 
+parameter file.
+%
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\section{Event (Station) Filter Files} \label{files,sec:filters}
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+%
+All event (or station) filter files are expected to be located in the directory \lcode{PATH_EVENT_FILTER} 
+(or \lcode{PATH_STATION_FILTER}), respectively. Both paths savely be set to the same directory.
+
+A filter file contains all spectral filter values associated with a specific event (or station component). 
+The file names are by convention \lcode{filter_EVENTID} (or \lcode{filter_STATIONNAME_COMP}), respectively.
+
+In the same way as measured data files, the filter files are text files containing $1$ column of 
+\lcode{MEASURED_DATA_NUMBER_OF_FREQ} complex numbers, 
+which can be understood by \lcode{FORTRAN} \lcode{read} command, i.e.\ of form \lcode{( real_part , imag_part )} .
+
+Line \lcode{i} contains the filter value for the \lcode{i}\textsuperscript{th} frequency, as defined by vector
+of indices \lcode{MEASURED_DATA_INDEX_OF_FREQ} and frequency step \lcode{MEASURED_DATA_FREQUENCY_STEP}. \\
+In particular, this means that \emph{all} filter files must contain the \emph{same} frequency discretization, given
 by parameters \lcode{MEASURED_DATA_INDEX_OF_FREQ}, \lcode{MEASURED_DATA_FREQUENCY_STEP} of the main 
 parameter file.
 %
@@ -316,10 +339,10 @@ All synthetic data files are expected to be in the directory \lcode{PATH_SYNTHET
 in the parameter file of the current iteration step.
 
 One synthetic data file contains the complete synthetic data values for one specific combination of
-event, station and receiver component. Its filename is by convention \lcode{synthetics_EVENTID_STATIONNAME_COMP}
+event, station and station component. Its filename is by convention \lcode{synthetics_EVENTID_STATIONNAME_COMP}
 
 The files are text files containing $1$ column of \lcode{ITERATION_STEP_NUMBER_OF_FREQ}  
-complex numbers, which can be understood by \lcode{FORTRAN} \lcode{read} command, i.e.\ of form \lcode{( real_part , imag_part)} .
+complex numbers, which can be understood by \lcode{FORTRAN} \lcode{read} command, i.e.\ of form \lcode{( real_part , imag_part )} .
 
 Line \lcode{i} contains the synthetic data value for the \lcode{i}\textsuperscript{th} frequency, as defined by vector
 of indices \lcode{ITERATION_STEP_INDEX_OF_FREQ} and frequency step \lcode{MEASURED_DATA_FREQUENCY_STEP}.
@@ -335,7 +358,7 @@ information and data values on geometric objects. The format can be either \lcod
 \lcode{BINARY}, controlled by flag \lcode{DEFAULT_VTK_FILE_FORMAT} in main parfile.\\
 General information on this file format may be found under \url{www.vtk.org/VTK/img/file-formats.pdf}
 
-\ASKI uses different software modules for writing \lcode{vtk} based on wavefield points, or 
+\ASKI{} uses separate software modules for writing \lcode{vtk} based on wavefield points, or 
 inversion grids or event-station path lines (or event, station coorrdinates). 
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -398,7 +421,7 @@ line \lcode{DATA SAMPLES}\\
 this line defines that the data samples block starts (definition of data samples) here. 
 
 line of form: \lcode{WEIGHTING value}, where value is one of is one of \lcode{NONE}, \lcode{BY_PATH}, 
-\lcode{BY_FREQUENCY}, \lcode{BY_PATH_AND_FREQUENCY}\\
+\lcode{BY_FREQUENCY}, \lcode{BY_PATH_AND_FREQUENCY} (by defining such weights, you might account for event clustering or huge differences in magnitudes of the events) \\
 In case of \lcode{NONE}, all data weights are internally set to 1.0 (i.e. no actual weighting is performed).
 Values \lcode{BY_PATH} and \lcode{BY_PATH_AND_FREQUENCY} are only allowed in case of \lcode{PATH SPECIFIC}, in which case
 the pairs \lcode{evid staname} in a specific path definition (below) is expected to be followed by one number $>$ 0.0 and $\le$ 1.0 (the weight).
@@ -428,7 +451,7 @@ line of form: \lcode{IMRE value}, where value is either \lcode{ALL} (for all pat
 (only allowed if \lcode{PATHS SPECIFIC}, for each path a specific set of imaginary/real parts may be defined)
 
 If \lcode{IMRE ALL}, the next line is of form \lcode{nimre imre_1 ... imre_n} defining imaginary (i.e. \lcode{imre_i} = \lcode{im}) or real parts 
-(\lcode{imre_i} = \lcode{re}}) for all paths.
+(\lcode{imre_i} = \lcode{re}) for all paths.
 
 If \lcode{PATHS SPECIFIC}, the following line must contain the number \lcode{npaths} of paths which should be used, followed by 
 npahts blocks of lines, each defining the path and the data samples for that path. \\
