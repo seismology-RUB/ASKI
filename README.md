@@ -10,5 +10,5 @@ in the [README](README) or the [ASKI manual](doc/ASKI_manual_1-1_mar-2016.pdf).
 
 Originally, the ASKI pdf user manual, as well its LaTeX source, were provided *separately* of the ASKI main source code 
 package on [http://www.rub.de/aski](http://www.rub.de/aski) as `ASKI_manual_1.1_mar-2016.tar.gz`. The directory
-`ASKI_manual_1.1_mar-2016/' contained in `ASKI_manual_1.1_mar-2016.tar.gz` is here renamed as `ASKI_manual/` and added
+`ASKI_manual_1.1_mar-2016/` contained in `ASKI_manual_1.1_mar-2016.tar.gz` is here renamed as `ASKI_manual/` and added
 to [doc/](doc) for completeness.
