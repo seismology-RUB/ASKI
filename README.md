@@ -1,4 +1,4 @@
-# ASKI main package version 1.2
+# ASKI main package
 
 ASKI and some of its components, as well as documentation and some examples
 are available under terms of the [GNU General Public License](LICENSE) (version 2 or higher)
