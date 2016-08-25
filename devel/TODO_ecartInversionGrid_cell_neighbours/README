@@ -102,7 +102,7 @@ invgrid_cells_nb002622.vtk:CELLS            1           5
 invgrid_cells_nb002626.vtk:CELLS            1           5
 invgrid_cells_nb002684.vtk:CELLS            1           5
 invgrid_cells_nb002711.vtk:CELLS            1           5
-+++ BEGIN SCREEN OUTPUT +++
++++ END SCREEN OUTPUT +++
 
 Looking into the above listed files (last entry in the files), we can see which neighbour cell was found 
 (i.e. determine its cell index), maybe this will help you to find a starting point in debugging:
