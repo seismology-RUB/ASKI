@@ -24,6 +24,11 @@ Please refer to documents in [doc/](doc/) :
   a standard layout
 
 
+## Toy examples
+
+Any files packages for the ASKI toy examples, as described in the [manual](doc/ASKI_manual.pdf) (chapter 0 *ASKI workflows*) are attached to [release 1.0 of the ASKI main package](https://github.com/seismology-RUB/ASKI/releases/tag/v1.0). These inversion examples use release version 1.0 of the extension packages [SPECFEM3D_Cartesian](https://github.com/seismology-RUB/SPECFEM3D_Cartesian_for_ASKI/releases/tag/v1.0) and [SPECFEM3D_GLOBE](https://github.com/seismology-RUB/SPECFEM3D_GLOBE_for_ASKI/releases/tag/v1.0), respectively.
+
+
 ## Requirements
 
 * GNU Make
