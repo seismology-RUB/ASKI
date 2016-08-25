@@ -41,6 +41,7 @@ Please refer to documents in [doc/](doc/) :
      ```
      git clone --depth 1 --branch master https://github.com/seismology-RUB/ASKI
      ```
+     
    * or downloading a zipped version of the source code from [there](https://github.com/seismology-RUB/ASKI/archive/master.zip):
      ```
      wget https://github.com/seismology-RUB/ASKI/archive/master.zip
