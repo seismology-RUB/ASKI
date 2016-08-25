@@ -1,41 +1,24 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.1 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.1 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 
 !############################################################################
-!## IN THE LONG RUN: improve this module !
-!## 
-!## do not generate the data model space over and over again from scratch
-!## 
-!## instead: in the beginning of every iteration step, generate one (binary) 
-!## file by a separate program which contains ALL information. Assume that
-!## all values are checked (do not check for validity). 
-!## Additionally: remembber in this file information like paths, npaths,
-!## which receiver components, frequencies are contained in which paths, 
-!## all different comp, all different ifreq, ...
-!## 
-!## The best thing would be to memorize all (or a lot of) information required by 
-!## the programs like: all data indices per path ....
-!## 
-!## Alternatively a more convenient access to this information should be
-!## implemented in this module.
-!## 
-!## This could allow for quicker access in the application of the programs
+!## IN THE LONG RUN: improve this module (see doxygen commentary below)!
 !############################################################################
 
 !> \brief Define and hold information about a set of data and a set of model values
@@ -52,7 +35,28 @@
 !!  inversion grid) are hold in this module, like station/event index, inversion grid cell 
 !!  index etc. 
 !!  For parallelized application, these data samples and model values may be defined and 
-!!  used locally and do not need to represent the whole data and model space.
+!!  used locally and do not need to represent the whole data and model space.<BR>
+!!  IN THE LONG RUN: improve this module !<BR>
+!!  Do not generate the data model space over and over again from scratch.
+!!  Instead: in the beginning of every iteration step, generate one (text or binary) 
+!!  file by a separate program which contains ALL information (or add a subroutine here 
+!!  to write the current data and or model space to file, maybe one file each for data 
+!!  and model space). Assume that all values are checked (do not check for validity). 
+!!  Additionally: remember in this file information like paths, npaths,
+!!  which receiver components, frequencies are contained in which paths, 
+!!  all different comp, all different ifreq, ...
+!!  The best thing would be to memorize all (or a lot of) information required by 
+!!  the programs like: all data indices per path ....
+!!  Alternatively a more convenient access to this information should be
+!!  implemented in this module. This could allow for quicker access in the application 
+!!  of the programs (although everything is working now).
+!!  write data model space as text file (or binary file, equivalent to MODEL VALUES SPECIFIC, DATA SAMPLES SPECIFIC)
+!!  This file format could be the only interface to this module!
+!!  Later on (if needed), people can write routines like "addDataSampleFromValues" (having optional "allCombinations" flag
+!!  which is handled in the same way as in routines addDataSamplesDataModelSpaceInfo,addModelValuesDataModelSpaceInfo)
+!!  where incoming values are checked (in the same way as in routines "add*FromFile") and inside which routines 
+!!  addDataSamplesDataModelSpaceInfo,addModelValuesDataModelSpaceInfo are called. 
+!!  
 !!
 !! \author Florian Schumacher
 !! \date July 2015
@@ -98,16 +102,6 @@ module dataModelSpaceInfo
 !!$  interface getArrayImre; module procedure getArrayImreDataSamplesDataModelSpaceInfo; end interface
 !!$  interface getArrayCell; module procedure getArrayCellModelValuesDataModelSpaceInfo; end interface
 
-! FS FS
-! instead of having ONE routine which returnes a vector of indices of data samples (model parameters)
-! which have certain properties, we can have ONE routine (well two actually: one for data samples, one for model parameters)
-! which gets ALL optional parameters staname,evid,comp,ifreq,imre (param,cell respectively)
-! and returnes a vector of indices of data samples (model parameters) which have all the requested properties
-! (or a pointer to null, if there is no data sample (model parameter) having the requested properties)
-! (could be realized like: get arrays of all properties, then use identity array (indices) and "where" statement
-! and finally pack statement (using count))
-!!$  interface getIndicesParam; module procedure getIndicesParameterDataModelSpaceInfo; end interface
-! FS FS
   interface operator (.ndata.); module procedure getNdataDataModelSpaceInfo; end interface
   interface operator (.nmval.); module procedure getNmvalDataModelSpaceInfo; end interface
   interface operator (.npath.); module procedure getNpathDataModelSpaceInfo; end interface
@@ -2133,20 +2127,6 @@ contains
     if(associated(this%normalization_kernel)) deallocate(this%normalization_kernel)
     goto 2
   end subroutine createDataNormalizationDataModelSpaceInfo
-
-
-!! FS FS
-! FUNCTION:
-! write data model space as text file (with MODEL VALUES SPECIFIC, DATA SAMPLES SPECIFIC)
-
-! THE TEXT FILE FORMAT IS THE ONLY INTERFACE TO THIS MODULE!
-! later on (if needed), people can write routines like "addDataSampleFromValues" (having optional "allCombinations" flag
-! which is handled in the same way as in modules addDataSamplesDataModelSpaceInfo,addModelValuesDataModelSpaceInfo)
-! where incoming values are checked (in the same way as in routines "add*FromFile") and inside which routines 
-! addDataSamplesDataModelSpaceInfo,addModelValuesDataModelSpaceInfo are called. 
-!! FS FS
-
-
 !------------------------------------------------------------------------
 !> \brief deallocate data_model_space_info object
 !! \param this data_model_space_info object
@@ -2717,14 +2697,14 @@ contains
 !!  which is present on enter, the array is reallocated inside this subroutine and contains on exit the respective values
 !!  corresponding to indices in array indx. It is not touched, however, and points to the same array as it did on enter, if
 !!  indx => null() on exit (i.e. no valid indices found)
-!!  For proper reallocation to work, the lengths of the incoming characters MUST be:
-!!    character_length_evid for array evid
-!!    character_length_staname for array staname
-!!    character_length_component for array comp
-!!    2 for array imre
-!!  Example: 
-!!    On enter: array evid = ("S001","S002")
-!!    On exit: indx = (1,2,5,6,7) and evid = ("S001","S001","S002","S002","S002")
+!!  For proper reallocation to work, the lengths of the incoming characters MUST be:<BR>
+!!    character_length_evid for array evid<BR>
+!!    character_length_staname for array staname<BR>
+!!    character_length_component for array comp<BR>
+!!    2 for array imre<BR>
+!!  Example: <BR>
+!!    On enter: array evid = ("S001","S002")<BR>
+!!    On exit: indx = (1,2,5,6,7) and evid = ("S001","S001","S002","S002","S002")<BR>
 !!    This means that data samples 1 and 2 have eventID S001, and data samples 5,6,7 have eventID S002
 !! \param this data model space
 !! \param evid optional pointer to array of event IDs

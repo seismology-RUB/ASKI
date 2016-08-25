@@ -1,0 +1,155 @@
+THIS README FILE DOCUMENTS AN ISSUE WITH ecartInversionGrid-NEIGHBOUR SEARCH (INSTABILITY)
+
+In this ecart inversion grid, which is also presented as an example in the user manual and in 
+doc/example_ecartInversionGrid/ (as of August 2016) (and certainly in other cases of inversion 
+grids, too), for some cells not all neighbours are found correctly, for some cells not even one 
+of the neighbours is found. The reason for that should be found in the numerical implementation 
+of the search algorithm (possibly problems comparing floating point numbers).
+
+
+
+executing the command: 
+../../../bin/invgrid2vtk -igtype ecartInversionGrid -igpath ./ -igpar ecartInversionGrid_parfile_template -o invgrid_cells -all_nb
+yields the following screen output:
+
++++ BEGIN SCREEN OUTPUT +++
+--------------------------------------------------------------------------------
+                         | DOCUMENTATION OF COMMANDLINE CONTENTS |
+                         -----------------------------------------
+Program:     invgrid2vtk
+Description: Create vtk file(s) of the given inversion grid (useful to look at, to see if the specifications are correct)
+ 
+Positional arguments:
+ 
+Optional arguments:
+       -igtype: Type =  sval, Value   = ecartInversionGrid
+        -igpar: Type =  sval, Value   = ecartInversionGrid_parfile_template
+       -igpath: Type =  sval, Value   = ./
+            -o: Type =  sval, Value   = invgrid_cells
+       -overwr: Type =  none, Default = none
+           -nb: Type =  ivec, Default = 
+       -all_nb: Type =  none, Value   = none
+          -bin: Type =  none, Default = none
+         -recr: Type =  none, Default = none
+      -bndcond: Type =  sval, Default = standard
+--------------------------------------------------------------------------------
+ 
+ created inversion grid with         2802  cells
+ writing inversion grid with invgrid index as data to vtk file with basename 'invgrid_cells'
+ writing neigbour vtk files for         2802  invgrid cells with basename 'invgrid_cells_nb######'
+ boundary condition type = 'standard'
+ there are no neighbours of invgrid cell          306
+ there are no neighbours of invgrid cell          600
+ there are no neighbours of invgrid cell         1667
+ there are no neighbours of invgrid cell         2123
+ there are no neighbours of invgrid cell         2635
++++ END SCREEN OUTPUT +++
+
+The 5 inversion grid cells for which no neighbour was found (indices 306, 600, 1667, 2123, 2635) DO actually have neighbours!
+
+
+
+As another example, the following list provides inversion grid cells for which only one neighbour was found (altough there
+is more than one), the respective cell indices being given by the vtk file names :
+
+executing the command: 
+grep "CELLS            1 " invgrid_cells_nb*.vtk
+yields a list of vtk neighbour files which only contain one vtk cell (i.e. one neighbour); the screen output is:
+
++++ BEGIN SCREEN OUTPUT +++
+invgrid_cells_nb000167.vtk:CELLS            1           5
+invgrid_cells_nb000266.vtk:CELLS            1           5
+invgrid_cells_nb000280.vtk:CELLS            1           5
+invgrid_cells_nb000285.vtk:CELLS            1           5
+invgrid_cells_nb000320.vtk:CELLS            1           5
+invgrid_cells_nb000401.vtk:CELLS            1           5
+invgrid_cells_nb000475.vtk:CELLS            1           5
+invgrid_cells_nb000477.vtk:CELLS            1           5
+invgrid_cells_nb000536.vtk:CELLS            1           5
+invgrid_cells_nb000599.vtk:CELLS            1           5
+invgrid_cells_nb000636.vtk:CELLS            1           5
+invgrid_cells_nb000653.vtk:CELLS            1           5
+invgrid_cells_nb000689.vtk:CELLS            1           5
+invgrid_cells_nb000729.vtk:CELLS            1           5
+invgrid_cells_nb000731.vtk:CELLS            1           5
+invgrid_cells_nb000889.vtk:CELLS            1           5
+invgrid_cells_nb000958.vtk:CELLS            1           5
+invgrid_cells_nb000969.vtk:CELLS            1           5
+invgrid_cells_nb000970.vtk:CELLS            1           5
+invgrid_cells_nb001270.vtk:CELLS            1           5
+invgrid_cells_nb001390.vtk:CELLS            1           5
+invgrid_cells_nb001433.vtk:CELLS            1           5
+invgrid_cells_nb001805.vtk:CELLS            1           5
+invgrid_cells_nb002003.vtk:CELLS            1           5
+invgrid_cells_nb002042.vtk:CELLS            1           5
+invgrid_cells_nb002089.vtk:CELLS            1           5
+invgrid_cells_nb002122.vtk:CELLS            1           5
+invgrid_cells_nb002157.vtk:CELLS            1           5
+invgrid_cells_nb002169.vtk:CELLS            1           5
+invgrid_cells_nb002211.vtk:CELLS            1           5
+invgrid_cells_nb002240.vtk:CELLS            1           5
+invgrid_cells_nb002282.vtk:CELLS            1           5
+invgrid_cells_nb002304.vtk:CELLS            1           5
+invgrid_cells_nb002309.vtk:CELLS            1           5
+invgrid_cells_nb002413.vtk:CELLS            1           5
+invgrid_cells_nb002444.vtk:CELLS            1           5
+invgrid_cells_nb002458.vtk:CELLS            1           5
+invgrid_cells_nb002495.vtk:CELLS            1           5
+invgrid_cells_nb002507.vtk:CELLS            1           5
+invgrid_cells_nb002528.vtk:CELLS            1           5
+invgrid_cells_nb002568.vtk:CELLS            1           5
+invgrid_cells_nb002622.vtk:CELLS            1           5
+invgrid_cells_nb002626.vtk:CELLS            1           5
+invgrid_cells_nb002684.vtk:CELLS            1           5
+invgrid_cells_nb002711.vtk:CELLS            1           5
++++ BEGIN SCREEN OUTPUT +++
+
+Looking into the above listed files (last entry in the files), we can see which neighbour cell was found 
+(i.e. determine its cell index), maybe this will help you to find a starting point in debugging:
+
+cell:    neighbour found (index in exponential notation, as in vtk files, sorry for that):
+ 167     0.168000E+03
+ 266     0.223500E+04
+ 280     0.505000E+03
+ 285     0.246400E+04
+ 320     0.321000E+03
+ 401     0.164000E+04
+ 475     0.190900E+04
+ 477     0.234300E+04
+ 536     0.235300E+04
+ 599     0.187700E+04
+ 636     0.279500E+04
+ 653     0.655000E+03
+ 689     0.178800E+04
+ 729     0.830000E+03
+ 731     0.396000E+03
+ 889     0.234800E+04
+ 958     0.126900E+04
+ 969     0.171600E+04
+ 970     0.115300E+04
+1270     0.127100E+04
+1390     0.207600E+04
+1433     0.568000E+03
+1805     0.235700E+04
+2003     0.179400E+04
+2042     0.478000E+03
+2089     0.170000E+03
+2122     0.235100E+04
+2157     0.225200E+04
+2169     0.276600E+04
+2211     0.750000E+03
+2240     0.780000E+03
+2282     0.701000E+03
+2304     0.188300E+04
+2309     0.236300E+04
+2413     0.494000E+03
+2444     0.600000E+01
+2458     0.223100E+04
+2495     0.269800E+04
+2507     0.109300E+04
+2528     0.172800E+04
+2568     0.172500E+04
+2622     0.209600E+04
+2626     0.223700E+04
+2684     0.119000E+03
+2711     0.123500E+04

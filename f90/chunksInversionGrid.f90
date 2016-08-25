@@ -1,39 +1,159 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Wolfgang Friederich and Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.1 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.1 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
-!> \brief simple spherical inversion grid using one chunk of a cubed sphere
+!
+!#################################################################################################
+!##  
+!##  A T T E N T I O N  ! !
+!##  
+!##  THIS MODULE HAS KEPT GROWING AND BECAME SOME KIND OF MONSTEROUS CONSTRUCT, WHICH IS
+!##  PROBABLY CHALLENGING TO EXTEND/MAINTAIN !
+!##  
+!##  F. Schumacher, July 2016
+!##  
+!#################################################################################################
+!
+!> \brief multi-chunk spherical inversion grid, semi-regular base cells, supports sophisticated base cell refinement
 !!
-!! \details The chunks inversion grid consists of 1, 2, 3 or 6 chunks of a cubed sphere (such as the 
-!!  schunk inversion grid). The chunk width is always 90 degrees, except for 1-chunk grids
+!! \details The chunks inversion grid consists of 1, 2, 3 or 6 chunks of a cubed sphere. No "center cube"
+!!  supported, i.e. covering the whole globe is not possible. The chunk width is always 90 degrees, except for 1-chunk grids
 !!  where smaller chunks are allowed. The inversion grid cells are equi-angularly distributed,
 !!  resulting in cells which are more or less evenly distributed in size (by contrast to the 
 !!  schunk inversion grid, where the lateral projections of the cells onto the tangential plane
 !!  have an equi-distant distribution on the plane). 
-!!  2 chunk grids consist of two neighbouring 90-degree chunks, 3 chunk grids of three chunks 
-!!  which are ALL neighbours of each other (i.e. essentially half of the Earth).
+!!  2-chunk grids consist of two neighbouring 90-degree chunks, 3 chunk grids of three chunks 
+!!  which are ALL neighbours of each other (i.e. essentially half of the Earth, see manuals for image
+!!  of chunk positioning or below this doxygen comment block in code file chunksInversionGrid.f90).
 !!  Inside the chunks, the inversion grid cells are constructed on the basis of regularly distributed
-!!  base cells in the fashion of the schunk inversion grid, having a certain number of refinement
-!!  blocks in depth inside which a fixed regular lateral resolution and depth resolution can be chosen.
-!!  (THE FOLLOWING FEATURE IS NOT YET IMPLEMENTED: thereafter, by certain mechanisms, the base cells
-!!  can be locally refined, e.g. due to ray coverage of the data)
+!!  base cells in the fashion of the schunk inversion grid (or scart inversion grid), having a certain 
+!!  number of refinement blocks in depth inside which a fixed regular lateral resolution and depth resolution 
+!!  can be chosen. Thereafter, by certain mechanisms, the base cells can be locally refined (so far only a toy
+!!  method of random cell refinement is implemented for illustration , other methods can now be added easily, 
+!!  e.g. based on ray coverage of the data).
+!!  From outside the module (e.g. from module wavefieldPoints)
+!!  always global Cartesian coordinates in [km] are assumed as "wp" coordinates ("wavefield points"), 
+!!  with 3-axis pointing towards the north pole, 1-axis towards the equator at lon=0 and 2-axis 
+!!  towards the equator at lon=90 degrees. "event" coordinates are lat,lon (degrees) and depth in km, 
+!!  "station" coordinates are lat,lon (degrees) and altitude in m.
+!!  This coordinate system is referred to as "global".
+!!  <BR> 
+!!  Internally, the module handles two other sets of  coordinate systems:
+!!  "flat" = non-dimensionalized values on the tangential planes of each chunk, w.r.t. an 
+!!  Earth radius of 1 (values x,y,z in type chunks_inversion_grid refer to these coordinates, with z being
+!!  RADIUS w.r.t. Earth radius 1). These coordinates are referred to (by arrays cell_ixmin, cell_ixmax,...)
+!!  as defining coordinates for inversion grid cells in all chunks, and in this coordinate system all chunks
+!!  "overlay" each other. By chunk-individual rotations (inverse, i.e. transposed, matrices of Mrot_local2flat), 
+!!  the individual chunks are rotated to their position in "local" coordinate system, where all chunks are curved 
+!!  and attached to each other, as illustrated on images in manuals (and immediately after this doxygen comment 
+!!  block in code file chunksInversionGrid.f90). In "local" reference frame, the first chunk (chunkd index 1) is 
+!!  centered on the north pole of Earth and the counter-clockwise azimuthal rotation about local z-axis by az_rot is
+!!  NOT applied. In order to go from "local" to "global": apply matrix Mrot_azimuth (only acting on x and y) and 
+!!  thereafter the inverse (i.e. transpose) rotation to Mrot_global2local (constant rotation valid for all chunks).
+!!  <BR>
+!!  For sake of vtk plotting ONLY, the coordinate projections are referred to as follows: "GLOBAL" is "wp" 
+!!  Cartesian coordinates; "LOCAL_CURV" is "GLOBAL" but with chunk 1 centered at the north pole (and not at 
+!!  clon,clat) and no azimuthal rotation about local z-axis by az_rot applied; "LOCAL_FLAT" is "LOCAL_CURV" but 
+!!  with curvature removed and the individual chunks simply shifted in the x-y plane and positioned as illustrated 
+!!  on images in manuals (and immediately after this doxygen 
+!!  comment block ended in code file chunksInversionGrid.f90); "LOCAL_NORTH_CURV" and "LOCAL_NORTH_FLAT" are
+!!  variants of "LOCAL_CURV" and "LOCAL_FLAT", respectively, where "NORTH" refers to the fact that in those cases 
+!!  the inversion grid is kept rotated about the local vertical by az_rot and this means that the northing (as seen
+!!  at the center point of the first chunk) is along a coordinate axis (namely the negative x-axis, i.e. x really 
+!!  points to south in those cases, which can be nice for plotting and cutting plots in paraview).
+!!  <BR>
+!!  
+!!  <BR>
+!!  For programmer's orientation: The inversion grid cells are categorized as "internal" and "external" cells. 
+!!  Outside this module (in executables and as vtk file data name etc.), normally only the terminology "cell index" 
+!!  is used, which is equivalent to external call index! External cells
+!!  are all cells that are used from the ASKI package as actual inversion grid cells (i.e. on which kernels are
+!!  pre-integrated and which are referred to by data model space info objects, etc.). ADDITIONALLY there can be 
+!!  cells for internal use only, which are not visible to the rest of the ASKI software package ("internal" cells).
+!!  Originally, this construct was chosen to realize base cell refinement in a multi hierachical way (e.g. refining
+!!  cells recursively several times) and only the lowest level of refined cells that do not have subcells should
+!!  be used as external inversion grid cells. All other parent cells should be kept as internal cells, in order 
+!!  to conveniently search for neighbours (going 1 hierarchical refinement level up, etc.). When eventually 
+!!  programming the first base cell refinement method in July 2016 (Florian Schumacher), it was noted that such
+!!  multiple levels of cell refinement complicate the module structure significantly (because cells are not handled
+!!  recursively but iteratively/serially in arrays). So Florian decided to have only ONE hierarchy level of cell 
+!!  refinement, namely subcells of base cells. Thus, the concept of "external" and "internal" cells is restricted
+!!  only to the case that base cells can lose their "external" status when they are refined. All contained subcells
+!!  are automatically external (as they are not refined themselves). If a base cell is not refined, it stays 
+!!  external. Please note, however, that ALL cells have a reference as an INTERNAL cell and their internal cell
+!!  index is their position in arrays cell_ixmin, cell_ixmax, ... etc. For ALL operations within this module
+!!  chunksInversionGrid, ALWAYS the internal cell index is used, and only for communication to the rest of the
+!!  ASKI package the external cell index is used (realized by mapping icell_internal (mapping external cell index
+!!  to internal cell index) as well as mapping icell_external (mapping internal cell index to external cell index)).
+!!  <BR>
+!!  The internal cell indexing is as follows: It is assumed that the internal cell index is sorted such that all 
+!!  base cells come first, i.e. have indices in range 1,..,ncell_base. WHAT IS REFERRED TO AS BASE CELL INDEX (also
+!!  in extecutables, e.g. chunksInvgrid2vtk) IS THE INTERNAL CELL INDEX OF THE BASE CELLS. 
+!!  The base cells of the first chunk constitute 
+!!  the first portion of internal cells and they are sorted analogously to cells in inversion grids of type 
+!!  schunk_inversion_grid or type scart_inversion_grid (i.e. outer loop z from (decreasing, i.e. from top to 
+!!  bottom), intermediate loop on y (increasing), inner loop on x (increasing)). If there is more than one chunk, 
+!!  the base cells of the other chunks (chunk 2, chunk 3, chunk 4, chunk 5, chunk 6) are appended to that list of
+!!  base cells. The indexing of the base cells in the other chunks is equal to the order of base cells in the first 
+!!  chunk. Note that for multi-chunk grids, ALL chunks are identical in their flat reference frame w.r.t. their
+!!  base cells: inversion grids of more than 1 chunk MUST have wlat = wlon = 90.0 (for all chunks). For 2-chunk 
+!!  inversion grids, the two (neighbouring) chunks are identical in terms of base cells, regardless of values 
+!!  CHUNKS_INVGRID_BASE_NLAT and CHUNKS_INVGRID_BASE_NLON (chunk 2 is just shifted to the left) and the depth
+!!  refinement is valid for the whole inversion grid.
+!!  For inversion grids with 3 or more chunks, additionally CHUNKS_INVGRID_BASE_NLAT must equal
+!!  CHUNKS_INVGRID_BASE_NLON for each depth layer. This is required, because at the boundary between chunk 2 and 
+!!  chunk 3, for instance, the lon direction of chunk 2 equals the lat direction of chunk 3 (and if 
+!!  CHUNKS_INVGRID_BASE_NLAT was not equal to CHUNKS_INVGRID_BASE_NLON, we would have two different lateral 
+!!  base cell resolutions on the boundary, which physically would not be sensible). Therefore, also for nchunk >= 3
+!!  all chunks are identical in terms of their base cells in their flat reference frame (and just rotated to their
+!!  location in local reference frame). This is the reason, why the definition of the base cells of chunks >= 2
+!!  is just a duplicate of the base cells of chunk 1 (i.e. the first ncell_base entries of arrays cell_ixmin,
+!!  cell_ixmax, .. etc. repeat themselves nchunk-times). In case there is no base cell refinement, the base cells
+!!  make up the inversion grid (all base cells are external cells) and the external indexing equals the internal
+!!  cell index. In case there is an additional base cell refinement, the internal indexing of the base cells is NOT 
+!!  changed and newly created cells (subcells of the base cells) are just appended to the list of internal cells
+!!  (i.e. arrays cell_ixmin, cell_ixmax, .. etc. are just extended by new subcells during their creation).
+!!  However, since a base cell is no longer an external cell when it is refined, it must be removed from the 
+!!  external cell index. NOTE, THAT EXTERNAL CELL INDEXING MUST BE CONNECTED (from 1, .., to ncell) AND MUST NOT
+!!  HAVE GAPS, I.E. MISSING INDICES! One way to achieve that, is to 
+!!  replace the base cell (in terms of its external index) by the first subcell and append all other subcells
+!!  (in terms of their external index) to the existing set of external inversion grid cells. Alternatively, the 
+!!  external indices of all base cells (with higher external index) must be shifted some way (decreased by 1 in 
+!!  order to fill the gap or increased in order to make room for the new subcells). The advantage of making room
+!!  for the new cells and "squeezing" them into the place where the original base cell was, is that the (external)
+!!  cell index remains ascending from base cell to base cell (which is actually nice for orientation by the user,
+!!  however, not relevant for the functionality of ASKI). Therefore, this approach is preferred by the exemplary
+!!  method EXPERIMENTAL_RANDOM_SUBDIVISION, for instance (as an example in the code of subroutine 
+!!  doExpRandCellRefinementChunksInversionGrid, the method of replacing the base cell only and appending the rest
+!!  of the new subcells is also given, in a commented code section -> this is slightly more convenient to implement
+!!  / might have slightly better performance since no shifting operations are required).
 !!
 !! \author Florian Schumacher
-!! \date Nov 2015
+!! \date July 2016
+!
+!  DISTRIBUTION OF CHUNKS in chunksInversionGrid (LOCAL_FLAT projection here, i.e. x points down, y points right, 
+!  z goes out of the screen):
+!      +---+
+!      | 3 |
+!  +---+---+---+---+
+!  | 2 | 1 | 5 | 4 |
+!  +---+---+---+---+
+!      | 6 |
+!      +---+
 !
 module chunksInversionGrid
 !
@@ -47,10 +167,17 @@ module chunksInversionGrid
 !
   private :: constructNewChunksInversionGrid,readChunksInversionGrid,writeChunksInversionGrid,&
        readCheckParFileChunksInversionGrid,transformVectorFlatToGlobalChunksInversionGrid,&
+       transformVectorGlobalToFlatChunksInversionGrid,&
        transformFlatToVtkChunksInversionGrid,computeTransformsChunksInversionGrid,&
        locateCoordinateChunksInversionGrid,sortCellBoundaryCoordinatesChunksInversionGrid,&
        findFaceNeighboursOfBaseCellsChunksInversionGrid,findFaceNeighboursOfRefinedCellsChunksInversionGrid,&
-       computeCellRadiiChunksInversionGrid
+       computeCellRadiiChunksInversionGrid,privateGetGeometryVtkChunksInversionGrid,&
+       doCellRefinementChunksInversionGrid,doExpRandCellRefinementChunksInversionGrid,&
+       addCoordinatesChunksInversionGrid,getTouchingBoundaryOfNbChunkChunksInversionGrid,&
+       locateWpLaterallyInsideChunksInversionGrid
+!
+  interface is_refined; module procedure containsRefinedCellsChunksInversionGrid ; end interface
+  interface operator (.nbase.); module procedure getNcellBaseChunksInversionGrid; end interface
 !
   !< derived type of complete inversion grid information (geometry and all cells)
   type chunks_inversion_grid
@@ -71,9 +198,8 @@ module chunksInversionGrid
 !
      double precision, dimension(2,2) :: Mrot_azimuth !< azimuthal rotation by angle rot in the x-y plane
      double precision, dimension(3,3) :: Mrot_global2local !< rotation from global cartesian to local curved chunks
-     !< (3,3,nchunk)-size arrays containing for each chunk different transformation matrices
-     double precision, dimension(:,:,:), pointer :: Mrot_local2flat => null() !< rotation from local curved chunks to flat reference chunk
-     double precision, dimension(:,:,:), pointer :: Mrot_global2flat => null() !< rotation from global Cartesian chunks to flat reference chunk (i.e. Mrot_global2local plus Mrot_local2flat)
+     double precision, dimension(:,:,:), pointer :: Mrot_local2flat => null() !< rotation from local curved chunks to flat reference chunk; (3,3,nchunk)-size array containing for each chunk different transformation matrices
+     double precision, dimension(:,:,:), pointer :: Mrot_global2flat => null() !< rotation from global Cartesian chunks to flat reference chunk (i.e. Mrot_local2flat times Mrot_global2local); (3,3,nchunk)-size array containing for each chunk different transformation matrices
 !
 ! INVERSION GRID CELLS, OUTSIDE COMMUNICATION
 !
@@ -101,7 +227,7 @@ module chunksInversionGrid
 
      ! detailed geometry information on each internal cell (lateral and depth coverage)
      integer, dimension(:), pointer :: cell_ichunk => null() !< for each internal cell, contains the chunk index
-     integer, dimension(:), pointer :: chunk_ncell_internal => null() !< for each chunk, contains the number of internal inversion grid cells (size of respective vectors in ichunk_cell
+     integer, dimension(:), pointer :: chunk_ncell_internal => null() !< for each chunk, contains the number of internal inversion grid cells (size of respective vectors in chunk_icell_internal
      type (integer_vector_pointer), dimension(:), pointer :: chunk_icell_internal => null() !< for each chunk i, a vector of length chunk_ncell_internal(i) giving all internal inversion grid cell indices of cells contained in chunk i
      integer, dimension(:), pointer :: cell_ixmin => null() !< (ncell_internal)-array of indizes of minimum x-coordinates (refers to position in array x)
      integer, dimension(:), pointer :: cell_ixmax => null() !< (ncell_internal)-array of indizes of maximum x-coordinates (refers to position in array x)
@@ -124,15 +250,19 @@ module chunksInversionGrid
 !
      ! inheritance of cells, cell hierarchy
      integer, dimension(:), pointer :: cell_parent => null() !< for each internal cell: internal index of parent cell (this cell is subcell of parent cell). For base cells (i.e. no parent), value is -1
-     type (integer_vector_pointer), dimension(:), pointer :: cell_subcells => null() !< for each internal cell: vector of internal cell indices of subcells. If no subcells: points to null()
+     type (integer_vector_pointer), dimension(:), pointer :: cell_subcells => null() !< for each base cell: vector of internal cell indices of subcells. If no subcells: points to null()
 !
 ! SPECIFICATIONS FOR VTK OUTPUT
 !
-     character(len=16) :: vtk_projection = '' !< 'GLOBAL', 'LOCAL_CURV', 'LOCAL_FLAT', 'LOCAL_NORTH_CURV', 'LOCAL_NORTH_FLAT', defining the vtk transformation
+     character(len=16) :: vtk_projection = "" !< 'GLOBAL', 'LOCAL_CURV', 'LOCAL_FLAT', 'LOCAL_NORTH_CURV', 'LOCAL_NORTH_FLAT', defining the vtk transformation
      double precision, dimension(:,:), pointer :: vtk_flat_shift => null() !< (2,nchunk)-array containing for each chunk a lateral shift vector (used for the "*FLAT" vtk projections)
-     logical :: apply_vtk_coords_scaling_factor
-     double precision :: vtk_coords_scaling_factor
+     logical :: apply_vtk_coords_scaling_factor !< flag indicating whether coordinates for vtk output are scaled by vtk_coords_scaling_factor 
+     double precision :: vtk_coords_scaling_factor !< factor by which coordinates for vtk output are scaled if apply_vtk_coords_scaling_factor is .true.
      integer :: vtk_geometry_type_int = -1 !< type of vtk geometry:  0 = volumetric cells , 1 = cell center points
+!
+! OTHER
+!
+     logical :: contains_refined_cells = .false. !< flag defining whether there are only base cells (.false.) or there was some cell refinement done (.true.)
 !
      ! in the future: there could be flags in parameter file like: DONT_SMOOTH_LAYER_BOUNDARIES, 
      ! or SMOOTHING_BOUNDARY_CONDITIONS which could be taken into account here, and memorized for better handling 
@@ -196,6 +326,89 @@ contains
     end select
   end function intGeometryTypeChunksInversionGrid
 !------------------------------------------------------------------------
+!> \brief get logical value whether this chunks inversion grid was refined or only contains base cells
+!
+  function containsRefinedCellsChunksInversionGrid(this) result(l)
+    type(chunks_inversion_grid), intent(in) :: this
+    logical :: l
+    l = this%contains_refined_cells
+  end function containsRefinedCellsChunksInversionGrid
+!------------------------------------------------------------------------
+!> \brief get logical value whether this chunks inversion grid was refined or only contains base cells
+!
+  function getNcellBaseChunksInversionGrid(this) result(n)
+    type(chunks_inversion_grid), intent(in) :: this
+    integer :: n
+    n = this%ncell_base
+  end function getNcellBaseChunksInversionGrid
+!------------------------------------------------------------------------
+!> \brief get chunk indices from internal cell indices; return null() if there are any invalid indices or inversion grid is not yet defined
+!
+  function getChunkIndexOfBaseCellsChunksInversionGrid(this,icell_base_in) result(p)
+    type(chunks_inversion_grid), intent(in) :: this
+    integer, dimension(:), intent(in) :: icell_base_in
+    integer, dimension(:), pointer :: p
+!
+    nullify(p)
+    if(.not.this%is_defined) return
+    if(size(icell_base_in)<=0) return
+    if(any(icell_base_in<1 .or. icell_base_in>this%ncell_base)) return
+!
+    allocate(p(size(icell_base_in)))
+    p = this%cell_ichunk(icell_base_in)
+  end function getChunkIndexOfBaseCellsChunksInversionGrid
+!------------------------------------------------------------------------
+!> \brief get chunk indices from external cell indices; return null() if there are any invalid indices or inversion grid is not yet defined
+!
+  function getChunkIndexOfExternalCellsChunksInversionGrid(this,icell_external_in) result(p)
+    type(chunks_inversion_grid), intent(in) :: this
+    integer, dimension(:), intent(in) :: icell_external_in
+    integer, dimension(:), pointer :: p
+!
+    nullify(p)
+    if(.not.this%is_defined) return
+    if(size(icell_external_in)<=0) return
+    if(any(icell_external_in<1 .or. icell_external_in>this%ncell)) return
+!
+    allocate(p(size(icell_external_in)))
+    p = this%cell_ichunk(this%icell_internal(icell_external_in))
+  end function getChunkIndexOfExternalCellsChunksInversionGrid
+!------------------------------------------------------------------------
+!> \brief get external cell indices from base cell indices; return null() if there are any invalid indices or inversion grid is not yet defined
+!
+  function getExternalCellIndexOfBaseCellsChunksInversionGrid(this,icell_base_in) result(p)
+    type(chunks_inversion_grid), intent(in) :: this
+    integer, dimension(:), intent(in) :: icell_base_in
+    integer, dimension(:), pointer :: p
+!
+    nullify(p)
+    if(.not.this%is_defined) return
+    if(size(icell_base_in)<=0) return
+    if(any(icell_base_in<1 .or. icell_base_in>this%ncell_base)) return
+!
+    allocate(p(size(icell_base_in)))
+    p = this%icell_external(icell_base_in)
+  end function getExternalCellIndexOfBaseCellsChunksInversionGrid
+!------------------------------------------------------------------------
+!> \brief get external subcell indices for given base cell index; return null() if base cell index is invalid or inversion grid is not yet defined
+!
+  function getSubcellsOfBaseCellChunksInversionGrid(this,icell_base_in) result(p)
+    type(chunks_inversion_grid), intent(in) :: this
+    integer :: icell_base_in
+    integer, dimension(:), pointer :: p
+    ! local
+    integer, dimension(:), pointer :: sub
+!
+    nullify(p)
+    if(.not.this%is_defined) return
+    if(icell_base_in<1 .or. icell_base_in>this%ncell_base) return
+    sub => getVectorPointer(this%cell_subcells(icell_base_in))
+    if(.not.associated(sub)) return
+!
+    allocate(p(size(sub)))
+    p = this%icell_external(sub)
+  end function getSubcellsOfBaseCellChunksInversionGrid
+!------------------------------------------------------------------------
 !> \brief create chunks inversion grid
 !
   subroutine createChunksInversionGrid(this,parfile,path,lu,errmsg,recreate)
@@ -209,12 +422,13 @@ contains
     logical :: recreate_invgrid,file_exists
     ! parfile
     type (input_parameter) :: inpar
-    character (len=80), dimension(17) :: inpar_keys
+    character (len=80), dimension(19) :: inpar_keys
     data inpar_keys/'CHUNKS_INVGRID_GEOM_NCHUNK',&
          'CHUNKS_INVGRID_GEOM_RMAX','CHUNKS_INVGRID_GEOM_CLAT','CHUNKS_INVGRID_GEOM_CLON',&
          'CHUNKS_INVGRID_GEOM_WLAT','CHUNKS_INVGRID_GEOM_WLON','CHUNKS_INVGRID_GEOM_ROT',&
          'CHUNKS_INVGRID_BASE_NREF_BLOCKS','CHUNKS_INVGRID_BASE_NLAY','CHUNKS_INVGRID_BASE_THICKNESS',&
-         'CHUNKS_INVGRID_BASE_NLAT','CHUNKS_INVGRID_BASE_NLON','CHUNKS_INVGRID_FILE','VTK_PROJECTION',&
+         'CHUNKS_INVGRID_BASE_NLAT','CHUNKS_INVGRID_BASE_NLON','CHUNKS_INVGRID_CREF_METHOD',&
+         'CHUNKS_INVGRID_CREF_PARAMETERS','CHUNKS_INVGRID_FILE','VTK_PROJECTION',&
          'VTK_GEOMETRY_TYPE','SCALE_VTK_COORDS','VTK_COORDS_SCALING_FACTOR'/
 !
     call addTrace(errmsg,myname)
@@ -249,7 +463,7 @@ contains
 !--------------------------------------------------------------------
 !> \brief read chunks inversion grid parameter file, check availability and basic consistency
   subroutine readCheckParFileChunksInversionGrid(inpar,nchunk,clat,clon,wlat,wlon,rmax,az_rot,nblock,nlay_block,&
-       thickness,nlat_block,nlon_block,vtk_geometry_type_int,apply_vtk_scaling,vtk_factor,errmsg,myname)
+       thickness,nlat_block,nlon_block,cref_param,vtk_geometry_type_int,apply_vtk_scaling,vtk_factor,errmsg,myname)
     ! incoming
     type (input_parameter) :: inpar
     character(len=*) :: myname
@@ -257,7 +471,7 @@ contains
     integer :: nchunk,nblock,iblock,vtk_geometry_type_int
     real :: clat,clon,wlat,wlon,rmax,az_rot
     integer, dimension(:), pointer :: nlay_block,nlat_block,nlon_block
-    real, dimension(:), pointer :: thickness
+    real, dimension(:), pointer :: thickness,cref_param
     logical :: apply_vtk_scaling
     double precision :: vtk_factor
     type (error_message) :: errmsg
@@ -266,7 +480,7 @@ contains
     character(len=400) :: errstr
     character(len=500) :: char_string
 !
-    nullify(nlay_block,nlat_block,nlon_block,thickness)
+    nullify(nlay_block,nlat_block,nlon_block,thickness,cref_param)
 !
     nchunk = ival(inpar,'CHUNKS_INVGRID_GEOM_NCHUNK',iostat=ios)
     if(ios/=0) then
@@ -442,6 +656,37 @@ contains
        end do ! iblock
     end if
 !
+    char_string = sval(inpar,'CHUNKS_INVGRID_CREF_METHOD',iostat=ios)
+    if(ios /= 0) then
+       call add(errmsg,2,"keyword 'CHUNKS_INVGRID_CREF_METHOD' is not present in parameter file",myname)
+       return
+    end if
+    select case(trim(char_string))
+    case('NONE')
+       ! OK, no values from CHUNKS_INVGRID_CREF_PARAMETERS required, so do nothing
+    case('EXPERIMENTAL_RANDOM_SUBDIVISION')
+       ! check if there is at least one real value in vector CHUNKS_INVGRID_CREF_PARAMETERS and read this value
+       cref_param => rvecp(inpar,'CHUNKS_INVGRID_CREF_PARAMETERS',2,iostat=ios)
+       if(ios /= 0) then
+          write(errstr,*) "could not read two real values of 'CHUNKS_INVGRID_CREF_PARAMETERS' from string '"//&
+               trim(inpar.sval.'CHUNKS_INVGRID_CREF_PARAMETERS')//"'"
+          call add(errmsg,2,errstr,myname)
+          return
+       end if
+!##################################
+! ADD YOUR REFINEMENT METHOD HERE
+!##################################
+    !case ('ADD_NEW_REFINEMENT_METHOD_HERE')
+    !   ! If required, read in some numbers given by keyword 'CHUNKS_INVGRID_CREF_PARAMETERS'.
+    !   ! Alternatively, you may need to introduce another keyword to read in some filenames
+    !   ! or introduce some naming convention for files containing additional information.
+    !   cref_param => rvecp(inpar,'CHUNKS_INVGRID_CREF_PARAMETERS',number_of_values_you_expect,iostat=ios)
+    case default
+       call add(errmsg,2,"value '"//trim(char_string)//"' of keyword 'CHUNKS_INVGRID_CREF_METHOD' is invalid; "//&
+            "must be one of 'NONE', 'EXPERIMENTAL_RANDOM_SUBDIVISION'",myname)
+       return
+    end select
+!
     char_string = sval(inpar,'VTK_PROJECTION',iostat=ios)
     if(ios /= 0) then
        call add(errmsg,2,"keyword 'VTK_PROJECTION' is not present in parameter file",myname)
@@ -495,16 +740,17 @@ contains
     character(len=400) :: errstr
     integer :: ios
     logical :: file_exists
-    integer :: nblock,ilay,ibl,ix,iy,iz,icell,ichunk,ncell_base_1chunk,ishift,ix_shift,iy_shift
+    integer :: nblock,ilay,ibl,ix,iy,iz,icell,ichunk,ncell_base_1chunk,ishift
     integer, dimension(:), pointer :: nlay_block,nlat,nlon,ip
     double precision :: wx_half,wy_half,alpha_min,alpha_max,walpha
-    real, dimension(:), pointer :: thickness
+    real, dimension(:), pointer :: thickness,cref_param
     integer, dimension(:), allocatable :: ixmin_base_1chunk,ixmax_base_1chunk,iymin_base_1chunk,iymax_base_1chunk,&
-         izmin_base_1chunk,izmax_base_1chunk
+         izmin_base_1chunk,izmax_base_1chunk,index_in_x,index_in_y
+    double precision, dimension(:), allocatable :: c_add
     integer, dimension(:,:,:,:), allocatable :: icell_base_1chunk
-    character (len=500) :: invgrid_filename
+    character (len=500) :: invgrid_filename,cref_method
 !
-    nullify(nlay_block,nlat,nlon,ip,thickness)
+    nullify(nlay_block,nlat,nlon,ip,thickness,cref_param)
     call addTrace(errmsg,myname)
     this%is_defined = .false.
 !
@@ -519,14 +765,18 @@ contains
     ! GET VALUES FROM PARAMETER FILE
 !
     call readCheckParFileChunksInversionGrid(inpar,this%nchunk,this%clat,this%clon,this%wlat,this%wlon,this%rmax,&
-         this%az_rot,nblock,nlay_block,thickness,nlat,nlon,this%vtk_geometry_type_int,&
+         this%az_rot,nblock,nlay_block,thickness,nlat,nlon,cref_param,this%vtk_geometry_type_int,&
          this%apply_vtk_coords_scaling_factor,this%vtk_coords_scaling_factor,errmsg,myname)
     if(.level.errmsg == 2) goto 2
 !
+    cref_method = trim(inpar.sval.'CHUNKS_INVGRID_CREF_METHOD')
     this%vtk_projection = trim(inpar.sval.'VTK_PROJECTION')
     call computeTransformsChunksInversionGrid(this)
 !
     ! NOW DEFINE z-COORDINATE DISTRIBUTION OF ALL INVERSION GRID BASE CELLS 
+    ! since the inversion grid is defined in layers of base cells, the complete z coordinate 
+    ! vector can be defined in advance now and referred to below
+    ! Note that this%z will have DECREASING order (starting with Earth's radius = surface going down, decreasing radius).
     this%nz = sum(nlay_block)+1
     allocate(this%z(this%nz))
     this%z(1) = dble(this%rmax)
@@ -543,8 +793,8 @@ contains
        end do ! ilay
     end do ! ibl
 !
-    ! NOW DEFINE x-COORDINATES AND y-COORDINATES OF ALL POSSIBLE BASE CELLS IN A LOCAL FLAT CHUNK, 
-    ! NORMALIZED BY this%rmax, i.e. the tangential plane touches a sphere of radius 1 at the north pole z=1
+    ! NOW PREPARE x-COORDINATES AND y-COORDINATES IN A LOCAL FLAT CHUNK, NORMALIZED BY this%rmax, 
+    ! i.e. the tangential plane touches a sphere of radius 1 at the north pole z=1
     if(this%nchunk == 1) then
        wx_half = tan(0.5d0*dble(this%wlat)*mc_deg2radd)
        wy_half = tan(0.5d0*dble(this%wlon)*mc_deg2radd)
@@ -554,21 +804,24 @@ contains
        wy_half = 1.d0
     end if
 !
-    this%nx = sum(nlat)+nblock - 2*nblock + 2  ! all boundary coordinates, subtracted by all first and last coords, plus two (left and right coordinate all the same, for all refinement blocks. Two refinement blocks might contain same coordinates other than the outer ones, but those are not identified)
-    this%ny = sum(nlon)+nblock - 2*nblock + 2
+    ! start with just two coordinates that are used in every refienement block (outer boundaries of inversion grid chunk)
+    ! inside the loop on refinement blocks (below), add the rest of the base cell boundary coordinates (if not yet 
+    ! exising due to the lateral refinement if a previous block)
+    this%nx = 2 
+    this%ny = 2
     allocate(this%x(this%nx),this%y(this%ny))
     ! for all refinement blocks of base cells, use x(1),x(2),y(1),y(2) for the outer-most coordinates of a chunk 
     ! (all blocks definitley have those coordinates in common, this way it is also assured that the cells are 
     ! exactly aligned at the outer lateral boundaries of a chunk)
     this%x(1) = -wx_half; this%x(2) = wx_half
     this%y(1) = -wy_half; this%y(2) = wy_half
-    ix_shift = 2; iy_shift = 2 ! counter of the coorrdinates added to arrays this%x, this%y
 !
     ncell_base_1chunk = sum(nlon * nlat * nlay_block) ! number of base cells in a chunk (the same for all chunks)
     allocate(ixmin_base_1chunk(ncell_base_1chunk),ixmax_base_1chunk(ncell_base_1chunk),&
          iymin_base_1chunk(ncell_base_1chunk),iymax_base_1chunk(ncell_base_1chunk),&
          izmin_base_1chunk(ncell_base_1chunk),izmax_base_1chunk(ncell_base_1chunk))
     allocate(icell_base_1chunk(maxval(nlat),maxval(nlon),maxval(nlay_block),nblock))
+    icell_base_1chunk = -1
 !
     ! loop on all blocks, layers in a block, and lateral cells and define this%x,this%y as well as 
     ! temporary index arrays ixmin,ixmax,iymin,iymax,izmin,izmax, which define one chunk (can be 
@@ -580,17 +833,35 @@ contains
        ! BUT EQUIANGULARLY distributed
        walpha = dble(this%wlat)*mc_deg2radd
        alpha_min = -0.5d0*walpha
+       ! create temporary array c_add containing all x-boundary values and "add" it to this%x
+       ! by routine addCoordinatesChunksInversionGrid
+       if(allocated(c_add)) deallocate(c_add)
+       allocate(c_add(nlat(ibl)+1))
+       c_add(1) = this%x(1) ! xmin of chunk -> coordinate should be located as existing at index 1
        do ix = 2,nlat(ibl)
-          this%x(ix-1+ix_shift) = tan( alpha_min + ((ix-1)*walpha)/nlat(ibl) )
+          c_add(ix) = tan( alpha_min + ((ix-1)*walpha)/nlat(ibl) )
        end do ! ix
+       c_add(nlat(ibl)+1) = this%x(2) ! xmax of chunk -> coordinate should be located as existing at index 2
+       if(allocated(index_in_x)) deallocate(index_in_x)
+       allocate(index_in_x(nlat(ibl)+1))
+       call addCoordinatesChunksInversionGrid(this%x,this%nx,c_add,nlat(ibl)+1,index_in_x)
 !
        ! define y-coordinates NOT EQUIDISTANT on the tangential plane (as done in schunkInversionGrid), 
        ! BUT EQUIANGULARLY distributed
        walpha = dble(this%wlon)*mc_deg2radd
        alpha_min = -0.5d0*walpha
+       ! create temporary array c_add containing all x-boundary values and "add" it to this%x
+       ! by routine addCoordinatesChunksInversionGrid
+       if(allocated(c_add)) deallocate(c_add)
+       allocate(c_add(nlon(ibl)+1))
+       c_add(1) = this%y(1) ! ymin of chunk -> coordinate should be located as existing at index 1
        do iy = 2,nlon(ibl)
-          this%y(iy-1+iy_shift) = tan( alpha_min + ((iy-1)*walpha)/nlon(ibl) )
+          c_add(iy) = tan( alpha_min + ((iy-1)*walpha)/nlon(ibl) )
        end do ! iy
+       c_add(nlon(ibl)+1) = this%x(2) ! xmax of chunk -> coordinate should be located as existing at index 2
+       if(allocated(index_in_y)) deallocate(index_in_y)
+       allocate(index_in_y(nlon(ibl)+1))
+       call addCoordinatesChunksInversionGrid(this%y,this%ny,c_add,nlon(ibl)+1,index_in_y)
 !
        do ilay = 1,nlay_block(ibl)
           iz = iz + 1
@@ -598,38 +869,25 @@ contains
              do ix = 1,nlat(ibl)
                 icell = icell+1
 !
-                if(ix == 1) then
-                   ixmin_base_1chunk(icell) = 1
-                else
-                   ixmin_base_1chunk(icell) = ix_shift + ix - 1
-                end if
-                if(ix == nlat(ibl)) then
-                   ixmax_base_1chunk(icell) = 2
-                else
-                   ixmax_base_1chunk(icell) = ix_shift + ix
-                end if
-                if(iy == 1) then
-                   iymin_base_1chunk(icell) = 1
-                else
-                   iymin_base_1chunk(icell) = iy_shift + iy - 1
-                end if
-                if(iy == nlon(ibl)) then
-                   iymax_base_1chunk(icell) = 2
-                else
-                   iymax_base_1chunk(icell) = iy_shift + iy
-                end if
-                izmin_base_1chunk(icell) = iz + 1
+                ixmin_base_1chunk(icell) = index_in_x(ix)
+                ixmax_base_1chunk(icell) = index_in_x(ix+1)
+!
+                iymin_base_1chunk(icell) = index_in_y(iy)
+                iymax_base_1chunk(icell) = index_in_y(iy+1)
+!
+                izmin_base_1chunk(icell) = iz + 1 ! array this%z has decreasing order (radius: surface -> center)r
                 izmax_base_1chunk(icell) = iz
 !
-                ! for simplicity, remember this cell index in dependence of ix,iy,ilay,ibl
+                ! for convenience, remember this cell index in dependence of ix,iy,ilay,ibl
+                ! (used below in findFaceNeighboursOfBaseCellsChunksInversionGrid)
                 icell_base_1chunk(ix,iy,ilay,ibl) = icell
              end do ! ix
           end do ! iy
        end do ! ilay
-!
-       ix_shift = ix_shift + nlat(ibl)-1
-       iy_shift = iy_shift + nlon(ibl)-1
     end do ! ibl
+    if(allocated(c_add)) deallocate(c_add)
+    if(allocated(index_in_x)) deallocate(index_in_x)
+    if(allocated(index_in_y)) deallocate(index_in_y)
 !
     ! NOW DEFINE THE BASE CELLS OF THE CHUNKS
 ! 
@@ -683,7 +941,7 @@ contains
     !   extend arrays icell_internal,x,y,z,cell_ichunk,chunk_icell_internal(:),cell_i(x,y,z)(min,max),cell_center,cell_radius
     !   extend and modify array icell_external (mark all base cells as NOT external when they are refined)
     !   modify array chunk_ncell_internal (increase the numbers of internal cells for each chunk by the refined subcells)
-    ! FS FS IMPLEMENT
+    call doCellRefinementChunksInversionGrid(this,cref_method,cref_param)
 !
     ! NOW SORT THE x,y,z COORDINATES
     call sortCellBoundaryCoordinatesChunksInversionGrid(this,sum(nlay_block)+1)
@@ -840,6 +1098,580 @@ contains
        end select
     end do ! ichunk
   end subroutine computeTransformsChunksInversionGrid
+!--------------------------------------------------------------------
+!> \brief do (recusrive) cell refinement of base cells
+  subroutine doCellRefinementChunksInversionGrid(this,cref_method,cref_param)
+    type (chunks_inversion_grid) :: this
+    character(len=*) :: cref_method
+    real, dimension(:), pointer :: cref_param
+    !type (error_message) :: errmsg
+    ! local
+    !character(len=35) :: myname = 'doCellRefinementChunksInversionGrid'
+!
+    ! in readCheckParFileChunksInversionGrid it was already checked that the value of cref_method 
+    ! is valid and that there exist according values in cref_param. DO NOT CHECK THIS AGAIN HERE!
+!
+    select case(cref_method)
+    case ('NONE')
+       return
+    case ('EXPERIMENTAL_RANDOM_SUBDIVISION')
+       call srand(int(cref_param(1)))
+       call doExpRandCellRefinementChunksInversionGrid(this,int(cref_param(2)))
+!##################################
+! ADD YOUR REFINEMENT METHOD HERE
+!##################################
+    !case ('ADD_NEW_REFINEMENT_METHOD_HERE')
+    !   call requiredSubroutinesForNewRefinementMethod(this)
+    end select
+!
+  end subroutine doCellRefinementChunksInversionGrid
+!--------------------------------------------------------------------
+!> \brief do cell refinement for Your New Refinement Method
+  !subroutine requiredSubroutinesForNewRefinementMethod(this)
+    !type (chunks_inversion_grid) :: this
+!
+!##################################
+! ADD YOUR REFINEMENT METHOD HERE
+!##################################
+!
+    ! THERE IS NO MULTIPLE REFINEMENT, i.e. MAKE SURE YOU ONLY HAVE ONE REFINEMENT HIERARCHY: 
+    ! BASE CELLS CAN HAVE SUBCELLS, SUBCELLS  C A N N O T  HAVE SUBCELLS (otherwise, this module might become inconsistent)
+    ! This means, that a refined base cell becomes internal only (no external cell anymore) and all its subcells are external.
+    ! You should NOT implement a recursive subroutine here, for larger grids you may easily have stack-overflow. 
+    ! If you want to have a recursive scheme, you should implmement it iteratively (compare 
+    ! doIterativeExpRandCellRefinementOfBaseCellChunksInversionGrid contained in doExpRandCellRefinementChunksInversionGrid)
+    ! 
+!
+    ! FOR EACH BASE CELL (index range 1,..,this%ncell_base) CHOOSE WHETHER TO REFINE IT OR NOT AND (if yes), DEFINE A SET OF SUBCELLS.
+    ! FOR EACH BASE CELL YOU NEED TO:
+    ! - allocate and set its pointer in this%cell_subcells (if base cell is refined, containing internal cell indices of the new subcells), leave unassociated otherwise
+    ! - if refined, remove base cell index from this%icell_internal (you shoud overwrite it by internal index of first subcell)
+    ! - set this%icell_external(icell_base) = -1 (base cell is not external anymore)
+!
+    ! EACH NEW SUBCELL IS A NEW EXTERNAL CELL OF THIS INVERSION GRID.
+    ! FOR EACH SUBCELL YOU NEED TO:
+    ! - increase counter this%ncell_internal -> internal cell indices of new subcells are just successors of this%ncell_internal, i.e. append them to the existing cell indices
+    ! - increase counter this%ncell (number of external cells, be aware that this%ncell additionally decreases by 1 due to the base cell not being external anymore)
+    ! - if necessary, add new cell boundary values to this%x,this%y,this%z (MAKE SURE YOU DO NOT ADD DUPLICATE VALUES!!, better use routine addCoordinatesChunksInversionGrid)
+    ! - append a value to this%cell_ixmin,this%cell_ixmax,this%cell_iymin,... (subcell boundaries, indices in this%x,this%y,this%z)
+    ! - append a value to this%cell_ichunk (index of chunk in which the cell is located: same index as that of base cell)
+    ! - for its chunk index 'ichunk', increase this%chunk_ncell_internal(ichunk) and append the internal cell index to this%chunk_icell_internal(ichunk)
+    ! - append a value to this%cell_parent (base cell index in which the subcell is contained)
+    ! - add a value to this%icell_internal (first subcell of the base cell should overwrite the base cell's entry in this%icell_internal, since the base cell is not external anymore
+    ! - add a value to this%icell_external (defining the external cell index of the subcell, make sure you account for the index shift due to the base cell not being external anymore, or simply define as inverse mapping of this%icell_internal, compare doExpRandCellRefinementChunksInversionGrid)
+!
+  !end subroutine requiredSubroutinesForNewRefinementMethod
+!--------------------------------------------------------------------
+!> \brief do cell refinement for experimental random method
+  subroutine doExpRandCellRefinementChunksInversionGrid(this,nmax_subcells)
+    type (chunks_inversion_grid) :: this
+    integer :: nmax_subcells
+    ! local
+    integer :: isub,isub_start,isub_end,nsub_added,nsub,nsub_external
+    integer :: ic,ix,nx,iy,ny,iz,nz,nxnynz
+    integer :: icell_base,icell_base_external,ichunk,j
+    logical,  dimension(:), pointer :: isub_is_external
+    double precision, dimension(:), pointer :: dpp,xmin_sub,xmax_sub,ymin_sub,ymax_sub,zmin_sub,zmax_sub
+    double precision, dimension(:), allocatable :: x,y,z
+    double precision :: xmin,xmax,ymin,ymax,zmin,zmax,delta
+    integer, dimension(:), pointer :: ip
+    integer, dimension(:), allocatable :: int_array
+!
+    nullify(isub_is_external,xmin_sub,xmax_sub,ymin_sub,ymax_sub,zmin_sub,zmax_sub)
+!
+    ! loop on all base cells and do refinement
+    do icell_base = 1,this%ncell_base
+!
+       !write(*,*) "BASE CELL ",icell_base," out of ",this%ncell_base
+!
+       if(associated(xmin_sub)) deallocate(xmin_sub)
+       if(associated(xmax_sub)) deallocate(xmax_sub)
+       if(associated(ymin_sub)) deallocate(ymin_sub)
+       if(associated(ymax_sub)) deallocate(ymax_sub)
+       if(associated(zmin_sub)) deallocate(zmin_sub)
+       if(associated(zmax_sub)) deallocate(zmax_sub)
+       nsub = 0
+       call doIterativeExpRandCellRefinementOfBaseCellChunksInversionGrid()
+       !! RECURSION DOES NOT WORK PROPERLY (see below)
+       !! call doRecursiveExpRandCellRefinementOfBaseCellChunksInversionGrid(&
+       !!      this%x(this%cell_ixmin(icell_base)),this%x(this%cell_ixmax(icell_base)),xmin_sub,xmax_sub,&
+       !!      this%y(this%cell_ixmin(icell_base)),this%y(this%cell_ixmax(icell_base)),ymin_sub,ymax_sub,&
+       !!      this%z(this%cell_ixmin(icell_base)),this%z(this%cell_ixmax(icell_base)),zmin_sub,zmax_sub,&
+       !!      0,parent)
+!
+       ! all returning pointers x**_sub,y**_sub,z**_sub are assumed to have the same size on return
+       ! (or be not associated).
+       ! the size of these arrays is stored in variable nsub
+!
+       if(.not.associated(xmin_sub)) cycle
+!
+       ! reallocate arrays in 'this' to add all subcells of current base cell
+       this%cell_ixmin => reallocate(this%cell_ixmin,this%ncell_internal+nsub)
+       this%cell_ixmax => reallocate(this%cell_ixmax,this%ncell_internal+nsub)
+       this%cell_iymin => reallocate(this%cell_iymin,this%ncell_internal+nsub)
+       this%cell_iymax => reallocate(this%cell_iymax,this%ncell_internal+nsub)
+       this%cell_izmin => reallocate(this%cell_izmin,this%ncell_internal+nsub)
+       this%cell_izmax => reallocate(this%cell_izmax,this%ncell_internal+nsub)
+       this%cell_ichunk => reallocate(this%cell_ichunk,this%ncell_internal+nsub)
+       this%cell_parent => reallocate(this%cell_parent,this%ncell_internal+nsub)
+       this%cell_subcells => extendArrayVectorPointer(this%cell_subcells,this%ncell_internal+nsub)
+!
+       allocate(int_array(nsub))
+       call addCoordinatesChunksInversionGrid(this%x,this%nx,xmin_sub,nsub,int_array)
+       this%cell_ixmin(this%ncell_internal+1:this%ncell_internal+nsub) = int_array
+       call addCoordinatesChunksInversionGrid(this%x,this%nx,xmax_sub,nsub,int_array)
+       this%cell_ixmax(this%ncell_internal+1:this%ncell_internal+nsub) = int_array
+       call addCoordinatesChunksInversionGrid(this%y,this%ny,ymin_sub,nsub,int_array)
+       this%cell_iymin(this%ncell_internal+1:this%ncell_internal+nsub) = int_array
+       call addCoordinatesChunksInversionGrid(this%y,this%ny,ymax_sub,nsub,int_array)
+       this%cell_iymax(this%ncell_internal+1:this%ncell_internal+nsub) = int_array
+       call addCoordinatesChunksInversionGrid(this%z,this%nz,zmin_sub,nsub,int_array)
+       this%cell_izmin(this%ncell_internal+1:this%ncell_internal+nsub) = int_array
+       call addCoordinatesChunksInversionGrid(this%z,this%nz,zmax_sub,nsub,int_array)
+       this%cell_izmax(this%ncell_internal+1:this%ncell_internal+nsub) = int_array
+       deallocate(int_array)
+!
+       ! update this%cell_parent
+       this%cell_parent(this%ncell_internal+1:this%ncell_internal+nsub) = this%icell_internal(icell_base)
+!
+       ! update this%cell_subcells
+       allocate(ip(nsub))
+       ip = (/ (j+this%ncell_internal,j=1,nsub) /)
+       call associateVectorPointer(this%cell_subcells(icell_base),ip)
+       nullify(ip)
+!
+       ichunk = this%cell_ichunk(icell_base)
+       this%cell_ichunk(this%ncell_internal+1:this%ncell_internal+nsub) = ichunk
+       ip => getVectorPointer(this%chunk_icell_internal(ichunk))
+       ip => reallocate(ip,this%chunk_ncell_internal(ichunk)+nsub)
+       ip(this%chunk_ncell_internal(ichunk)+1:this%chunk_ncell_internal(ichunk)+nsub) = &
+            (/(j,j=this%ncell_internal+1,this%ncell_internal+nsub)/)
+       call associateVectorPointer(this%chunk_icell_internal(ichunk),ip)
+       nullify(ip)
+       this%chunk_ncell_internal(ichunk) = this%chunk_ncell_internal(ichunk) + nsub
+!
+!
+! THE FOLLOWING CODE REPLACES THE BASE CELL BY THE FIRST NEW SUBCELL (IN TERMS OF EXTERNAL CELL INDEX)
+! AND APPENDS ALL OTHER SUBCELLS TO THE MAXIMUM EXTERNAL CELL INDEX -> YIELDS "SCATTERED" INDEX DISTRIBUTION
+       ! ! there were ONLY external subcells returned by routine
+       ! ! doIterativeExpRandCellRefinementOfBaseCellChunksInversionGrid,
+       ! ! so add new cells as external cells and mark this base cell as INTERNAL only
+       ! allocate(int_array(nsub))
+       ! int_array = (/(j+this%ncell_internal,j=1,nsub)/)
+       ! this%icell_internal => reallocate(this%icell_internal,this%ncell+nsub-1)
+       ! this%icell_external => reallocate(this%icell_external,this%ncell_internal+nsub)
+       ! this%icell_external(this%ncell_internal+1:this%ncell_internal+nsub) = -1
+       ! ! in terms of external cells, replace the current base cell (formerly external) by the first subcell
+       ! ! (that is external) instead of removing the external cell (this way, the rest of the array 
+       ! ! this%icell_external does not need to be shifted)
+       ! this%icell_external(int_array(1)) = this%icell_external(icell_base)
+       ! this%icell_internal(this%icell_external(int_array(1))) = int_array(1)
+       ! this%icell_external(icell_base) = -1
+       ! ! define external cells for the rest of the new external cells
+       ! this%icell_internal(this%ncell+1:this%ncell+nsub-1) = int_array(2:nsub)
+       ! this%icell_external(int_array(2:nsub)) = (/(j,j=this%ncell+1,this%ncell+nsub-1)/)
+       ! deallocate(int_array)
+!
+! NICER ALTERNATIVE TO ABOVE COMMENTED CODE SECTION (YIELDS NICER INVERSION GRID EXTERNAL CELL INDEX DISTRIBUTION):
+! SHIFT THE EXTERNAL CELL INDEX AND "SQUEEZE" THE NEW CELLS INTO THE INDEX POSITION WHERE THE BASE CELL WAS
+       ! There were ONLY external subcells (nsub many) returned by routine
+       ! doIterativeExpRandCellRefinementOfBaseCellChunksInversionGrid.
+       ! This base cell, however, is NOT internal anymore (therfore, -1 in next line)
+       this%icell_internal => reallocate(this%icell_internal,this%ncell+nsub-1)
+       this%icell_external => reallocate(this%icell_external,this%ncell_internal+nsub)
+       this%icell_external(this%ncell_internal+1:this%ncell_internal+nsub) = -1 ! safety: initialize to -1
+       icell_base_external = this%icell_external(icell_base)
+       ! shift existing external indices (only those "behind" icell_base_external, if there are any)
+       if(icell_base_external < this%ncell) then
+          this%icell_internal(icell_base_external+nsub:this%ncell+nsub-1) = &
+               this%icell_internal(icell_base_external+1:this%ncell)
+          this%icell_external(this%icell_internal(icell_base_external+nsub:this%ncell+nsub-1)) = &
+               (/ (j,j=icell_base_external+nsub,this%ncell+nsub-1) /)
+       end if
+       ! Insert the new external subcells into the range of existing external cell indices, 
+       ! starting with the index that the base cell had so far (icell_base_external), i.e. replacing this
+       ! entry by nsub ones.
+       this%icell_internal(icell_base_external:icell_base_external+nsub-1) = &
+            (/ (j,j=this%ncell_internal+1,this%ncell_internal+nsub) /)
+       this%icell_external(this%ncell_internal+1:this%ncell_internal+nsub) = &
+            (/ (j,j=icell_base_external,icell_base_external+nsub-1) /)
+       ! Mark base cell as internal only
+       this%icell_external(icell_base) = -1
+!
+!
+       ! eventually, increase the counters of internal and external cells
+       this%ncell_internal = this%ncell_internal + nsub
+       this%ncell = this%ncell + nsub - 1 ! -1 here, because base cell is no external cell anymore
+!
+       this%contains_refined_cells = .true.
+    end do  ! icell_base
+!
+  contains
+!
+    subroutine doIterativeExpRandCellRefinementOfBaseCellChunksInversionGrid()
+      ! do random coin flip
+!       if(rand() < 0.5) then
+!          ! do not subdivide further
+! write(*,*) "'NO' COIN FLIP => NO REFINING OF BASE CELL"
+!          return
+!       end if
+
+!       ! yes, subdivide cell
+! write(*,*) "'YES' COIN FLIP => REFINING BASE CELL"
+!
+      ! nsub should have been initiated to 0 before calling this subroutine
+      !nsub = 0
+!
+      ! SUBDIVIDE BASE CELL: ARTIFICIALLY TREAT BASE CELL AS ONE NEW SUBCELL THAT WAS ADDED AND HAS TO 
+      ! BE REFINED IN THE FIRST EXECUTION OF THE FOLLOWING LOOP (will only loop on one cell, namely the base cell)
+      ! (by this mechanism, the execution of the following loop (designed for subcells) works also for the base cell)
+      nsub_added = 1
+!
+100   isub_start = nsub-nsub_added+1
+      isub_end = nsub
+      nsub_added = 0
+      do isub = isub_start,isub_end
+!
+         ! first check, if this cell is do be subdivided AT ALL (if not, the the following operations do not need
+         ! to be done)
+         nx = int(rand()*3)+1
+         ny = int(rand()*3)+1
+         nz = int(rand()*3)+1
+         nxnynz = nx*ny*nz
+         if(nxnynz <= 1 .or. nsub+nxnynz>=nmax_subcells) then
+            !write(*,*) "NO REFINING OF CELL",isub
+            ! memorize that this is an external cell (reduce arrays xmin_sub,xmax_sub,... below in order to 
+            ! only contain external cells)
+            if(isub>0) then 
+               ! do not return base cell as one of the external subcells, i.e. in case of isub==0, there is
+               ! no need to do anything
+               isub_is_external(isub) = .true.
+            end if
+            cycle
+         end if
+         !write(*,*) "YES REFINING OF CELL",isub," BY CELLS ",nsub+1," ... ",nsub+nxnynz
+!
+         ! IF THE CODE COMES HERE, THIS (SUB)CELL IS TO BE SUBDIVIDED
+!
+         ! SUBDIVIDE THE isub'th SUBCELL: ALL SUBCELLS CREATED NOW WILL BE APPENDED TO TOTAL LIST OF SUBCELLS
+!
+         if(isub==0) then
+            ! this is the base cell
+            xmin = this%x(this%cell_ixmin(icell_base))
+            xmax = this%x(this%cell_ixmax(icell_base))
+            ymin = this%y(this%cell_iymin(icell_base))
+            ymax = this%y(this%cell_iymax(icell_base))
+            zmin = this%z(this%cell_izmin(icell_base))
+            zmax = this%z(this%cell_izmax(icell_base))
+         else
+            ! this is a subcell of the base cell that was created before in this subroutine
+            xmin = xmin_sub(isub)
+            xmax = xmax_sub(isub)
+            ymin = ymin_sub(isub)
+            ymax = ymax_sub(isub)
+            zmin = zmin_sub(isub)
+            zmax = zmax_sub(isub)
+          end if
+!
+         allocate(x(nx+1))
+         x(1) = xmin
+         x(nx+1) = xmax
+         delta = (xmax-xmin)/dble(nx)
+         do ix = 2,nx
+            x(ix) = x(ix-1)+delta
+         end do ! ix
+!
+         allocate(y(ny+1))
+         y(1) = ymin
+         y(ny+1) = ymax
+         delta = (ymax-ymin)/dble(ny)
+         do iy = 2,ny
+            y(iy) = y(iy-1)+delta
+         end do ! iy
+!
+         allocate(z(nz+1))
+         z(1) = zmin
+         z(nz+1) = zmax
+         delta = (zmax-zmin)/dble(nz)
+         do iz = 2,nz
+            z(iz) = z(iz-1)+delta
+         end do ! iz
+!
+         ! subdivide this cell into nx*ny*nz subcells, extend arrays that memorize subcell boundaries
+         xmin_sub => reallocate(xmin_sub,nsub+nxnynz)
+         xmax_sub => reallocate(xmax_sub,nsub+nxnynz)
+         ymin_sub => reallocate(ymin_sub,nsub+nxnynz)
+         ymax_sub => reallocate(ymax_sub,nsub+nxnynz)
+         zmin_sub => reallocate(zmin_sub,nsub+nxnynz)
+         zmax_sub => reallocate(zmax_sub,nsub+nxnynz)
+         isub_is_external => reallocate(isub_is_external,nsub+nxnynz)
+         isub_is_external(nsub+1:nsub+nxnynz) = .false. ! initiate to .false. (is set to .true. above if cell is external)
+         ic = 0
+         do iz = 1,nz
+            do iy = 1,ny
+               do ix = 1,nx
+                  ic = ic + 1
+                  xmin_sub(nsub+ic) = x(ix)
+                  xmax_sub(nsub+ic) = x(ix+1)
+                  ymin_sub(nsub+ic) = y(iy)
+                  ymax_sub(nsub+ic) = y(iy+1)
+                  zmin_sub(nsub+ic) = z(iz)
+                  zmax_sub(nsub+ic) = z(iz+1)
+               end do ! ix
+            end do ! iy
+         end do ! iz
+!
+         deallocate(x,y,z)
+!
+         ! increase counters of total number of subscells
+         nsub = nsub+nxnynz
+         ! increase counters of subscells added in this loop
+         nsub_added = nsub_added+nxnynz
+      end do ! isub
+!
+      ! if there were any subdivisions done inside the loop, invoke "recursion" by 
+      ! going back and iterating over those subdivided cells, checking if themselves need to be subdivided
+      if(nsub_added >0) then
+         !write(*,*) "RE-EXECUTE THE LOOP"
+         goto 100
+      end if
+!
+      if(nsub>0) then
+         nsub_external = count(isub_is_external)
+         ! reduce array xmin_sub,xmax_sub,... in order to only contain external cells
+         if(nsub_external < nsub) then
+            ! some of the nsub subcells are NOT external (i.e. these cells were themselves subdivided)
+            ! remove those from the return arrays
+!
+            ! xmin
+            allocate(dpp(nsub_external))
+            dpp = pack(xmin_sub,isub_is_external)
+            deallocate(xmin_sub)
+            xmin_sub => dpp
+            nullify(dpp)
+            ! xmax
+            allocate(dpp(nsub_external))
+            dpp = pack(xmax_sub,isub_is_external)
+            deallocate(xmax_sub)
+            xmax_sub => dpp
+            nullify(dpp)
+            ! ymin
+            allocate(dpp(nsub_external))
+            dpp = pack(ymin_sub,isub_is_external)
+            deallocate(ymin_sub)
+            ymin_sub => dpp
+            nullify(dpp)
+            ! ymax
+            allocate(dpp(nsub_external))
+            dpp = pack(ymax_sub,isub_is_external)
+            deallocate(ymax_sub)
+            ymax_sub => dpp
+            nullify(dpp)
+            ! zmin
+            allocate(dpp(nsub_external))
+            dpp = pack(zmin_sub,isub_is_external)
+            deallocate(zmin_sub)
+            zmin_sub => dpp
+            nullify(dpp)
+            ! zmax
+            allocate(dpp(nsub_external))
+            dpp = pack(zmax_sub,isub_is_external)
+            deallocate(zmax_sub)
+            zmax_sub => dpp
+            nullify(dpp)
+!
+            nsub = nsub_external
+         else ! nsub_external < nsub
+            ! no need to do anything, as all nsub subcells are external.
+            ! even if nsub is still 0, nsub_external must be 0, too, and arrays xmin_sub,... are not associated. 
+            ! So everything alright.
+         end if ! nsub_external < nsub
+      end if ! nsub>0
+      if(associated(isub_is_external)) deallocate(isub_is_external)
+    end subroutine doIterativeExpRandCellRefinementOfBaseCellChunksInversionGrid
+
+!#################################################################################################
+! THE FOLLOWING RECURSIVE SUBROUTINE CAUSES SEGMENTATION FAULTS THAT I CANNOT TRACE BACK (expecially
+! for large inversion grids/a lot of refinement recursions, probably stack overflow?!)
+! ALTERNATIVELY, I IMPLEMENTED THE ABOVE ITERATIVE SUBROUTINE 
+!#################################################################################################
+!     recursive subroutine doRecursiveExpRandCellRefinementOfBaseCellChunksInversionGrid(&
+!          xmin_base,xmax_base,xmin_sub,xmax_sub,&
+!          ymin_base,ymax_base,ymin_sub,ymax_sub,&
+!          zmin_base,zmax_base,zmin_sub,zmax_sub,base_index,parent_sub)
+!       double precision, intent(in) :: xmin_base,xmax_base,ymin_base,ymax_base,zmin_base,zmax_base
+!       double precision, dimension(:), pointer, intent(inout) :: xmin_sub,xmax_sub,ymin_sub,ymax_sub,zmin_sub,zmax_sub
+!       integer, intent(in) :: base_index
+!       integer, dimension(:), pointer, intent(inout) :: parent_sub
+!       ! local
+!       integer :: nsub,ic,ix,nx,iy,ny,iz,nz,nxnynz
+!       double precision :: delta
+!       double precision, dimension(:), allocatable :: x,y,z
+! !
+!       ! do random coin flip
+!       if(rand() < 0.5) then
+! !write(*,*) "YES COIN FLIP => REFINING CELL",base_index
+!          ! yes, subdivide cell
+!          if(associated(parent_sub)) then
+!             !write(*,*) "associated(parent_sub)"
+!             nsub = size(parent_sub)
+!          else
+!             !write(*,*) "NOT associated(parent_sub)"
+!             nsub = 0
+!          end if
+! !write(*,*) "base_index, size(parent_sub) = ",base_index, nsub
+! !
+!          ! first check, if this base cell already contains enough subcells (termination criterion of recursion)
+!          if(nsub >= 81) then
+! !write(*,*) "nsub >= 81, so returning"
+! write(*,*) "NO REFINING OF CELL",base_index
+!             return
+!          else
+!          end if
+! !
+!          nx = int(rand()*3)+1
+!          ny = int(rand()*3)+1
+!          nz = int(rand()*3)+1
+!          nxnynz = nx*ny*nz
+!          if(nxnynz <= 1) then
+! write(*,*) "NO REFINING OF CELL",base_index
+!             return
+!          end if
+! write(*,*) "YES REFINING OF CELL",base_index," BY CELLS ",nsub+1," ... ",nsub+nxnynz
+! !
+!          allocate(x(nx+1))
+!          x(1) = xmin_base
+!          x(nx+1) = xmax_base
+!          delta = (xmax_base-xmin_base)/dble(nx)
+!          do ix = 2,nx
+!             x(ix) = x(ix-1)+delta
+!          end do ! ix
+! !
+!          allocate(y(ny+1))
+!          y(1) = ymin_base
+!          y(ny+1) = ymax_base
+!          delta = (ymax_base-ymin_base)/dble(ny)
+!          do iy = 2,ny
+!             y(iy) = y(iy-1)+delta
+!          end do ! iy
+! !
+!          allocate(z(nz+1))
+!          z(1) = zmin_base
+!          z(nz+1) = zmax_base
+!          delta = (zmax_base-zmin_base)/dble(nz)
+!          do iz = 2,nz
+!             z(iz) = z(iz-1)+delta
+!          end do ! iz
+! !
+!          ! subdivide this cell into nx*ny*nz subcells, extend outgoing arrays
+!          xmin_sub => reallocate(xmin_sub,nsub+nxnynz)
+!          xmax_sub => reallocate(xmax_sub,nsub+nxnynz)
+!          ymin_sub => reallocate(ymin_sub,nsub+nxnynz)
+!          ymax_sub => reallocate(ymax_sub,nsub+nxnynz)
+!          zmin_sub => reallocate(zmin_sub,nsub+nxnynz)
+!          zmax_sub => reallocate(zmax_sub,nsub+nxnynz)
+!          ic = 0
+!          do iz = 1,nz
+!             do iy = 1,ny
+!                do ix = 1,nx
+!                   ic = ic + 1
+!                   xmin_sub(nsub+ic) = x(ix)
+!                   xmax_sub(nsub+ic) = x(ix+1)
+!                   ymin_sub(nsub+ic) = y(iy)
+!                   ymax_sub(nsub+ic) = y(iy+1)
+!                   zmin_sub(nsub+ic) = z(iz)
+!                   zmax_sub(nsub+ic) = z(iz+1)
+!                end do ! ix
+!             end do ! iy
+!          end do ! iz
+! !
+!          deallocate(x,y,z)
+! !
+!          ! extend the array parents
+!          parent_sub => reallocate(parent_sub,nsub+nxnynz)
+!          parent_sub(nsub+1:nsub+nxnynz) = base_index
+! !
+!          ! invoke recursion
+!          ic = 0
+!          do iz = 1,nz
+!             do iy = 1,ny
+!                do ix = 1,nx
+!                   ic = ic + 1
+!                   call doRecursiveExpRandCellRefinementOfBaseCellChunksInversionGrid(&
+!                        xmin_sub(nsub+ic),xmax_sub(nsub+ic),xmin_sub,xmax_sub,&
+!                        ymin_sub(nsub+ic),ymax_sub(nsub+ic),ymin_sub,ymax_sub,&
+!                        zmin_sub(nsub+ic),zmax_sub(nsub+ic),zmin_sub,zmax_sub,nsub+ic,parent_sub)
+!                end do ! ix
+!             end do ! iy
+!          end do ! iz
+! !         
+!       else
+!          ! do not subdivide further
+! write(*,*) "NO REFINING OF CELL",base_index
+!          return
+!       end if
+! !
+!     end subroutine doRecursiveExpRandCellRefinementOfBaseCellChunksInversionGrid
+!
+  end subroutine doExpRandCellRefinementChunksInversionGrid
+!--------------------------------------------------------------------
+!> \brief add new coordinates in new_c to vector c, but detect existing ones (create NO duplicates!)
+!! \param c pointer to array of existing coordinates (e.g. this%x,this%y,this%z): WILL BE EXTENDED IF NECESSARY
+!! \param nc size of c (e.g. this%nx,this%ny,this%nz): WILL BE INCREASED IF NECESSARY
+!! \param new_c array of new coordinates that should be added to c: COORDINATES ALREADY EXISTING IN c WILL NOT BE ADDED TO c!
+!! \param nnew_c size of array new_c
+!! \param index_new_c has size nnew_c; on return, index_new_c(i) equals the position of new_c(i) in array c, i.e. c(index_new_c(i)) = new_c(i) (for previously existing coordinates, index_new_c(i) <= nc, nc as on enter)
+  subroutine addCoordinatesChunksInversionGrid(c,nc,new_c,nnew_c,&
+            index_new_c)
+    double precision, dimension(:), pointer, intent(inout) :: c
+    integer, intent(inout) :: nc
+    integer, intent(in) :: nnew_c
+    double precision, dimension(nnew_c), intent(in) :: new_c
+    integer, dimension(nnew_c), intent(out) :: index_new_c
+    ! local
+    integer :: nadd_c,inew_c,ic
+    double precision, dimension(nnew_c) :: add_c
+    logical :: coordinate_existed
+!
+    nadd_c = 0
+!
+    do inew_c = 1,nnew_c
+!
+       ! check existing coordinates, if new_c(inew_c) is among them
+       coordinate_existed = .false.
+       do ic = 1,nc
+          if(c(ic)==new_c(inew_c)) then
+             index_new_c(inew_c) = ic
+             coordinate_existed = .true.
+             exit
+          end if
+       end do ! ic
+       if(coordinate_existed) cycle
+!
+       ! additionally, loop over all coordinates newly added so far
+       do ic=1,nadd_c ! if nadd_c == 0, this loop does not do anything
+          if(add_c(ic)==new_c(inew_c)) then
+             index_new_c(inew_c) = nc+ic ! the new coordinates will be appended, so its index ic is shifted by nc
+             coordinate_existed = .true.
+             exit
+          end if
+       end do ! ic
+       if(coordinate_existed) cycle
+!
+       ! if new_c(inew_c) is not among the existing coordinates nor among newly added ones, remember to add it
+       nadd_c = nadd_c + 1
+       add_c(nadd_c) = new_c(inew_c)
+       index_new_c(inew_c) = nc+nadd_c
+    end do ! inew_c
+!
+    ! if there were new coordinates found, that were not already contained
+    ! in vector c, then extend c and append those new  coordinates; also update nc
+    if(nadd_c > 0) then
+       c => reallocate(c,nc+nadd_c)
+       c(nc+1:nc+nadd_c) = add_c(1:nadd_c)
+       nc = nc+nadd_c
+    end if
+  end subroutine addCoordinatesChunksInversionGrid
 !--------------------------------------------------------------------
 !> \brief define the sorting mappings of x,y,z coordinates of cell boundaries
   subroutine sortCellBoundaryCoordinatesChunksInversionGrid(this,nz_base)
@@ -1204,8 +2036,9 @@ contains
                       iy_nb_2 = ny_below - ((ny-iy)*ny_below)/ny
                       n_nb = (ix_nb_2-ix_nb_1+1)*(iy_nb_2-iy_nb_1+1)
                       if(ix_nb_2 < ix_nb_1 .or. iy_nb_2 < iy_nb_1) then
-                         ! FS FS THIS IS ACTUALLY BAD PRACTICE, BETTER RAISE A REAL ERROR HERE (well, hope this will not be necessary...)
-                         write(*,*) "THIS ERROR SHOULD NOT OCCUR: number of zmin neigbhour base cells = ",n_nb
+                         ! THIS IS ACTUALLY BAD PRACTICE, BETTER RAISE A REAL ERROR HERE (well, hope this will not be necessary...)
+                         write(*,*) "ERROR 1 IN findFaceNeighboursOfBaseCellsChunksInversionGrid: ",&
+                              "THIS ERROR SHOULD NOT OCCUR: number of zmin neigbhour base cells = ",n_nb
                          stop
                       end if
                       do ichunk = 1,this%nchunk
@@ -1257,8 +2090,9 @@ contains
                       iy_nb_2 = ny_above - ((ny-iy)*ny_above)/ny
                       n_nb = (ix_nb_2-ix_nb_1+1)*(iy_nb_2-iy_nb_1+1)
                       if(ix_nb_2 < ix_nb_1 .or. iy_nb_2 < iy_nb_1) then
-                         ! FS FS THIS IS ACTUALLY BAD PRACTICE, BETTER RAISE A REAL ERROR HERE (well, hope this will not be necessary...)
-                         write(*,*) "THIS ERROR SHOULD NOT OCCUR: number of zmax neigbhour base cells = ",n_nb
+                         ! THIS IS ACTUALLY BAD PRACTICE, BETTER RAISE A REAL ERROR HERE (well, hope this will not be necessary...)
+                         write(*,*) "ERROR 2 IN findFaceNeighboursOfBaseCellsChunksInversionGrid: ",&
+                              "THIS ERROR SHOULD NOT OCCUR: number of zmax neigbhour base cells = ",n_nb
                          stop
                       end if
                       do ichunk = 1,this%nchunk
@@ -1330,7 +2164,7 @@ contains
           end select ! bound
 
        case(2) ! ichunk
-          ! in this case, there is only one boundary with a neighbour, namely, namely ymax
+          ! in this case, there is only one boundary with a neighbour, namely ymax
           select case(bound)
           case('ymax')
              ichunk_nb = 1
@@ -1492,10 +2326,781 @@ contains
   subroutine findFaceNeighboursOfRefinedCellsChunksInversionGrid(this)
     type (chunks_inversion_grid) :: this
     ! local
-    !integer :: icell
+    integer :: icell_base,ibound,isub,nsub,inb,nnb
+    integer, dimension(:), pointer :: idx_subcells,idx_nb,ixmin_sub,ixmax_sub,iymin_sub,iymax_sub,izmin_sub,izmax_sub
+    character(len=4) :: bound,bound_nb
+    integer, dimension(:), pointer :: nb_base,idx_sub_base_at_bound,idx_sub_nb_base_at_bound
+    integer :: icell_nb_base,ichunk,ichunk_nb,reverse_orientation,c2_min,c2_max,c3_min,c3_max
+    logical :: base_cell_is_refined,nb_base_cell_is_refined
+    logical, dimension(:), allocatable :: condition_c1,condition_c1_c2_c3
 !
-    ! FS FS IMPLEMENT
+    nullify(idx_subcells,idx_nb,ixmin_sub,ixmax_sub,iymin_sub,iymax_sub,izmin_sub,izmax_sub)
+    nullify(nb_base,idx_sub_base_at_bound,idx_sub_nb_base_at_bound)
 !
+    do icell_base = 1,this%ncell_base
+       idx_subcells => getVectorPointer(this%cell_subcells(icell_base))
+       if(.not.associated(idx_subcells)) cycle
+!
+       nsub = size(idx_subcells)
+       if(associated(ixmin_sub)) deallocate(ixmin_sub)
+       if(associated(ixmax_sub)) deallocate(ixmax_sub)
+       if(associated(iymin_sub)) deallocate(iymin_sub)
+       if(associated(iymax_sub)) deallocate(iymax_sub)
+       if(associated(izmin_sub)) deallocate(izmin_sub)
+       if(associated(izmax_sub)) deallocate(izmax_sub)
+       allocate(ixmin_sub(nsub),ixmax_sub(nsub),iymin_sub(nsub),iymax_sub(nsub),izmin_sub(nsub),izmax_sub(nsub))
+       ixmin_sub = this%cell_ixmin(idx_subcells)
+       ixmax_sub = this%cell_ixmax(idx_subcells)
+       iymin_sub = this%cell_iymin(idx_subcells)
+       iymax_sub = this%cell_iymax(idx_subcells)
+       izmin_sub = this%cell_izmin(idx_subcells)
+       izmax_sub = this%cell_izmax(idx_subcells)
+!
+       if(allocated(condition_c1)) deallocate(condition_c1)
+       if(allocated(condition_c1_c2_c3)) deallocate(condition_c1_c2_c3)
+       allocate(condition_c1(nsub),condition_c1_c2_c3(nsub))
+       do isub = 1,nsub
+          !find xmin neighbours of cell isub
+          condition_c1(:) = ixmax_sub(:) == ixmin_sub(isub) ! select those indices which satisfy condition on first coordinate
+          if(any(condition_c1)) then
+             ! HERE: c2 = y, c3 = z
+             call findOverlapping2DFacesChunksInversionGrid(&
+                  this%iy2sorted(iymin_sub(isub)),this%iy2sorted(iymax_sub(isub)),& ! c2 test cell
+                  this%iz2sorted(izmin_sub(isub)),this%iz2sorted(izmax_sub(isub)),& ! c3 test cell
+                  nsub,&
+                  this%iy2sorted(iymin_sub),this%iy2sorted(iymax_sub),& ! c2 array
+                  this%iz2sorted(izmin_sub),this%iz2sorted(izmax_sub),& ! c3 array
+                  condition_c1_c2_c3,condition_c1=condition_c1)
+             nnb = count(condition_c1_c2_c3)
+             if(nnb>0) then
+                allocate(idx_nb(nnb))
+                idx_nb = pack( idx_subcells , condition_c1_c2_c3 )
+                call associateVectorPointer(this%cell_nb_xmin(idx_subcells(isub)),idx_nb)
+                nullify(idx_nb)
+             end if
+          end if ! any(condition_c1) for xmin neighbours
+!
+          !find xmax neighbours of cell isub
+          condition_c1(:) = ixmin_sub(:) == ixmax_sub(isub) ! select those indices which satisfy condition on first coordinate
+          if(any(condition_c1)) then
+             ! HERE: c2 = y, c3 = z
+             call findOverlapping2DFacesChunksInversionGrid(&
+                  this%iy2sorted(iymin_sub(isub)),this%iy2sorted(iymax_sub(isub)),& ! c2 test cell
+                  this%iz2sorted(izmin_sub(isub)),this%iz2sorted(izmax_sub(isub)),& ! c3 test cell
+                  nsub,&
+                  this%iy2sorted(iymin_sub),this%iy2sorted(iymax_sub),& ! c2 array
+                  this%iz2sorted(izmin_sub),this%iz2sorted(izmax_sub),& ! c3 array
+                  condition_c1_c2_c3,condition_c1=condition_c1)
+             nnb = count(condition_c1_c2_c3)
+             if(nnb>0) then
+                allocate(idx_nb(nnb))
+                idx_nb = pack( idx_subcells , condition_c1_c2_c3 )
+                call associateVectorPointer(this%cell_nb_xmax(idx_subcells(isub)),idx_nb)
+                nullify(idx_nb)
+             end if
+          end if ! any(condition_c1) for xmax neighbours
+!
+          !find ymin neighbours of cell isub
+          condition_c1(:) = iymax_sub(:) == iymin_sub(isub) ! select those indices which satisfy condition on first coordinate
+          if(any(condition_c1)) then
+             ! HERE: c2 = x, c3 = z
+             call findOverlapping2DFacesChunksInversionGrid(&
+                  this%ix2sorted(ixmin_sub(isub)),this%ix2sorted(ixmax_sub(isub)),& ! c2 test cell
+                  this%iz2sorted(izmin_sub(isub)),this%iz2sorted(izmax_sub(isub)),& ! c3 test cell
+                  nsub,&
+                  this%ix2sorted(ixmin_sub),this%ix2sorted(ixmax_sub),& ! c2 array
+                  this%iz2sorted(izmin_sub),this%iz2sorted(izmax_sub),& ! c3 array
+                  condition_c1_c2_c3,condition_c1=condition_c1)
+             nnb = count(condition_c1_c2_c3)
+             if(nnb>0) then
+                allocate(idx_nb(nnb))
+                idx_nb = pack( idx_subcells , condition_c1_c2_c3 )
+                call associateVectorPointer(this%cell_nb_ymin(idx_subcells(isub)),idx_nb)
+                nullify(idx_nb)
+             end if
+          end if ! any(condition_c1) for ymin neighbours
+!
+          !find ymax neighbours of cell isub
+          condition_c1(:) = iymin_sub(:) == iymax_sub(isub) ! select those indices which satisfy condition on first coordinate
+          if(any(condition_c1)) then
+             ! HERE: c2 = x, c3 = z
+             call findOverlapping2DFacesChunksInversionGrid(&
+                  this%ix2sorted(ixmin_sub(isub)),this%ix2sorted(ixmax_sub(isub)),& ! c2 test cell
+                  this%iz2sorted(izmin_sub(isub)),this%iz2sorted(izmax_sub(isub)),& ! c3 test cell
+                  nsub,&
+                  this%ix2sorted(ixmin_sub),this%ix2sorted(ixmax_sub),& ! c2 array
+                  this%iz2sorted(izmin_sub),this%iz2sorted(izmax_sub),& ! c3 array
+                  condition_c1_c2_c3,condition_c1=condition_c1)
+             nnb = count(condition_c1_c2_c3)
+             if(nnb>0) then
+                allocate(idx_nb(nnb))
+                idx_nb = pack( idx_subcells , condition_c1_c2_c3 )
+                call associateVectorPointer(this%cell_nb_ymax(idx_subcells(isub)),idx_nb)
+                nullify(idx_nb)
+             end if
+          end if ! any(condition_c1) for ymax neighbours
+!
+          !find zmin neighbours of cell isub
+          condition_c1(:) = izmax_sub(:) == izmin_sub(isub) ! select those indices which satisfy condition on first coordinate
+          if(any(condition_c1)) then
+             ! HERE: c2 = x, c3 = y
+             call findOverlapping2DFacesChunksInversionGrid(&
+                  this%ix2sorted(ixmin_sub(isub)),this%ix2sorted(ixmax_sub(isub)),& ! c2 test cell
+                  this%iy2sorted(iymin_sub(isub)),this%iy2sorted(iymax_sub(isub)),& ! c3 test cell
+                  nsub,&
+                  this%ix2sorted(ixmin_sub),this%ix2sorted(ixmax_sub),& ! c2 array
+                  this%iy2sorted(iymin_sub),this%iy2sorted(iymax_sub),& ! c3 array
+                  condition_c1_c2_c3,condition_c1=condition_c1)
+             nnb = count(condition_c1_c2_c3)
+             if(nnb>0) then
+                allocate(idx_nb(nnb))
+                idx_nb = pack( idx_subcells , condition_c1_c2_c3 )
+                call associateVectorPointer(this%cell_nb_zmin(idx_subcells(isub)),idx_nb)
+                nullify(idx_nb)
+             end if
+          end if ! any(condition_c1) for zmin neighbours
+!
+          !find zmax neighbours of cell isub
+          condition_c1(:) = izmin_sub(:) == izmax_sub(isub) ! select those indices which satisfy condition on first coordinate
+          if(any(condition_c1)) then
+             ! HERE: c2 = x, c3 = y
+             call findOverlapping2DFacesChunksInversionGrid(&
+                  this%ix2sorted(ixmin_sub(isub)),this%ix2sorted(ixmax_sub(isub)),& ! c2 test cell
+                  this%iy2sorted(iymin_sub(isub)),this%iy2sorted(iymax_sub(isub)),& ! c3 test cell
+                  nsub,&
+                  this%ix2sorted(ixmin_sub),this%ix2sorted(ixmax_sub),& ! c2 array
+                  this%iy2sorted(iymin_sub),this%iy2sorted(iymax_sub),& ! c3 array
+                  condition_c1_c2_c3,condition_c1=condition_c1)
+             nnb = count(condition_c1_c2_c3)
+             if(nnb>0) then
+                allocate(idx_nb(nnb))
+                idx_nb = pack( idx_subcells , condition_c1_c2_c3 )
+                call associateVectorPointer(this%cell_nb_zmax(idx_subcells(isub)),idx_nb)
+                nullify(idx_nb)
+             end if
+          end if ! any(condition_c1) for zmax neighbours
+       end do ! isub
+    end do ! icell_base
+!
+    if(associated(ixmin_sub)) deallocate(ixmin_sub)
+    if(associated(ixmax_sub)) deallocate(ixmax_sub)
+    if(associated(iymin_sub)) deallocate(iymin_sub)
+    if(associated(iymax_sub)) deallocate(iymax_sub)
+    if(associated(izmin_sub)) deallocate(izmin_sub)
+    if(associated(izmax_sub)) deallocate(izmax_sub)
+    if(allocated(condition_c1)) deallocate(condition_c1)
+!
+    ! re-loop over all base cells, updating neighbour arrays of all subcells (and possibly the base cell 
+    ! itself) w.r.t. subcells of neighbouring base cells; pay special attention if the neighbouring base 
+    ! cell is in a different chunk (possibly inverse orientation of lateral coordinates)
+    do icell_base = 1,this%ncell_base
+       base_cell_is_refined = associated(getVectorPointer(this%cell_subcells(icell_base)))
+       ichunk = this%cell_ichunk(icell_base)
+!
+       ! Loop on all 4 lateral boundaries of this base cell and update the neighbours of this base cell 
+       ! (if not refined) or the neighbours of subcells of this base cell (if refined)
+       ! For lateral neighbours, there is special treatment required if neighbouring base cells are in 
+       ! a different chunk
+       do ibound = 1,4
+          select case (ibound)
+          case(1)
+             bound = 'xmin'
+             bound_nb = 'xmax'
+             nb_base => getVectorPointer(this%cell_nb_xmin(icell_base))
+          case(2)
+             bound = 'ymin'
+             bound_nb = 'ymax'
+             nb_base => getVectorPointer(this%cell_nb_ymin(icell_base))
+          case(3)
+             bound = 'xmax'
+             bound_nb = 'xmin'
+             nb_base => getVectorPointer(this%cell_nb_xmax(icell_base))
+          case(4)
+             bound = 'ymax'
+             bound_nb = 'ymin'
+             nb_base => getVectorPointer(this%cell_nb_ymax(icell_base))
+          end select
+!
+          if(associated(nb_base)) then
+             ! Yes, there is a neighbouring base cell
+!
+             if(size(nb_base)/=1) then
+                write(*,*) "ERROR 3 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: base cell ",icell_base,&
+                     " has ",size(nb_base)," neighbouring base cells at boundary '",bound,"'. This violates the ",&
+                     "internal assumption of module chunksInversionGrid that in case of NCHUNK > 2, NLAT must ",&
+                     "equal NLON in all blocks. Hence, module chunksInversionGrid is inconsistent!"
+                stop
+             end if
+             icell_nb_base = nb_base(1)
+!
+             ! test all subcells of neighbouring base cell if they have a touching face with (the subcells of) this base cell
+!
+             ! if neighbour is contained in a different chunk, we need to select boundary (and orientation) of neighbour 
+             ! base cell (otherwise the boundary of the neighbour cell was defined above by bound_nb already)
+             ichunk_nb = this%cell_ichunk(icell_nb_base)
+             if(ichunk == ichunk_nb) then
+                ! both base cells are in the same chunk: need to consider the opposite boundary of the neighbour,
+                ! the value of bound_nb was set above
+                if(associated(idx_sub_nb_base_at_bound)) deallocate(idx_sub_nb_base_at_bound)
+                call getSubcellsAtBoundaryChunksInversionGrid(icell_nb_base,bound_nb,idx_sub_nb_base_at_bound)
+                reverse_orientation = 0
+             else
+                ! overwrite previously set value of bound_nb by correct boundary of neighbouring chunk
+                ! and get reversre_orientation value (0 or 1)
+                call getTouchingBoundaryOfNbChunkChunksInversionGrid(this,ichunk,bound,ichunk_nb,bound_nb,reverse_orientation)
+                if(associated(idx_sub_nb_base_at_bound)) deallocate(idx_sub_nb_base_at_bound)
+                call getSubcellsAtBoundaryChunksInversionGrid(icell_nb_base,bound_nb,idx_sub_nb_base_at_bound)
+             end if ! ichunk == ichunk_nb
+             nb_base_cell_is_refined = associated(idx_sub_nb_base_at_bound)
+!
+             if(base_cell_is_refined) then
+                ! get subcells of icell_base which are located on boundary bound
+                if(associated(idx_sub_base_at_bound)) deallocate(idx_sub_base_at_bound)
+                call getSubcellsAtBoundaryChunksInversionGrid(icell_base,bound,idx_sub_base_at_bound)
+                if(.not.associated(idx_sub_base_at_bound)) then
+                   write(*,*) "ERROR 4 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: base cell ",icell_base,&
+                        " has subcells, but none of them is located at boundary '",bound,&
+                        "' -> module chunksInversionGrid is inconsistent!"
+                   stop
+                end if
+                ! loop on all subcells located on boundary bound and update their 'bound'-neighbours array
+                do isub = 1,size(idx_sub_base_at_bound)
+                   if(nb_base_cell_is_refined) then
+                      ! call subroutine findOverlapping2DFacesChunksInversionGrid accounting for reverse_orientation.
+                      ! The boundaries c1_min,... (on the current base cell side) can be defined according to the value of 'bound'.
+                      ! The boundaries of the subcells on the neighbouring side (for which overlap should be checked, 
+!
+                      ! always choose c3 to be z, as we iterate over x,y boundaries only
+                      c3_min = this%iz2sorted(this%cell_izmin(idx_sub_base_at_bound(isub)))
+                      c3_max = this%iz2sorted(this%cell_izmax(idx_sub_base_at_bound(isub)))
+                      select case(bound)
+                      case('xmin','xmax')
+                         ! on the 'x'-sides of the base cell, we need to test 'y' coordinates for overlap, so c2 is y
+                         c2_min = this%iy2sorted(this%cell_iymin(idx_sub_base_at_bound(isub)))
+                         c2_max = this%iy2sorted(this%cell_iymax(idx_sub_base_at_bound(isub)))
+                      case('ymin','ymax')
+                         ! on the 'y'-sides of the base cell, we need to test 'x' coordinates for overlap, so c2 is x
+                         c2_min = this%ix2sorted(this%cell_ixmin(idx_sub_base_at_bound(isub)))
+                         c2_max = this%ix2sorted(this%cell_ixmax(idx_sub_base_at_bound(isub)))
+                      end select ! bound
+!
+                      if(allocated(condition_c1_c2_c3)) deallocate(condition_c1_c2_c3)
+                      allocate(condition_c1_c2_c3(size(idx_sub_nb_base_at_bound)))
+!
+                      select case(bound_nb)
+                      case('xmin','xmax')
+                         ! on the 'x'-sides of the neighbouring base cell, we need to test 'y' coordinates for overlap, so c2 is y
+                         ! c3 is z (everywhere, so also here)
+                         call findOverlapping2DFacesChunksInversionGrid(&
+                              c2_min,c2_max,c3_min,c3_max,size(idx_sub_nb_base_at_bound),&
+                              this%iy2sorted(this%cell_iymin(idx_sub_nb_base_at_bound)),& ! c2 min array
+                              this%iy2sorted(this%cell_iymax(idx_sub_nb_base_at_bound)),& ! c2 max array
+                              this%iz2sorted(this%cell_izmin(idx_sub_nb_base_at_bound)),& ! c3 min array -> always z
+                              this%iz2sorted(this%cell_izmax(idx_sub_nb_base_at_bound)),& ! c3 max array -> always z
+                              condition_c1_c2_c3,c2_reverse_order=reverse_orientation)
+                      case('ymin','ymax')
+                         ! on the 'y'-sides of the neighbouring base cell, we need to test 'x' coordinates for overlap, so c2 is x
+                         ! c3 is z (everywhere, so also here)
+                         call findOverlapping2DFacesChunksInversionGrid(&
+                              c2_min,c2_max,c3_min,c3_max,size(idx_sub_nb_base_at_bound),&
+                              this%ix2sorted(this%cell_ixmin(idx_sub_nb_base_at_bound)),& ! c2 min array
+                              this%ix2sorted(this%cell_ixmax(idx_sub_nb_base_at_bound)),& ! c2 max array
+                              this%iz2sorted(this%cell_izmin(idx_sub_nb_base_at_bound)),& ! c3 min array -> always z
+                              this%iz2sorted(this%cell_izmax(idx_sub_nb_base_at_bound)),& ! c3 max array -> always z
+                              condition_c1_c2_c3,c2_reverse_order=reverse_orientation)
+                      end select ! bound_nb
+!
+                      nnb = count(condition_c1_c2_c3)
+                      if(nnb>0) then
+                         allocate(idx_nb(nnb))
+                         idx_nb = pack( idx_sub_nb_base_at_bound , condition_c1_c2_c3 )
+                      else
+                         write(*,*) "ERROR 5 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: subcell ",&
+                              this%icell_external(idx_sub_base_at_bound(isub))," (external_index, contained in base cell ",&
+                              icell_base,") does not find any '",bound,"' neighbours, although it is located on the '",bound,&
+                              "' face of the base cell (which has one refined base-cell neighbour) ",&
+                              "-> module chunksInversionGrid is inconsistent!"
+                         stop
+                      end if
+                   else ! nb_base_cell_is_refined
+                      ! the only neighbour to be added is the neighbouring base cell
+                      allocate(idx_nb(1))
+                      idx_nb(1) = icell_nb_base
+                   end if ! nb_base_cell_is_refined
+!
+                   ! update the 'bound'-neighbours array by idx_nb
+                   select case(ibound)
+                   case(1)
+                      if(associated(getVectorPointer(this%cell_nb_xmin(idx_sub_base_at_bound(isub))))) then
+                         write(*,*) "ERROR 6 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: subcell ",&
+                              this%icell_external(idx_sub_base_at_bound(isub))," (external index, contained in base cell ",&
+                              icell_base,") already has '",bound,"' neighbours, although it is located on the '",bound,&
+                              "' face of the base cell. This should not yet have been defined",&
+                              " -> module chunksInversionGrid is inconsistent!"
+                         stop
+                      end if
+                      call associateVectorPointer(this%cell_nb_xmin(idx_sub_base_at_bound(isub)),idx_nb)
+                   case(2)
+                      if(associated(getVectorPointer(this%cell_nb_ymin(idx_sub_base_at_bound(isub))))) then
+                         write(*,*) "ERROR 7 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: subcell ",&
+                              this%icell_external(idx_sub_base_at_bound(isub))," (external index, contained in base cell ",&
+                              icell_base,") already has '",bound,"' neighbours, although it is located on the '",bound,&
+                              "' face of the base cell. This should not yet have been defined",&
+                              " -> module chunksInversionGrid is inconsistent!"
+                         stop
+                      end if
+                      call associateVectorPointer(this%cell_nb_ymin(idx_sub_base_at_bound(isub)),idx_nb)
+                   case(3)
+                      if(associated(getVectorPointer(this%cell_nb_xmax(idx_sub_base_at_bound(isub))))) then
+                         write(*,*) "ERROR 8 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: subcell ",&
+                              this%icell_external(idx_sub_base_at_bound(isub))," (external index, contained in base cell ",&
+                              icell_base,") already has '",bound,"' neighbours, although it is located on the '",bound,&
+                              "' face of the base cell. This should not yet have been defined",&
+                              " -> module chunksInversionGrid is inconsistent!"
+                         stop
+                      end if
+                      call associateVectorPointer(this%cell_nb_xmax(idx_sub_base_at_bound(isub)),idx_nb)
+                   case(4)
+                      if(associated(getVectorPointer(this%cell_nb_ymax(idx_sub_base_at_bound(isub))))) then
+                         write(*,*) "ERROR 9 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: subcell ",&
+                              this%icell_external(idx_sub_base_at_bound(isub))," (external index, contained in base cell ",&
+                              icell_base,") already has '",bound,"' neighbours, although it is located on the '",bound,&
+                              "' face of the base cell. This should not yet have been defined",&
+                              " -> module chunksInversionGrid is inconsistent!"
+                         stop
+                      end if
+                      call associateVectorPointer(this%cell_nb_ymax(idx_sub_base_at_bound(isub)),idx_nb)
+                   end select ! ibound
+                   nullify(idx_nb)
+                end do ! isub
+                ! remove neighbour of current base cell, since the base cell is not external anymore (was refined)
+                ! -> only keep external neighbours for simplicity
+                select case(ibound)
+                case(1); call dealloc(this%cell_nb_xmin(icell_base))
+                case(2); call dealloc(this%cell_nb_ymin(icell_base))
+                case(3); call dealloc(this%cell_nb_xmax(icell_base))
+                case(4); call dealloc(this%cell_nb_ymax(icell_base))
+                end select ! ibound
+                nullify(nb_base)
+!
+             else ! base_cell_is_refined
+!
+                if(nb_base_cell_is_refined) then
+                   ! modify 'bound'-neighbours of this base cell:
+                   ! remove neighbouring base cell index (since neighbouring base cell is not external, since it was refined)
+                   ! and add all subcell indices at the touching boundary
+                   if(size(idx_sub_nb_base_at_bound)==1) then
+                      ! directly overwrite value in respective array this%cell_nb_'bound'(icell_base)
+                      nb_base(1) = idx_sub_nb_base_at_bound(1)
+                   else
+                      nb_base => reallocate(nb_base,size(idx_sub_nb_base_at_bound))
+                      nb_base = idx_sub_nb_base_at_bound
+                      ! reallocation has changed the memory location of the neighbour array and deallocated the
+                      ! old memory, so need to re-associated this%cell_nb_'bound'(icell_base)
+                      select case(ibound)
+                      case(1); call associateVectorPointer(this%cell_nb_xmin(icell_base),nb_base)
+                      case(2); call associateVectorPointer(this%cell_nb_ymin(icell_base),nb_base)
+                      case(3); call associateVectorPointer(this%cell_nb_xmax(icell_base),nb_base)
+                      case(4); call associateVectorPointer(this%cell_nb_ymax(icell_base),nb_base)
+                      end select ! ibound
+                   end if
+                else ! nb_base_cell_is_refined
+                   ! the only neighbour to be added would be the neighbouring base cell, which already is
+                   ! set as neighbour, so nothing to do here
+                end if ! nb_base_cell_is_refined
+             end if ! base_cell_is_refined
+
+          else ! associated(nb_base)
+             ! since there is no 'bound'-neighbour of this base cell, there is nothing to do at this point
+          end if ! associated(nb_base)
+       end do ! ibound, xmin,ymin,xmax,ymax
+!
+       ! account for the vertical boundaries zmin,zmax
+       do ibound = 5,6
+          select case (ibound)
+          case(5)
+             bound = 'zmin'
+             bound_nb = 'zmax'
+             nb_base => getVectorPointer(this%cell_nb_zmin(icell_base))
+          case(6)
+             bound = 'zmax'
+             bound_nb = 'zmin'
+             nb_base => getVectorPointer(this%cell_nb_zmax(icell_base))
+          end select
+!
+          if(associated(nb_base)) then
+             ! Yes, there is at least one neighbouring base cell
+
+             ! test all subcells of neighbouring base cell(s) if they have a touching face with (the subcells of) this base cell
+!
+             ! in case of vertical neighbours, there can be more than one neighbouring base cell, so collect
+             ! potential subcells
+             if(associated(idx_sub_nb_base_at_bound)) deallocate(idx_sub_nb_base_at_bound)
+             nsub = 0
+             nb_base_cell_is_refined = .false.
+             do inb = 1,size(nb_base)
+                if(associated(idx_nb)) deallocate(idx_nb)
+                call getSubcellsAtBoundaryChunksInversionGrid(nb_base(inb),bound_nb,idx_nb)
+                if(associated(idx_nb)) then
+                   ! base cell nb_base(inb) was refined, so append idx to idx_sub_nb_base_at_bound
+                   nnb = size(idx_nb)
+                   idx_sub_nb_base_at_bound => reallocate(idx_sub_nb_base_at_bound,nsub+nnb)
+                   idx_sub_nb_base_at_bound(nsub+1:nsub+nnb) = idx_nb
+                   nsub = nsub+nnb
+                   ! remember that there is at least one neighbouring base cell which contains subcells
+                   ! (otherwise we do not need to test for overlapping faces below, but simply can set
+                   ! the base cells as neighbours)
+                   nb_base_cell_is_refined = .true. 
+                else
+                   ! base cell nb_base(inb) is NOT refined, so append base cell index nb_base(inb) to idx_sub_nb_base_at_bound
+                   idx_sub_nb_base_at_bound => reallocate(idx_sub_nb_base_at_bound,nsub+1)
+                   idx_sub_nb_base_at_bound(nsub+1) = nb_base(inb)
+                   nsub = nsub+1
+                end if
+             end do ! inb
+             if(associated(idx_nb)) deallocate(idx_nb)
+!
+             if(base_cell_is_refined) then
+                ! get subcells of icell_base which are located on boundary bound
+                call getSubcellsAtBoundaryChunksInversionGrid(icell_base,bound,idx_sub_base_at_bound)
+                if(.not.associated(idx_sub_base_at_bound)) then
+                   write(*,*) "ERROR 10 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: base cell ",icell_base,&
+                        " has subcells, but none of them is located at boundary '",bound,&
+                        "' -> module chunksInversionGrid is inconsistent!"
+                   stop
+                end if
+                ! loop on all subcells located on boundary bound and update their 'bound'-neighbours array
+                do isub = 1,size(idx_sub_base_at_bound)
+                   if( (size(idx_sub_base_at_bound)==1.and.(.not.nb_base_cell_is_refined .or. size(nb_base)==1)) .or. &
+                        size(idx_sub_nb_base_at_bound)==1 ) then
+                      ! in these cases, we do not need to search for overlapping 2D faces:
+                      ! 1) if there is just one subcell and only base cells as neighbours (or one base cell which is allowed 
+                      !    to be refined), assign vector idx_sub_nb_base_at_bound as neighbours
+                      ! 2) if there is just one neighbour on the face (either base cell or subcell), it 
+                      !    automatically overlaps with all subcells here
+                      !
+                      ! in these cases, do allocate new memory for idx_nb and DO NOT simply 
+                      ! idx_nb => idx_sub_nb_base_at_bound, since this must be done for ALL subcells isub 
+                      ! (otherwise, this operation only works for the first subcell isub==1).
+                      allocate(idx_nb(size(idx_sub_nb_base_at_bound)))
+                      idx_nb = idx_sub_nb_base_at_bound
+                   else ! (size(idx_sub_base_at_bound)==1.and.(.not.nb_base_cell_is_refined ....
+                      ! we need to search for overlapping 2D faces, because even if all neighbouring base cells 
+                      ! (there is more than one!) are not refined, it is not clear whether all of them overlap 
+                      ! with all subcells of this base cell
+!
+                      if(allocated(condition_c1_c2_c3)) deallocate(condition_c1_c2_c3)
+                      allocate(condition_c1_c2_c3(size(idx_sub_nb_base_at_bound)))
+!
+                      ! call subroutine findOverlapping2DFacesChunksInversionGrid, with c3 = x, c3 = y 
+                      ! (c1 is always z, as we are on a z-boundary)
+                      ! There is no reverse orientation here, since in z direction we are always in the same chunks
+                      ! with same orientations of x- and y- coordinates
+                      call findOverlapping2DFacesChunksInversionGrid(&
+                           this%ix2sorted(this%cell_ixmin(idx_sub_base_at_bound(isub))),& ! c2 min
+                           this%ix2sorted(this%cell_ixmax(idx_sub_base_at_bound(isub))),& ! c2 max
+                           this%iy2sorted(this%cell_iymin(idx_sub_base_at_bound(isub))),& ! c3 min
+                           this%iy2sorted(this%cell_iymax(idx_sub_base_at_bound(isub))),& ! c3 max
+                           size(idx_sub_nb_base_at_bound),&
+                           this%ix2sorted(this%cell_ixmin(idx_sub_nb_base_at_bound)),& ! c2 min array
+                           this%ix2sorted(this%cell_ixmax(idx_sub_nb_base_at_bound)),& ! c2 max array
+                           this%iy2sorted(this%cell_iymin(idx_sub_nb_base_at_bound)),& ! c3 min array
+                           this%iy2sorted(this%cell_iymax(idx_sub_nb_base_at_bound)),& ! c3 max array
+                           condition_c1_c2_c3)
+                      nnb = count(condition_c1_c2_c3)
+                      if(nnb>0) then
+                         allocate(idx_nb(nnb))
+                         idx_nb = pack( idx_sub_nb_base_at_bound , condition_c1_c2_c3 )
+                      else
+                         write(*,*) "ERROR 11 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: subcell ",&
+                              this%icell_external(idx_sub_base_at_bound(isub))," (external index, contained in base cell ",&
+                              icell_base,") does not find any '",bound,"' neighbours, although it is located on the '",bound,&
+                              "' face of the base cell (which has base-cell neighbour(s)) ",&
+                              "-> module chunksInversionGrid is inconsistent!"
+                         stop
+                      end if
+                   end if ! (size(idx_sub_base_at_bound)==1.and.(.not.nb_base_cell_is_refined ....
+!
+                   ! update the 'bound'-neighbours array by idx_nb
+                   select case(ibound)
+                   case(5)
+                      if(associated(getVectorPointer(this%cell_nb_zmin(idx_sub_base_at_bound(isub))))) then
+                         write(*,*) "ERROR 12 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: subcell ",&
+                              this%icell_external(idx_sub_base_at_bound(isub))," (external index, contained in base cell ",&
+                              icell_base,") already has '",bound,"' neighbours, although it is located on the '",bound,&
+                              "' face of the base cell. This should not yet have been defined -> module ",&
+                              "chunksInversionGrid is inconsistent!"
+                         stop
+                      end if
+                      call associateVectorPointer(this%cell_nb_zmin(idx_sub_base_at_bound(isub)),idx_nb)
+                   case(6)
+                      if(associated(getVectorPointer(this%cell_nb_zmax(idx_sub_base_at_bound(isub))))) then
+                         write(*,*) "ERROR 13 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: subcell ",&
+                              this%icell_external(idx_sub_base_at_bound(isub))," (external index, contained in base cell ",&
+                              icell_base,") already has '",bound,"' neighbours, although it is located on the '",bound,&
+                              "' face of the base cell. This should not yet have been defined -> module ",&
+                              "chunksInversionGrid is inconsistent!"
+                         stop
+                      end if
+                      call associateVectorPointer(this%cell_nb_zmax(idx_sub_base_at_bound(isub)),idx_nb)
+                   end select ! ibound
+                   nullify(idx_nb)
+                end do ! isub
+                ! remove neighbour of current base cell, since the base cell is not external anymore (was refined)
+                ! -> only keep external neighbours for simplicity
+                select case(ibound)
+                case(5); call dealloc(this%cell_nb_zmin(icell_base))
+                case(6); call dealloc(this%cell_nb_zmax(icell_base))
+                end select ! ibound
+                nullify(nb_base)
+!
+             else ! base_cell_is_refined
+!
+                if(nb_base_cell_is_refined) then
+                   if(size(nb_base)==1) then
+                      ! if there is only one refined neighbouring base cell, all subcells are neighbours
+                      ! of this (unrefined) base cell
+                      ! -> Replace 'bound'-neighbours of this base cell by complete array idx_sub_nb_base_at_bound
+                      ! remove neighbouring base cell indices (if there are external neighbouring base cells, 
+                      ! their indices are contained in , so we get the correct result)
+                      if(size(idx_sub_nb_base_at_bound)==1) then
+                         ! directly overwrite value in respective array this%cell_nb_'bound'(icell_base)
+                         nb_base(1) = idx_sub_nb_base_at_bound(1)
+                      else
+                         nb_base => reallocate(nb_base,size(idx_sub_nb_base_at_bound))
+                         nb_base = idx_sub_nb_base_at_bound
+                         ! reallocation has changed the memory location of the neighbour array and deallocated the
+                         ! old memory, so need to re-associated this%cell_nb_'bound'(icell_base)
+                         select case(ibound)
+                         case(5); call associateVectorPointer(this%cell_nb_zmin(icell_base),nb_base)
+                         case(6); call associateVectorPointer(this%cell_nb_zmax(icell_base),nb_base)
+                         end select ! ibound
+                      end if
+                   else ! size(nb_base)==1
+                      ! we need to search for overlapping 2D faces, because there can be subcells which lie laterally 
+                      ! outside the face of this base cell
+!
+                      if(allocated(condition_c1_c2_c3)) deallocate(condition_c1_c2_c3)
+                      allocate(condition_c1_c2_c3(size(idx_sub_nb_base_at_bound)))
+!
+                      ! call subroutine findOverlapping2DFacesChunksInversionGrid, with c3 = x, c3 = y 
+                      ! (c1 is always z, as we are on a z-boundary)
+                      ! There is no reverse orientation here, since in z direction we are always in the same chunks
+                      ! with same orientations of x- and y- coordinates
+                      call findOverlapping2DFacesChunksInversionGrid(&
+                           this%ix2sorted(this%cell_ixmin(icell_base)),& ! c2 min  this is the base cell
+                           this%ix2sorted(this%cell_ixmax(icell_base)),& ! c2 max
+                           this%iy2sorted(this%cell_iymin(icell_base)),& ! c3 min
+                           this%iy2sorted(this%cell_iymax(icell_base)),& ! c3 max
+                           size(idx_sub_nb_base_at_bound),&
+                           this%ix2sorted(this%cell_ixmin(idx_sub_nb_base_at_bound)),& ! c2 min array
+                           this%ix2sorted(this%cell_ixmax(idx_sub_nb_base_at_bound)),& ! c2 max array
+                           this%iy2sorted(this%cell_iymin(idx_sub_nb_base_at_bound)),& ! c3 min array
+                           this%iy2sorted(this%cell_iymax(idx_sub_nb_base_at_bound)),& ! c3 max array
+                           condition_c1_c2_c3)
+                      nnb = count(condition_c1_c2_c3)
+                      if(nnb>0) then
+                         allocate(idx_nb(nnb))
+                         idx_nb = pack( idx_sub_nb_base_at_bound , condition_c1_c2_c3 )
+                      else
+                         write(*,*) "ERROR 14 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: base cell ",&
+                              icell_base," has no '",bound,"' neighbours in terms of neighbouring subcells, ",&
+                              "even though there is at least one neighbouring base cell which are refined. ",&
+                              "-> module chunksInversionGrid is inconsistent"
+                         stop
+                      end if
+                      ! replace the 'bound'-neighbours of this base cell by idx_nb, deallocating the previous 
+                      ! neighbour(s) (that were base cells only) -> only keep external neighbours for simplicity
+                      select case(ibound)
+                      case(5)
+                         call dealloc(this%cell_nb_zmin(icell_base))
+                         call associateVectorPointer(this%cell_nb_zmin(icell_base),idx_nb)
+                      case(6)
+                         call dealloc(this%cell_nb_zmax(icell_base))
+                         call associateVectorPointer(this%cell_nb_zmax(icell_base),idx_nb)
+                      end select ! ibound
+                      nullify(idx_nb)
+                      nullify(nb_base)
+                   end if ! size(nb_base)==1
+!
+                else ! nb_base_cell_is_refined
+                   ! the only neighbour(s) to be added would be the neighbouring base cell(s), which already is/are
+                   ! set as neighbour(s), so nothing to do here
+                end if ! nb_base_cell_is_refined
+             end if ! base_cell_is_refined
+!
+          else ! associated(nb_base)
+             ! since there is no 'bound'-neighbour of this base cell, there is nothing to do at this point
+          end if ! associated(nb_base)
+       end do ! ibound zmin,zmax
+!
+       ! CHECK FOR CONSISTENCY OF THIS SUBROUTINE: REFINED BASE CELLS SHOULD NOT HAVE ASSIGNED ANY NEIGHBOURS ANYMORE
+       if(base_cell_is_refined) then
+          if(associated(getVectorPointer(this%cell_nb_xmin(icell_base)))) then
+             write(*,*) "ERROR 17 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: after subcell neighbour ",&
+                  "definition, base cell ",icell_base," still has xmin neighbours, even though it has subcells",&
+                  "-> module chunksInversionGrid is inconsistent"
+             stop
+          end if
+          if(associated(getVectorPointer(this%cell_nb_xmax(icell_base)))) then
+             write(*,*) "ERROR 17 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: after subcell neighbour ",&
+                  "definition, base cell ",icell_base," still has xmax neighbours, even though it has subcells",&
+                  "-> module chunksInversionGrid is inconsistent"
+             stop
+          end if
+          if(associated(getVectorPointer(this%cell_nb_ymin(icell_base)))) then
+             write(*,*) "ERROR 17 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: after subcell neighbour ",&
+                  "definition, base cell ",icell_base," still has ymin neighbours, even though it has subcells",&
+                  "-> module chunksInversionGrid is inconsistent"
+             stop
+          end if
+          if(associated(getVectorPointer(this%cell_nb_ymax(icell_base)))) then
+             write(*,*) "ERROR 17 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: after subcell neighbour ",&
+                  "definition, base cell ",icell_base," still has ymax neighbours, even though it has subcells",&
+                  "-> module chunksInversionGrid is inconsistent"
+             stop
+          end if
+          if(associated(getVectorPointer(this%cell_nb_zmin(icell_base)))) then
+             write(*,*) "ERROR 17 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: after subcell neighbour ",&
+                  "definition, base cell ",icell_base," still has zmin neighbours, even though it has subcells",&
+                  "-> module chunksInversionGrid is inconsistent"
+             stop
+          end if
+          if(associated(getVectorPointer(this%cell_nb_zmax(icell_base)))) then
+             write(*,*) "ERROR 17 in findFaceNeighboursOfRefinedCellsChunksInversionGrid: after subcell neighbour ",&
+                  "definition, base cell ",icell_base," still has zmax neighbours, even though it has subcells",&
+                  "-> module chunksInversionGrid is inconsistent"
+             stop
+          end if
+       end if ! base_cell_is_refined
+    end do ! icell_base
+!
+    if(associated(idx_sub_base_at_bound)) deallocate(idx_sub_base_at_bound)
+    if(associated(idx_sub_nb_base_at_bound)) deallocate(idx_sub_nb_base_at_bound)
+    if(allocated(condition_c1_c2_c3)) deallocate(condition_c1_c2_c3)
+!
+!------------------------------------------------------------------------
+  contains
+!
+    subroutine findOverlapping2DFacesChunksInversionGrid(&
+         c2_min_testcell_sorted,c2_max_testcell_sorted,c3_min_testcell_sorted,c3_max_testcell_sorted,&
+         n,c2_min_array_sorted,c2_max_array_sorted,c3_min_array_sorted,c3_max_array_sorted,&
+         condition_c1_c2_c3,condition_c1,c2_reverse_order)
+      integer, intent(in) :: n,c2_min_testcell_sorted,c2_max_testcell_sorted,c3_min_testcell_sorted,c3_max_testcell_sorted
+      integer, dimension(n), intent(in) :: c2_min_array_sorted,c2_max_array_sorted,&
+           c3_min_array_sorted,c3_max_array_sorted
+      logical, dimension(n), intent(out) :: condition_c1_c2_c3
+      logical, dimension(n), optional, intent(in) :: condition_c1
+      integer, optional, intent(in) :: c2_reverse_order
+      ! local
+      logical :: cond1_present,c2_is_reverse_order
+      integer :: i
+!
+      condition_c1_c2_c3(:) = .false.
+!
+      cond1_present = present(condition_c1)
+      if(present(c2_reverse_order)) then
+         c2_is_reverse_order = c2_reverse_order /= 0
+      else
+         c2_is_reverse_order = .false.
+      end if
+!
+      if(c2_is_reverse_order) then
+         do i=1,n
+            if(cond1_present) then
+               if(.not.condition_c1(i)) cycle
+            end if
+            if(c2_min_array_sorted(i) > c2_max_testcell_sorted) then
+            if(c2_max_array_sorted(i) < c2_min_testcell_sorted) then
+            if(c3_min_array_sorted(i) < c3_max_testcell_sorted) then
+            if(c3_max_array_sorted(i) > c3_min_testcell_sorted) then
+               ! this if-construct defines
+               ! condition_c1_c2_c3(i) = (condition_c1(i), if present) .and. &
+               !    c2_min_array_sorted(i) > c2_max_testcell_sorted (due to reverse order) .and. &
+               !    c2_max_array_sorted(i) < c2_min_testcell_sorted (due to reverse order) .and. &
+               !    c3_min_array_sorted(i) < c3_max_testcell_sorted .and. &
+               !    c3_max_array_sorted(i) > c3_min_testcell_sorted
+               ! for reasons of performance, test one condition after another instead of every time 
+               ! evaluating all of them. 
+               ! if all above conditions are fulfilled, set condition_c1_c2_c3(i) to .true.
+               condition_c1_c2_c3(i) = .true.
+            end if
+            end if
+            end if
+            end if
+         end do ! i
+!
+      else ! c2_is_reverse_order
+!
+         do i=1,n
+            if(cond1_present) then
+               if(.not.condition_c1(i)) cycle
+            end if
+            if(c2_min_array_sorted(i) < c2_max_testcell_sorted) then
+            if(c2_max_array_sorted(i) > c2_min_testcell_sorted) then
+            if(c3_min_array_sorted(i) < c3_max_testcell_sorted) then
+            if(c3_max_array_sorted(i) > c3_min_testcell_sorted) then
+               ! this if-construct defines
+               ! condition_c1_c2_c3(i) = (condition_c1(i), if present) .and. &
+               !    c2_min_array_sorted(i) < c2_max_testcell_sorted .and. &
+               !    c2_max_array_sorted(i) > c2_min_testcell_sorted .and. &
+               !    c3_min_array_sorted(i) < c3_max_testcell_sorted .and. &
+               !    c3_max_array_sorted(i) > c3_min_testcell_sorted
+               ! for reasons of performance, test one condition after another instead of every time 
+               ! evaluating all of them. 
+               ! if all above conditions are fulfilled, set condition_c1_c2_c3(i) to .true.
+               condition_c1_c2_c3(i) = .true.
+            end if
+            end if
+            end if
+            end if
+         end do ! i
+      end if ! c2_is_reverse_order
+    end subroutine findOverlapping2DFacesChunksInversionGrid
+!
+    subroutine getSubcellsAtBoundaryChunksInversionGrid(icell,bnd,idx_return)
+      !type (chunks_inversion_grid), intent(in) :: this
+      integer, intent(in) :: icell
+      character(len=*) :: bnd
+      integer, dimension(:), pointer, intent(out) :: idx_return
+      ! local
+      integer, dimension(:), pointer :: subcells,idx_bnd
+      integer :: n_subcells,n_return
+      logical, dimension(:), allocatable :: map
+!
+      nullify(idx_return)
+!
+      subcells => getVectorPointer(this%cell_subcells(icell))
+      ! return null pointer if this cell is not refined
+      if(.not.associated(subcells)) return
+      n_subcells = size(subcells)
+!
+      select case(bnd)
+      case('xmin'); idx_bnd => this%cell_ixmin
+      case('xmax'); idx_bnd => this%cell_ixmax
+      case('ymin'); idx_bnd => this%cell_iymin
+      case('ymax'); idx_bnd => this%cell_iymax
+      case('zmin'); idx_bnd => this%cell_izmin
+      case('zmax'); idx_bnd => this%cell_izmax
+      case default
+         write(*,*) "ERROR 15 in getSubcellsAtBoundaryChunksInversionGrid: incoming boundary code = '",bnd,&
+              "', must be one of 'xmin','xmax','ymin','ymax','zmin','zmax'"
+         stop
+      end select
+!
+      allocate(map(n_subcells))
+      map = (idx_bnd(subcells) == idx_bnd(icell))
+      n_return = count(map)
+!
+      if(n_return == 0) then
+         deallocate(map)
+         return
+      else
+         allocate(idx_return(n_return))
+         idx_return = pack( subcells , map )
+         deallocate(map)
+      end if
+    end subroutine getSubcellsAtBoundaryChunksInversionGrid
   end subroutine findFaceNeighboursOfRefinedCellsChunksInversionGrid
 !--------------------------------------------------------------------
 !> \brief compute cell radii of all cells
@@ -1542,15 +3147,15 @@ contains
     character(len=400) :: errstr
     character(len=600) :: filename
     character(len=23) :: myname = 'readChunksInversionGrid'
-    integer :: ios,ichunk,icell,size_ip
+    integer :: ios,ichunk,icell,size_ip,n
     integer, dimension(:), pointer :: ip
     ! par file
     integer :: nchunk,nblock
     real :: clat,clon,wlat,wlon,rmax,az_rot
     integer, dimension(:), pointer :: nlay_block,nlat_block,nlon_block
-    real, dimension(:), pointer :: thickness
+    real, dimension(:), pointer :: thickness,cref_param
 !
-    nullify(ip,nlay_block,nlat_block,nlon_block,thickness)
+    nullify(ip,nlay_block,nlat_block,nlon_block,thickness,cref_param)
     call addTrace(errmsg,myname)
 !
     this%is_defined = .false.
@@ -1558,7 +3163,7 @@ contains
     ! GET VALUES FROM PARAMETER FILE
 !
     call readCheckParFileChunksInversionGrid(inpar,nchunk,clat,clon,wlat,wlon,rmax,az_rot,nblock,nlay_block,thickness,&
-         nlat_block,nlon_block,this%vtk_geometry_type_int,this%apply_vtk_coords_scaling_factor,&
+         nlat_block,nlon_block,cref_param,this%vtk_geometry_type_int,this%apply_vtk_coords_scaling_factor,&
          this%vtk_coords_scaling_factor,errmsg,myname)
     if(.level.errmsg == 2) goto 2
 !
@@ -1803,7 +3408,7 @@ contains
        goto 2
     end if
     if(any(this%chunk_ncell_internal < 0)) then
-       write(*,*) "ERROR in readChunksInversionGrid: there are negative values in vector chunk_ncell_internal = ",&
+       write(*,*) "ERROR 16 in readChunksInversionGrid: there are negative values in vector chunk_ncell_internal = ",&
             this%chunk_ncell_internal
        call add(errmsg,2,"there are negative values in vector chunk_ncell_internal",myname)
        goto 2
@@ -2046,6 +3651,23 @@ contains
        call associateVectorPointer(this%cell_nb_zmax(icell),ip)
        nullify(ip)
     end do ! icell
+    ! contains_refeined_cells
+    read(lu,iostat=ios) n
+    if(ios/=0) then
+       write(errstr,*) "could not read integer indicating the logical 'contains_refined_cells': raised iostat = ",ios
+       call add(errmsg,2,errstr,myname)
+       goto 2
+    end if
+    select case(n)
+    case (0)
+       this%contains_refined_cells = .false.
+    case (1)
+       this%contains_refined_cells = .true.
+    case default
+       write(errstr,*) "integer indicating the logical 'contains_refined_cells' has value ",n,": expect either 0 or 1"
+       call add(errmsg,2,errstr,myname)
+       goto 2
+    end select
 !
     ! if code comes here, everything was read in and is consistent; so, inversion grid is correctly defined
     this%is_defined = .true.
@@ -2071,13 +3693,14 @@ contains
     ! local
     character(len=400) :: errstr
     character(len=24) :: myname = 'writeChunksInversionGrid'
-    integer :: ios,ichunk,icell,zero
+    integer :: ios,ichunk,icell,zero,one
     integer, dimension(:), pointer :: ip
 !
     nullify(ip)
     call addTrace(errmsg,myname)
 !
     zero = 0
+    one = 1
 !
     open(unit=lu,file=filename,form='UNFORMATTED',access='STREAM',status=trim(open_status),action='WRITE',iostat=ios)
     if(ios/=0) then
@@ -2167,6 +3790,11 @@ contains
           write(lu) zero
        end if
     end do ! icell
+    if(this%contains_refined_cells) then
+       write(lu) one
+    else
+       write(lu) zero
+    end if
     close(lu)
   end subroutine writeChunksInversionGrid
 !--------------------------------------------------------------------
@@ -2525,8 +4153,9 @@ contains
        deallocate(lat,lon,z)
 !
     case('wp')
-       ! if the optional argument uf_wp is given, check if wavefield point coordinates are given in km,
-       ! otherwise transform to km first, then execute the tests below
+       ! if the optional argument uf_wp is present, check if wavefield point coordinates are given in km
+       ! and if necessary transform to km first before executing the transformations below
+       ! if uf_wp is not present, IT IS ASSUMED THAT WAVEFIELD POINT COORDINATES ARE IN km !
        if(present(uf_wp)) then
           if(uf_wp /= 1.0e3) then
              ! multiplying by uf_wp brings the coordinates to SI units of m and then dividing by 1000 brings them to km
@@ -2596,14 +4225,14 @@ contains
   end subroutine transformToVtkChunksInversionGrid
 !------------------------------------------------------------------------
 !> \brief return geometry information on cells for vtk output
-!! \details Dependent on the type of inversion grid cells (i.e. hexahedra, tetrahedra, ...)
-!!  define an array of point coordinates and an array defining cells of a
+!! \details Dependent on the geometry type defined by the parameter file of this chunks inversion grid (i.e. CELLS or CELL_CENTERS),
+!!  define an array of point coordinates and (if geometry type is CELLS) an array defining cells of a
 !!  certain cell_type as in vtk file format for unstructured grid.
 !!  We need the additional index mapping indx_map here (confer invgrid_vtk_file%req_indx) for the case of 
-!!  present(cell_indx_req), as the specific subroutines belowroutine may throw away invalid and duplicate 
+!!  present(cell_indx_req), as this routine (or rather privateGetGeometryVtkChunksInversionGrid) may throw away invalid and duplicate 
 !!  invgrid cell indices. in order to be able to still use the cell geometry information with data vectors 
 !!  of same length (and order) as cell_indx_req, indx_map maps the vtk cell index of the returned vtk cells 
-!!  to the original position in array cell_indx_req. also, if routine getGeometryVtkInversionGrid does not 
+!!  to the original position in array cell_indx_req. also, if routine privateGetGeometryVtkChunksInversionGrid does not 
 !!  preserve the order of vtk cells as requested by cell_indx_req, map indx_map will reconstruct this order 
 !!  (and be the identity otherwise)
 !! \param this inversion grid
@@ -2628,89 +4257,230 @@ contains
     ! local
     character(len=33) :: myname = 'getGeometryVtkChunksInversionGrid'
     character(len=400) :: errstr
-    double precision, dimension(:,:), allocatable :: points_dble
-    integer, dimension(:), pointer :: indx_map
-    logical, dimension(:), allocatable :: cell_occurred
-    logical :: select_cell_indices
-    integer :: ncell_return,npoint_return,i,ishift
-    integer :: icell,icell_internal,ix,iy,iz,ichunk
-    integer, dimension(:,:,:,:), allocatable :: idx_point
-    integer, dimension(:), allocatable :: ichunk_corner
-!
-    nullify(indx_map)
+    integer, dimension(:), allocatable :: icell_internal_req
+    integer :: j
 !
     call addTrace(errmsg,myname)
-    nullify(points,cell_connectivity,cell_type,cell_indx_out)
-    if(present(indx_map_out)) nullify(indx_map_out)
 !
     if(.not.this%is_defined) then
        call add(errmsg,2,"inversion grid not yet defined",myname)
        return
     end if
 !
+    if(present(cell_indx_req)) then
+       ! incoming array cell_indx_req contains external cell indices, transforming them now to internal ones
+       allocate(icell_internal_req(size(cell_indx_req)))
+       ! make sure to use only valid internal cell indices as input for privateGetGeometryVtkChunksInversionGrid
+       where(cell_indx_req>=1 .and. cell_indx_req<=this%ncell)
+          icell_internal_req = this%icell_internal(cell_indx_req)
+       elsewhere
+          icell_internal_req = -1
+       end where
+       if(all(icell_internal_req == -1)) then
+          write(errstr,*) "there are no valid cell indices among the requested ones; cell indices must "//&
+               "be between 1 and ",this%ncell
+          call add(errmsg,2,errstr,myname)
+          deallocate(icell_internal_req)
+          return
+       end if
+    else
+       ! in this case, all external cells are requested, by default
+       allocate(icell_internal_req(this%ncell))
+       icell_internal_req = (/ (this%icell_internal(j), j=1,this%ncell) /)
+    end if
+!
+    call privateGetGeometryVtkChunksInversionGrid(this,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,errmsg,& 
+       icell_internal_req,indx_map_out)
+!
+    ! array cell_indx_out contains internal cell indices, transforming them now to external ones
+    cell_indx_out = this%icell_external(cell_indx_out)
+!
+    deallocate(icell_internal_req)
+  end subroutine getGeometryVtkChunksInversionGrid
+!------------------------------------------------------------------------
+!> \brief do the same as routine getGeometryVtkChunksInversionGrid but for base cells only
+!! \details Dependent on the geometry type defined by the parameter file of this chunks inversion grid (i.e. CELLS or CELL_CENTERS),
+!!  define an array of point coordinates and (if geometry type is CELLS) an array defining cells of a
+!!  certain cell_type as in vtk file format for unstructured grid.
+!!  We need the additional index mapping indx_map here (confer invgrid_vtk_file%req_indx) for the case of 
+!!  present(cell_indx_req), as this routine (or rather privateGetGeometryVtkChunksInversionGrid) may throw away invalid and duplicate 
+!!  invgrid cell indices. in order to be able to still use the cell geometry information with data vectors 
+!!  of same length (and order) as cell_indx_req, indx_map maps the vtk cell index of the returned vtk cells 
+!!  to the original position in array cell_indx_req. also, if routine privateGetGeometryVtkChunksInversionGrid does not 
+!!  preserve the order of vtk cells as requested by cell_indx_req, map indx_map will reconstruct this order 
+!!  (and be the identity otherwise)
+!! \param this inversion grid
+!! \param geometry_type integer returning the type of geometry: 0 = volumetric cells, 1 = cell center points
+!! \param points array of nodes which cell_connectivity array refers to
+!! \param cell_connectivity array contianing indices of points (indices having zero offset) as required by vtk format
+!! \param cell_types vtk cell types of cells as of vtk convention
+!! \param cell_indx_out array of same size as the number of vtk cells (same order), which contains the invgrid cell index of a corresponding vtk cell
+!! \param cell_indx_req optional incoming array defining invgrid cell indices for which vtk cells should be returned only
+!! \param indx_map if cell_indx_req present, then indx_map(cell_indx_req(i)) = i for all valid and non duplicate cell_indx_req(i) , otherwise identity
+!
+  subroutine getBaseCellGeometryVtkChunksInversionGrid(this,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,errmsg,& 
+       cell_indx_req,indx_map_out)
+    type (chunks_inversion_grid) :: this
+    integer :: geometry_type
+    integer, dimension(:), optional :: cell_indx_req
+    ! outgoing
+    real, dimension(:,:), pointer :: points
+    integer, dimension(:), pointer :: cell_connectivity,cell_type,cell_indx_out
+    integer, dimension(:), pointer, optional :: indx_map_out
+    type (error_message) :: errmsg
+    ! local
+    character(len=41) :: myname = 'getBaseCellGeometryVtkChunksInversionGrid'
+    character(len=400) :: errstr
+    integer, dimension(:), allocatable :: icell_internal_req
+    integer :: j
+!
+    call addTrace(errmsg,myname)
+!
+    if(.not.this%is_defined) then
+       call add(errmsg,2,"inversion grid not yet defined",myname)
+       return
+    end if
+!
+    if(present(cell_indx_req)) then
+       ! incoming array cell_indx_req contains external cell indices, transforming them now to internal ones
+       allocate(icell_internal_req(size(cell_indx_req)))
+       ! make sure to use only valid internal cell indices as input for privateGetGeometryVtkChunksInversionGrid
+       ! note that the base cells cover the first this%ncell_base internal cell indices, i.e. only mark invalid ones
+       where(cell_indx_req>=1 .and. cell_indx_req<=this%ncell_base)
+          icell_internal_req = cell_indx_req
+       elsewhere
+          icell_internal_req = -1
+       end where
+       if(all(icell_internal_req == -1)) then
+          write(errstr,*) "there are no valid cell indices among the requested ones; cell indices must "//&
+               "be between 1 and the number of base cells = ",this%ncell_base
+          call add(errmsg,2,errstr,myname)
+          deallocate(icell_internal_req)
+          return
+       end if
+    else
+       ! in this case, all external cells are requested, by default
+       allocate(icell_internal_req(this%ncell_base))
+       icell_internal_req = (/ (j, j=1,this%ncell_base) /)
+    end if
+!
+    call privateGetGeometryVtkChunksInversionGrid(this,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,errmsg,& 
+       icell_internal_req,indx_map_out)
+!
+    ! array cell_indx_out contains internal cell indices, which is OK here, since we are returning base cells:
+    ! if the inversion grid is refined, the internal index of base cells is ordered as 1,..,this%ncell_base, so OK for external use
+    ! if the inversion grid is not refined, then internal and external indices are equal anyway
+!
+    deallocate(icell_internal_req)
+  end subroutine getBaseCellGeometryVtkChunksInversionGrid
+!------------------------------------------------------------------------
+!> \brief private routine: return geometry information on cells for vtk output
+!! \param this inversion grid
+!! \param geometry_type integer returning the type of geometry: 0 = volumetric cells, 1 = cell center points
+!! \param points array of nodes which cell_connectivity array refers to
+!! \param cell_connectivity array contianing indices of points (indices having zero offset) as required by vtk format
+!! \param cell_types vtk cell types of cells as of vtk convention
+!! \param cell_indx_out array of INTERNAL CELL INDEX, same size as the number of vtk cells (same order), which contains the invgrid cell index of a corresponding vtk cell
+!! \param cell_indx_req incoming array of INTERNAL CELL INDICES defining those invgrid cells for which vtk output should be returned only
+!! \param indx_map indx_map(cell_indx_req(i)) = i for all valid and non duplicate cell_indx_req(i)
+!
+  subroutine privateGetGeometryVtkChunksInversionGrid(this,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,errmsg,& 
+       cell_indx_req,indx_map_out)
+    type (chunks_inversion_grid) :: this
+    integer :: geometry_type
+    integer, dimension(:) :: cell_indx_req
+    ! outgoing
+    real, dimension(:,:), pointer :: points
+    integer, dimension(:), pointer :: cell_connectivity,cell_type,cell_indx_out
+    integer, dimension(:), pointer, optional :: indx_map_out
+    type (error_message) :: errmsg
+    ! local
+    character(len=40) :: myname = 'privateGetGeometryVtkChunksInversionGrid'
+    character(len=400) :: errstr
+    integer,  parameter :: nrealloc = 400000 ! nrealloc = 400,000 corresponds to arrays points_dble(3,nrealloc) and ichunk_corner(nrealloc) consuming approx. 10 MB memory (this reallocation step should be OK for normal hardware)
+    double precision, dimension(:,:), pointer :: points_dble
+    double precision :: ix_dble,iy_dble,iz_dble
+    integer, dimension(:), pointer :: indx_map
+    logical, dimension(:), allocatable :: cell_occurred
+    logical :: select_cell_indices
+    integer :: ncell_return,ipoint,npoint_return,n,i,ishift
+    integer :: icell,icell_internal,ix,iy,iz,ichunk,point_index_of_corner
+    integer, dimension(:,:,:,:), allocatable :: idx_point
+    integer, dimension(:), pointer :: ichunk_corner
+    logical :: use_idx_point
+!
+    nullify(indx_map,points_dble,ichunk_corner)
+!
+    call addTrace(errmsg,myname)
+    nullify(points,cell_connectivity,cell_type,cell_indx_out)
+    if(present(indx_map_out)) nullify(indx_map_out)
+!
 ! DEFINE THOSE INVGRID CELLS FOR WHICH THE GEOMETRY IS RETURNED
 !
-    ! only if cell_indx_req is present and there are any indices in valid range, select those specific cells.
+    ! only if there are any indices in valid range, select those cells and remove duplicate ones.
     ! otherwise return no cells (nullified pointers)
-    if(present(cell_indx_req)) then
-       if(any(cell_indx_req .ge. 1 .and. cell_indx_req .le. this%ncell)) then
-          select_cell_indices = .true.
-          ncell_return = 0
-          ! define mapping indx_map_tmp which maps invgrid index to index in array cell_indx_req
-          allocate(indx_map(this%ncell),cell_indx_out(this%ncell)) ! allocate for maximum number of cells returned (reallocate later, if necessary)
-          allocate(cell_occurred(this%ncell)); cell_occurred(:) = .false.
-          do i = 1,size(cell_indx_req)
-             if(cell_indx_req(i)>=1 .and. cell_indx_req(i)<=this%ncell) then
-                ! only if this valid index did not occurr so far, take it.
-                ! this way, always the FIRST occuring index (in case of duplicate indices) is returned, 
-                ! the others are lost. But in this case, you should not use the indx_map anyway
-                if(.not.cell_occurred(cell_indx_req(i))) then
-                   ncell_return = ncell_return + 1
-                   indx_map(ncell_return) = i
-                   cell_indx_out(ncell_return) = cell_indx_req(i)
-                   cell_occurred(cell_indx_req(i)) = .true.
-                end if
-             endif
-          enddo ! i
-          deallocate(cell_occurred)
-          if(ncell_return < this%ncell) then
-             indx_map => reallocate(indx_map,ncell_return)
-             cell_indx_out => reallocate(cell_indx_out,ncell_return)
-          end if
-       else
-          write(errstr,*) "there are no valid indices among requested cell indices; indices must be between 1 and ",&
-               this%ncell
-          call add(errmsg,2,errstr,myname)
-          return
-       endif
-!
-    else ! present(cell_indx_req)
-!
-       select_cell_indices = .false.
-       ! define index mapping anyway (although it is trivially the identiy in this case), 
-       ! to provide optional output indx_map whenever requested (in case .not.present(cell_indx_req), indx_map is just the identity)
-       allocate(indx_map(this%ncell),cell_indx_out(this%ncell))
-       indx_map = (/ (i,i=1,this%ncell) /)
-       cell_indx_out = indx_map
-       ncell_return = this%ncell
-    endif ! present(cell_indx_req)
+    if(any(cell_indx_req .ge. 1 .and. cell_indx_req .le. this%ncell_internal)) then
+       select_cell_indices = .true.
+       ncell_return = 0
+       ! define mapping indx_map_tmp which maps invgrid index to index in array cell_indx_req
+       allocate(indx_map(this%ncell_internal),cell_indx_out(this%ncell_internal)) ! allocate for maximum number of cells returned (reallocate later, if necessary)
+       allocate(cell_occurred(this%ncell_internal)); cell_occurred(:) = .false.
+       do i = 1,size(cell_indx_req)
+          if(cell_indx_req(i)>=1 .and. cell_indx_req(i)<=this%ncell_internal) then
+             ! only if this valid index did not occurr so far, take it.
+             ! this way, always the FIRST occuring index (in case of duplicate indices) is returned, 
+             ! the others are lost. But in this case, you should not use the indx_map anyway
+             if(.not.cell_occurred(cell_indx_req(i))) then
+                ncell_return = ncell_return + 1
+                indx_map(ncell_return) = i
+                cell_indx_out(ncell_return) = cell_indx_req(i)
+                cell_occurred(cell_indx_req(i)) = .true.
+             end if
+          endif
+       enddo ! i
+       deallocate(cell_occurred)
+       if(ncell_return < this%ncell_internal) then
+          indx_map => reallocate(indx_map,ncell_return)
+          cell_indx_out => reallocate(cell_indx_out,ncell_return)
+       end if
+    else ! any(cell_indx_req .ge. 1 .and. cell_indx_req .le. this%ncell_internal)
+       write(errstr,*) "there are no valid internal indices among the requested ones; internal cell indices must "//&
+            "be between 1 and ",this%ncell_internal
+       call add(errmsg,2,errstr,myname)
+       return
+    endif ! any(cell_indx_req .ge. 1 .and. cell_indx_req .le. this%ncell_internal)
 !
 ! LOOP ON ALL CELLS TO BE RETURNED AND DEFINE POINTS AND CELL CONNECTIVITY
 !
     select case(this%vtk_geometry_type_int)
     case(0) ! CELLS
-       allocate(idx_point(this%nx,this%ny,this%nz,this%nchunk))
-       idx_point = -1
+       ! TRY TO ALLOCATE ARRAY idx_point (can be very very large for large refined inversion grids)
+       allocate(idx_point(this%nx,this%ny,this%nz,this%nchunk),stat=i)
+       use_idx_point = (i == 0)
+       if(use_idx_point) then
+          idx_point = -1
+       else
+          write(*,*) "WARNING in getGeometryVtkChunksInversionGrid: too many x,y,z coordinates, cannot ",&
+               "allocate array for memorizing already collected point indices (would be ",&
+               4*this%nx*this%ny*this%nz*this%nchunk," bytes)-> APPLYING A DIFFERENT METHOD FOR ",&
+               "THAT PURPOSE WHICH IS COMPUTATIONALLY EXPENSIVE (so the program might slow down now significantly!)"
+       end if
+!
+       if(this%contains_refined_cells) then
+          ! the number this%nx*this%ny*this%nz*this%nchunk is much too large and not sensible to be used
+          ! for pre-allocation of points_dble. In case of cell refinement, it makes sense to reallocate
+          ! the arrays
+          allocate(points_dble(3,nrealloc),ichunk_corner(nrealloc))
+       else
+          ! allocate for maximum number of vtk points (the following is the exact number in case of NO cell 
+          ! refinement); in the end, reallocate array points for the actual number of found corners
+          allocate(points_dble(3,this%nx*this%ny*this%nz*this%nchunk),ichunk_corner(this%nx*this%ny*this%nz*this%nchunk))
+       end if
        ! need to track the chunk index for each corner, since only (a subset of) external cells are processed here
-       allocate(ichunk_corner(this%nx*this%ny*this%nz*this%nchunk))
-       ichunk_corner = -1
+       ichunk_corner(:) = -1
 !
-       ! first allocate for maximum number of vtk points (this is the exact number in case of NO cell refinement!)
-       ! in the end, reallocate array points for the actual number of found corners
-       allocate(points_dble(3,this%nx*this%ny*this%nz*this%nchunk),cell_connectivity((8+1)*ncell_return),&
-            cell_type(ncell_return))
-!
-       ! so far, all cells are hexahedra, hence cell_type equals 12 everywhere (by vtk standard)
+       allocate(cell_connectivity((8+1)*ncell_return),cell_type(ncell_return))
+!       ! so far, all cells are hexahedra, hence cell_type equals 12 everywhere (by vtk standard)
        cell_type(:) = 12
 !
        ishift = 0 ! remember the current position in array cell_connectivity
@@ -2719,148 +4489,82 @@ contains
           ! first entry in cell_connectivity for this cell: number of indices to come (always = 8)
           cell_connectivity(1+ishift) = 8
 !
-          icell_internal = this%icell_internal(cell_indx_out(icell))
+          icell_internal = cell_indx_out(icell)
           ichunk = this%cell_ichunk(icell_internal)
 !
           ! 1st corner xmin,ymin,zmin
           ix = this%cell_ixmin(icell_internal)
           iy = this%cell_iymin(icell_internal)
           iz = this%cell_izmin(icell_internal)
-          ! check if this corner is added to points_dble, if not add it and use new index, otherwise use existing index
-          if(idx_point(ix,iy,iz,ichunk) == -1) then
-             ! add this point to array points_dble and store its position into idx_point and its chunk into ichunk_corner
-             npoint_return = npoint_return + 1
-             idx_point(ix,iy,iz,ichunk) = npoint_return
-             ichunk_corner(npoint_return) = ichunk
-             points_dble(1,npoint_return) = this%x(ix)
-             points_dble(2,npoint_return) = this%y(iy)
-             points_dble(3,npoint_return) = this%z(iz)
-             cell_connectivity(2+ishift) = npoint_return - 1  ! indices in vtk files have offset 0, so always store ipoint-1
-          else
-             cell_connectivity(2+ishift) = idx_point(ix,iy,iz,ichunk) - 1
-          end if
+          call addCornerIfNotAlreadyAdded() ! in this subroutine, the value of index point_index_of_corner is set
+          cell_connectivity(2+ishift) = point_index_of_corner
 !
           ! 2nd corner xmax,ymin,zmin
           ix = this%cell_ixmax(icell_internal)
           iy = this%cell_iymin(icell_internal)
           iz = this%cell_izmin(icell_internal)
-          ! check if this corner is added to points_dble, if not add it and use new index, otherwise use existing index
-          if(idx_point(ix,iy,iz,ichunk) == -1) then
-             npoint_return = npoint_return + 1
-             idx_point(ix,iy,iz,ichunk) = npoint_return
-             ichunk_corner(npoint_return) = ichunk
-             points_dble(1,npoint_return) = this%x(ix)
-             points_dble(2,npoint_return) = this%y(iy)
-             points_dble(3,npoint_return) = this%z(iz)
-             cell_connectivity(3+ishift) = npoint_return - 1  ! indices in vtk files have offset 0, so always store ipoint-1
-          else
-             cell_connectivity(3+ishift) = idx_point(ix,iy,iz,ichunk) - 1
-          end if
+          call addCornerIfNotAlreadyAdded() ! in this subroutine, the value of index point_index_of_corner is set
+          cell_connectivity(3+ishift) = point_index_of_corner
 !
           ! 3rd corner xmax,ymax,zmin
           ix = this%cell_ixmax(icell_internal)
           iy = this%cell_iymax(icell_internal)
           iz = this%cell_izmin(icell_internal)
-          ! check if this corner is added to points_dble, if not add it and use new index, otherwise use existing index
-          if(idx_point(ix,iy,iz,ichunk) == -1) then
-             npoint_return = npoint_return + 1
-             idx_point(ix,iy,iz,ichunk) = npoint_return
-             ichunk_corner(npoint_return) = ichunk
-             points_dble(1,npoint_return) = this%x(ix)
-             points_dble(2,npoint_return) = this%y(iy)
-             points_dble(3,npoint_return) = this%z(iz)
-             cell_connectivity(4+ishift) = npoint_return - 1  ! indices in vtk files have offset 0, so always store ipoint-1
-          else
-             cell_connectivity(4+ishift) = idx_point(ix,iy,iz,ichunk) - 1
-          end if
+          call addCornerIfNotAlreadyAdded() ! in this subroutine, the value of index point_index_of_corner is set
+          cell_connectivity(4+ishift) = point_index_of_corner
 !
           ! 4th corner xmin,ymax,zmin
           ix = this%cell_ixmin(icell_internal)
           iy = this%cell_iymax(icell_internal)
           iz = this%cell_izmin(icell_internal)
-          ! check if this corner is added to points_dble, if not add it and use new index, otherwise use existing index
-          if(idx_point(ix,iy,iz,ichunk) == -1) then
-             npoint_return = npoint_return + 1
-             idx_point(ix,iy,iz,ichunk) = npoint_return
-             ichunk_corner(npoint_return) = ichunk
-             points_dble(1,npoint_return) = this%x(ix)
-             points_dble(2,npoint_return) = this%y(iy)
-             points_dble(3,npoint_return) = this%z(iz)
-             cell_connectivity(5+ishift) = npoint_return - 1  ! indices in vtk files have offset 0, so always store ipoint-1
-          else
-             cell_connectivity(5+ishift) = idx_point(ix,iy,iz,ichunk) - 1
-          end if
+          call addCornerIfNotAlreadyAdded() ! in this subroutine, the value of index point_index_of_corner is set
+          cell_connectivity(5+ishift) = point_index_of_corner
 !
           ! 5th corner xmin,ymin,zmax
           ix = this%cell_ixmin(icell_internal)
           iy = this%cell_iymin(icell_internal)
           iz = this%cell_izmax(icell_internal)
-          ! check if this corner is added to points_dble, if not add it and use new index, otherwise use existing index
-          if(idx_point(ix,iy,iz,ichunk) == -1) then
-             npoint_return = npoint_return + 1
-             idx_point(ix,iy,iz,ichunk) = npoint_return
-             ichunk_corner(npoint_return) = ichunk
-             points_dble(1,npoint_return) = this%x(ix)
-             points_dble(2,npoint_return) = this%y(iy)
-             points_dble(3,npoint_return) = this%z(iz)
-             cell_connectivity(6+ishift) = npoint_return - 1  ! indices in vtk files have offset 0, so always store ipoint-1
-          else
-             cell_connectivity(6+ishift) = idx_point(ix,iy,iz,ichunk) - 1
-          end if
+          call addCornerIfNotAlreadyAdded() ! in this subroutine, the value of index point_index_of_corner is set
+          cell_connectivity(6+ishift) = point_index_of_corner
 !
           ! 6th corner xmax,ymin,zmax
           ix = this%cell_ixmax(icell_internal)
           iy = this%cell_iymin(icell_internal)
           iz = this%cell_izmax(icell_internal)
-          ! check if this corner is added to points_dble, if not add it and use new index, otherwise use existing index
-          if(idx_point(ix,iy,iz,ichunk) == -1) then
-             npoint_return = npoint_return + 1
-             idx_point(ix,iy,iz,ichunk) = npoint_return
-             ichunk_corner(npoint_return) = ichunk
-             points_dble(1,npoint_return) = this%x(ix)
-             points_dble(2,npoint_return) = this%y(iy)
-             points_dble(3,npoint_return) = this%z(iz)
-             cell_connectivity(7+ishift) = npoint_return - 1  ! indices in vtk files have offset 0, so always store ipoint-1
-          else
-             cell_connectivity(7+ishift) = idx_point(ix,iy,iz,ichunk) - 1
-          end if
+          call addCornerIfNotAlreadyAdded() ! in this subroutine, the value of index point_index_of_corner is set
+          cell_connectivity(7+ishift) = point_index_of_corner
 !
           ! 7th corner xmax,ymax,zmax
           ix = this%cell_ixmax(icell_internal)
           iy = this%cell_iymax(icell_internal)
           iz = this%cell_izmax(icell_internal)
-          ! check if this corner is added to points_dble, if not add it and use new index, otherwise use existing index
-          if(idx_point(ix,iy,iz,ichunk) == -1) then
-             npoint_return = npoint_return + 1
-             idx_point(ix,iy,iz,ichunk) = npoint_return
-             ichunk_corner(npoint_return) = ichunk
-             points_dble(1,npoint_return) = this%x(ix)
-             points_dble(2,npoint_return) = this%y(iy)
-             points_dble(3,npoint_return) = this%z(iz)
-             cell_connectivity(8+ishift) = npoint_return - 1  ! indices in vtk files have offset 0, so always store ipoint-1
-          else
-             cell_connectivity(8+ishift) = idx_point(ix,iy,iz,ichunk) - 1
-          end if
+          call addCornerIfNotAlreadyAdded() ! in this subroutine, the value of index point_index_of_corner is set
+          cell_connectivity(8+ishift) = point_index_of_corner
 !
           ! 8th corner xmin,ymax,zmax
           ix = this%cell_ixmin(icell_internal)
           iy = this%cell_iymax(icell_internal)
           iz = this%cell_izmax(icell_internal)
-          ! check if this corner is added to points_dble, if not add it and use new index, otherwise use existing index
-          if(idx_point(ix,iy,iz,ichunk) == -1) then
-             npoint_return = npoint_return + 1
-             idx_point(ix,iy,iz,ichunk) = npoint_return
-             ichunk_corner(npoint_return) = ichunk
-             points_dble(1,npoint_return) = this%x(ix)
-             points_dble(2,npoint_return) = this%y(iy)
-             points_dble(3,npoint_return) = this%z(iz)
-             cell_connectivity(9+ishift) = npoint_return - 1  ! indices in vtk files have offset 0, so always store ipoint-1
-          else
-             cell_connectivity(9+ishift) = idx_point(ix,iy,iz,ichunk) - 1
-          end if
+          call addCornerIfNotAlreadyAdded() ! in this subroutine, the value of index point_index_of_corner is set
+          cell_connectivity(9+ishift) = point_index_of_corner
 !
           ishift = ishift + 9
        end do ! icell
+!
+       if(allocated(idx_point)) deallocate(idx_point)
+!
+       if(.not.use_idx_point) then
+          ! convert integer indices still contained in array points_dble to actual point coordinates
+          do ipoint = 1,npoint_return
+             ix = int(real(points_dble(1,ipoint)))
+             points_dble(1,ipoint) = this%x(ix)
+             iy = int(real(points_dble(2,ipoint)))
+             points_dble(2,ipoint) = this%y(iy)
+             iz = int(real(points_dble(3,ipoint)))
+             points_dble(3,ipoint) = this%z(iz)
+          end do ! ipoint
+       end if
+!
        geometry_type = 0
 !
     case(1) ! CELL CENTERS
@@ -2886,9 +4590,8 @@ contains
     allocate(points(3,npoint_return))
     points = real(points_dble(:,1:npoint_return))
 !
-    if(allocated(idx_point)) deallocate(idx_point)
-    if(allocated(ichunk_corner)) deallocate(ichunk_corner)
-    if(allocated(points_dble)) deallocate(points_dble)
+    if(associated(ichunk_corner)) deallocate(ichunk_corner)
+    if(associated(points_dble)) deallocate(points_dble)
 !
     if(present(indx_map_out)) then
        indx_map_out => indx_map
@@ -2896,7 +4599,70 @@ contains
     else
        deallocate(indx_map)
     endif
-  end subroutine getGeometryVtkChunksInversionGrid
+!
+  contains
+!
+    subroutine addCornerIfNotAlreadyAdded()
+      ! NO LOCAL DECLARATION OF VARIABLES, USE THE (global) ONES DECLARED IN subroutine getGeometryVtkChunksInversionGrid
+!
+      ! check if this corner is added to points_dble (dependent on whether idx_point is used or not); 
+      ! if yes, define the existing index point_index_of_corner and return
+!
+      if(use_idx_point) then
+         if(idx_point(ix,iy,iz,ichunk) > 0) then
+            point_index_of_corner = idx_point(ix,iy,iz,ichunk) -1
+            return
+         end if
+      else ! use_idx_point
+         ix_dble = dble(ix)
+         iy_dble = dble(iy)
+         iz_dble = dble(iz)
+         do ipoint = 1,npoint_return
+            if(ichunk_corner(ipoint) == ichunk) then
+               if(points_dble(1,ipoint)==ix_dble) then
+                  if(points_dble(2,ipoint)==iy_dble) then
+                     if(points_dble(3,ipoint)==iz_dble) then
+                        point_index_of_corner = ipoint-1 ! indices in vtk files have offset 0, so always store ipoint-1
+                        return
+                     end if
+                  end if
+               end if
+            end if
+         end do ! ipoint
+      end if ! use_idx_point
+!
+      ! if subroutine comes to this line of code, the current cell corner is NOT yet contained in points_dble, so add it 
+!
+      ! for either case (use_idx_point or not) increase global counter of points in points_dble and reallocate if necessary
+      npoint_return = npoint_return + 1
+      n = size(ichunk_corner)
+      if(npoint_return > n) then
+         ! reallocate arrays points_dble, ichunk_corner
+         points_dble => reallocate(points_dble,3,n+nrealloc)
+         ichunk_corner => reallocate(ichunk_corner,n+nrealloc)
+      end if
+!
+      if(use_idx_point) then
+         ! store the actual coordinates in array points_dble
+         points_dble(1,npoint_return) = this%x(ix)
+         points_dble(2,npoint_return) = this%y(iy)
+         points_dble(3,npoint_return) = this%z(iz)
+         ! memorize the index of this corner in array points_dble
+         idx_point(ix,iy,iz,ichunk) = npoint_return
+      else ! use_idx_point
+         ! if the loop above did not find the corner as an existing point in array points_dble, 
+         ! add the integer indices (in arrays this%x,this%y,this%z) of this point as dbles 
+         ! to array points_dble
+         points_dble(1,npoint_return) = ix_dble
+         points_dble(2,npoint_return) = iy_dble
+         points_dble(3,npoint_return) = iz_dble
+      end if ! use_idx_point
+!
+      ! for either case (use_idx_point or not), store the chunk index into ichunk_corner and define point_index_of_corner as the new index just added
+      ichunk_corner(npoint_return) = ichunk
+      point_index_of_corner = npoint_return - 1  ! indices in vtk files have offset 0, so always store ipoint-1
+    end subroutine addCornerIfNotAlreadyAdded
+  end subroutine privateGetGeometryVtkChunksInversionGrid
 !------------------------------------------------------------------------
 !> \brief return indices of all face neighbours for all (optionally only subset of) cells
 !!  \details If boundary_conditions is set, there should be a special form of nb_idx returned, which is used
@@ -3467,8 +5233,8 @@ contains
 !! \param wp-y vector of global y coordinate (contains y-values in standard cell on exit)
 !! \param wp-z vector of global z coordinate (contains z-values in standard cell on exit)
 !! \param uf_wp unit factor of wavefield points
-!! \param jacobian jacobian of transformation from standard cell to real coordinate cell (to be multiplied to standard weights)
-!! \param type_standard_cell defines the shape of the standard cell, select specific routine dependent on type (4=Tetrahedron,6=Hexahedron)
+!! \param jacobian jacobian of transformation from standard cell to real coordinate cell (to be multiplied to standard weights). If ON INPUT type_standard_cell=-1, then instead of jacobian values actual integration weights are requested
+!! \param type_standard_cell defines on return the shape of the standard cell (specific integration weights routine can be chosen): (4=Tetrahedron,6=Hexahedron). If ON INPUT type_standard_cell=-1, then instead of jacobian values actual integration weights are requested
 !! \param errmsg error message
 !
   subroutine transformToStandardCellChunksInversionGrid(this,icell,x,y,z,uf_wp,jacobian,type_standard_cell,errmsg)
@@ -3672,12 +5438,16 @@ contains
 !! \param c3 third coordinate
 !! \param coords_type 'wp','event','station'
 !! \param uf_wp unit factor of wavefield points; optional (recommended to be used along with 'wp')
+!! \param ichunk on return, ichunk contains the index of the chunk in which the point is located; optional
+!! \param l logical indicating whether the given point inside the inversion grid domain
+!! \return logical indicating whether the given point inside the inversion grid domain
 !
-  function pointInsideChunksInversionGrid(this,c1,c2,c3,coords_type,uf_wp) result(l)
+  function pointInsideChunksInversionGrid(this,c1,c2,c3,coords_type,uf_wp,ichunk) result(l)
     type (chunks_inversion_grid) :: this
     real, intent(in) :: c1,c2,c3
     character(len=*) :: coords_type
     real, optional :: uf_wp
+    integer, optional :: ichunk
     logical :: l
     ! local
     double precision, dimension(1) :: c1_copy,c2_copy,c3_copy
@@ -3685,6 +5455,7 @@ contains
     integer, dimension(1) :: wp_ichunk
 !
     l = .false.
+    if(present(ichunk)) ichunk = -1
 !
     if(.not.this%is_defined) return
 !
@@ -3729,6 +5500,7 @@ contains
        ! about the routine locateWpLaterallyInsideChunksInversionGrid.
        call locateWpLaterallyInsideChunksInversionGrid(this,c1_copy,c2_copy,c3_copy,wp_ichunk,1)
        l = wp_ichunk(1) > 0
+       if(present(ichunk) .and. l) ichunk = wp_ichunk(1)
 !
     case('wp')
        ! if the optional argument uf_wp is given, check if wavefield point coordinates are given in km,
@@ -3750,6 +5522,7 @@ contains
        ! If the point is in correct depth range, check if it is laterally located inside any of the chunks
        call locateWpLaterallyInsideChunksInversionGrid(this,c1_copy,c2_copy,c3_copy,wp_ichunk,1)
        l = wp_ichunk(1) > 0
+       if(present(ichunk) .and. l) ichunk = wp_ichunk(1)
     end select
   end function pointInsideChunksInversionGrid
 !

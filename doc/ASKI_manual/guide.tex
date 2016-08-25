@@ -14,8 +14,8 @@
 %   Free Documentation License''. 
 %-----------------------------------------------------------------------------
 %
-This chapter is intended to guide you, dependent on what you want to do, through all necessary steps
-to achieve your goals.
+This chapter is intended to guide you, dependent on what workflow you want to follow, through all necessary steps
+to achieve your goals. Make sure that you have read section entitled ``How to get started''. 
 
 If you don't know about \ASKI{} yet, we recommend you to quickly read through the previous section 
 entitled ``What is \ASKI{}?'', which explains some basic terminology in \ASKI{} and the concepts it is based on.
@@ -29,9 +29,9 @@ Good Luck!
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \newpage
-\section*{Full Waveform Inversion using pre-integrated spectral Waveform Sensitivity Kernels} \label{guide,sec:classic_inversion}
-\phantomsection  % so hyperref creates bookmarks
-\addcontentsline{toc}{section}{Full Waveform Inversion - Classical Waveform Sensitivity Kernels}
+\section{Full Waveform Inversion using pre-integrated spectral Waveform Sensitivity Kernels} \label{guide,sec:classic_inversion}
+%\phantomsection  % so hyperref creates bookmarks
+%\addcontentsline{toc}{section}{Full Waveform Inversion - Classical Waveform Sensitivity Kernels}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 %
@@ -40,7 +40,8 @@ Good Luck!
 
 Iterative inversion scheme which uses waveform sensitivity kernels to gain model updates form data residua.
 
-In addition to \ASKI{} \myaref{basic_steps,sec:install_ASKI}, you will need to install a supported software which 
+You should have already installed \ASKI{}, see section entitled ``How to get started''. 
+In addition to \ASKI{}, you will need to install a supported software which 
 solves the forward problem \myaref{basic_steps,sec:forward_problem}.
 %
 %----------------------------------------------------------
@@ -141,36 +142,102 @@ smoothing (next step) in the course of inverting for different models \myaref{ba
   with ``Before Each Iteration Step (including the first one)''.
 \end{itemize}
 %
+%
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \newpage
-\section*{Cross Borehole Example} \label{guide,sec:example_C_borehole}
-\phantomsection  % so hyperref creates bookmarks
-\addcontentsline{toc}{section}{Cross Borehole Example}
+\section{Toy Example Using \lcodetitle{SPECFEM3D\_Cartesian} as a forward solver} \label{guide,sec:example_SPEC_C}
+%\phantomsection  % so hyperref creates bookmarks
+%\addcontentsline{toc}{section}{Cross Borehole Example}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+%
+%
+Please refer to section~\myref{guide,sec:example_C_borehole}.
+%
+%
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\newpage
+\section{Toy Example Using \lcodetitle{SPECFEM3D\_GLOBE} as a forward solver} \label{guide,sec:example_SPEC_GLOB}
+%\phantomsection  % so hyperref creates bookmarks
+%\addcontentsline{toc}{section}{Cross Borehole Example}
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+%
+%
+This section describes a very short example of computing a spherical waveform kernel for just one event-station 
+pair using the setting of example "regional\_Greece\_small" from the \lcode{SPECFEM3D_GLOBE 7.0.0} release package 
+(example uses 4 CPU cores only).
+
+The kernel files of this example package were computed with \ASKI{} version 1.0, which however should
+be reproducable also with higher versions of \ASKI{}
+since the changes to version 1.2 do not effect the 
+computations or compatibility of the output files. It may, however, 
+occur that numbers might not be reproduced in a numerically exact way, which is also likely to happen
+when a different compiler (version) is used. 
+
+You should have already installed the \ASKI{} main package, see section entitled ``How to get started''. 
+
+Then download the example
+package \lcode{ASKI_example_spherical_small.tar.gz} which is attached to release \lcode{v1.0} 
+of gitHub repository \url{https://github.com/seismology-RUB/ASKI} (198 MB, probably go to 
+\url{https://github.com/seismology-RUB/ASKI/releases/tag/v1.0}).
+The wavefield files in this example package were produced by version \lcode{1.0} of the extension package
+\lcode{SPECFEM3D_GLOBE for ASKI} 
+(\url{https://github.com/seismology-RUB/SPECFEM3D_GLOBE_for_ASKI/releases/tag/v1.0}), 
+but you should be able to re-produce them as well with version \lcode{1.2} of the extension package
+(\url{https://github.com/seismology-RUB/SPECFEM3D_GLOBE_for_ASKI/releases/tag/v1.2}).
+
+\emph{Please note} that this example is not documented as detailed as the 
+Cartesian cross-borehole example~\myaref{guide,sec:example_C_borehole}. Even if you do not intent to use 
+the forward code \lcode{SPECFEM3D_Cartesian}, you are still advised to have a look at the Cartesian
+cross-borehole example (or get to know \ASKI{} otherwise), in order to practice the operations of the main \ASKI{}
+package and, thus, learn about how to conduct any steps \emph{after} the forward problem is solved, in particular
+how to compute kernels. Otherwise, refer to the general FWI workflow until the point of kernel 
+computation~\myaref{guide,sec:classic_inversion} in order to re-produce the kernels provided in this 
+example package.
+
+\emph{Most importantly}, you must change the value of \lcode{MAIN_PATH_INVERSION}
+in file\\
+\lcode{ASKI_example_spherical_small/main_parfile} to
+\lcode{"your_base_path/"} in order for all the example directory to work. 
+If you do not want to overwrite the existing output, alternatively you 
+should create a separate inversion directory from scratch~\myaref{basic_steps,sec:create_dir}
+and leave \lcode{ASKI_example_spherical_small/}
+as a reference only. 
+%
+%
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\newpage
+\section{Cross Borehole Example} \label{guide,sec:example_C_borehole}
+%\phantomsection  % so hyperref creates bookmarks
+%\addcontentsline{toc}{section}{Cross Borehole Example}
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+%
 %
 This section describes the synthetic cross borehole example presented in Florian's dissertation 
 \cite{_743d334d-dfa4-4a16-8cc5-91cdadc95271} (chapter 5.1) as well as in our GJI paper \cite{Schumacher16} 
 (section 4.1). It is an example of lull waveform inversion using pre-integrated spectral waveform sensitivity 
-kernels (as described in the first recipe of this chapter Guide (page~\pageref{guide}).
+kernels (as described in the first recipe~\myref{guide,sec:classic_inversion} of this chapter. 
 
 The example files referred to in the following, were computed with \ASKI{} version 1.0, which however should
-not pose any problem since the changed from version 1.0 to 1.1 do not effect the computations or compatibility
+not pose any problem since the changes from version 1.0 to 1.2 do not effect the computations or compatibility
 of any output files. It may, however, 
-occur that numbers might not be reproduced in a numerically equal way, which is also likely to happen
+occur that numbers might not be reproduced in a numerically exact way, which is also likely to happen
 when a different compiler (version) is used. 
 
-Install \ASKI{} \myaref{basic_steps,sec:install_ASKI}. 
+You should have already installed \ASKI{}, see section entitled ``How to get started''. 
 
 Then download the example
-files \lcode{ASKI_inversion_cross_borehole.tar.gz} via \url{http://www.rub.de/aski} (566 MB). 
+package \lcode{ASKI_inversion_cross_borehole.tar.gz} which is attached to release \lcode{v1.0} 
+of gitHub repository \url{https://github.com/seismology-RUB/ASKI} (566 MB, probably go to 
+\url{https://github.com/seismology-RUB/ASKI/releases/tag/v1.0}).
 In this package, all files of the first 2 iterations (plus illustrating extras) are provided. 
 In order to keep the download small, wavefield output is not provided  for
 iterations 3 to 12. You should be able to reproduce the wavefields immendiately for any iteration step
 from the provided inverted models without reproducing all preceeding iterations. 
 The pre-integrated sensitivity kernel files are only provided for
 iterations 1 to 3. Kernel files for the other iterations can be downloaded by
-interested users seperately via \url{http://www.rub.de/aski} (package\\
-\lcode{ASKI_inversion_cross_borehole_sensitivity_kernels_iter04-iter12.tar.gz}, (907 MB).
+interested users seperately as package 
+\lcode{ASKI_inversion_cross_borehole_sensitivity_kernels_iter04-iter12.tar.gz}
+(907 MB, same location \url{https://github.com/seismology-RUB/ASKI/releases/tag/v1.0}).
 
 \emph{Most importantly}, you must change the value of \lcode{MAIN_PATH_INVERSION}
 in file\\
@@ -181,7 +248,9 @@ should create a separate inversion directory from scratch~\myaref{basic_steps,se
  and leave \lcode{ASKI_inversion_cross_borehole/}
 as a reference only. 
 
-This example was generated using \lcode{SPECFEM3D_Cartesian 3.0} for \ASKI{}. Even if you intend
+This example was generated using \lcode{SPECFEM3D_Cartesian 3.0} for \ASKI{} version 1.0.
+(\url{https://github.com/seismology-RUB/SPECFEM3D_Cartesian_for_ASKI/releases/tag/v1.0}).
+Even if you intend
 to use a different forward method, you can still practice the operations of the main \ASKI{}
 package and, thus, learn about how to conduct any steps in
 the full waveform inversion \emph{after} the forward problem is solved. Just read the description
@@ -194,9 +263,9 @@ you need to install it, of course~\myaref{basic_steps,sec:forward_problem}.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \newpage
-\section*{Time-Domain Sensitivity Kernels} \label{guide,sec:time_kernels}
-\phantomsection  % so hyperref creates bookmarks
-\addcontentsline{toc}{section}{Time-Domain Sensitivity Kernels}
+\section{Time-Domain Sensitivity Kernels} \label{guide,sec:time_kernels}
+%\phantomsection  % so hyperref creates bookmarks
+%\addcontentsline{toc}{section}{Time-Domain Sensitivity Kernels}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 %
@@ -214,7 +283,8 @@ Please do not get confused by the general terminology of \emph{inversion} and \e
 Technically you will be conducting an incomplete first iteration step of a full waveform inversion, 
 using all the program infrastructure which is also used for a full waveform inversion. 
 
-In addition to \ASKI{} \myaref{basic_steps,sec:install_ASKI}, you will need to install a supported software which 
+You should have already installed \ASKI{}, see section entitled ``How to get started''. 
+In addition to \ASKI{}, you will need to install a supported software which 
 solves the forward problem \myaref{basic_steps,sec:forward_problem}.
 %
 %----------------------------------------------------------
@@ -335,9 +405,9 @@ You could compute different types of weights and store them in different files, 
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \newpage
-\section*{Analysis of Acquisition Geometry using Kernel Focussing} \label{guide,sec:acq_ana_focus}
-\phantomsection
-\addcontentsline{toc}{section}{Analysis of Acquisition Geometry using Kernel Focussing}
+\section{Analysis of Acquisition Geometry using Kernel Focussing} \label{guide,sec:acq_ana_focus}
+%\phantomsection
+%\addcontentsline{toc}{section}{Analysis of Acquisition Geometry using Kernel Focussing}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 {\bf THIS SECTION IS WORK IN PROGRESS!}
@@ -361,9 +431,9 @@ an analysis.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \newpage
-\section*{Full Waveform Inversion - Focused Waveform Sensitivity Kernels} \label{guide,sec:focused_inversion}
-\phantomsection
-\addcontentsline{toc}{section}{Full Waveform Inversion - Focused Waveform Sensitivity Kernels}
+\section{Full Waveform Inversion - Focused Waveform Sensitivity Kernels} \label{guide,sec:focused_inversion}
+%\phantomsection
+%\addcontentsline{toc}{section}{Full Waveform Inversion - Focused Waveform Sensitivity Kernels}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 {\bf THIS SECTION IS WORK IN PROGRESS!}

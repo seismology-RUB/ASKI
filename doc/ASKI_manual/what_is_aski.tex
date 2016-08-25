@@ -24,74 +24,62 @@ This inversion concept is presented in our paper \cite{Schumacher16} and in Flor
 dissertation \cite{_743d334d-dfa4-4a16-8cc5-91cdadc95271}.
 
 \ASKI{} does not implement an intrinsic code for simulation of seismic wave propagation in order to 
-solve the forward problem, but instead provides generalized interfaces to different external wave 
+solve the seismic forward problem, but instead provides generalized interfaces to different external wave 
 propagation codes. At the moment, the 1D semi-analytical code Gemini \cite{friederich_wd1995} and the 3D spectral 
 element code SPECFEM3D \cite{TrKoLi08} are supported in \emph{both}, Cartesian and spherical framework. 
 Additionally \ASKI{} supports the 3D nodal discontinuous Galerkin code NEXD \cite{Lambrecht.2015}
-and plan to implement support for the Finite Difference code SOFI \cite{bohlen2002parallel}
-in the near future. 
-Please do not hesitate to add your own forward code, we are happy to support you during that process.
+and we plan to implement support for the Finite Difference code SOFI \cite{bohlen2002parallel}
+in the future. 
+Please do not hesitate to add your own forward code (refer to the \ASKI{} developers manual in
+\lcode{devel/doc/ASKI_developers_manual/}). If you encounter any problems or have suggestions to improve this
+process, we are happy to hear from you.
 
 The resulting very modular concept of \ASKI{} allows us to keep the spatial description of the inverted 
 models completely independent of the spatial description of the model used for solving the forward 
-problem. This way, the overall iverse problem can be approached and regularized more physically compared
-with using the forward grid also for inversion. The normally very fine spatial discretization of the model
-domain is employed by the forward solver. This discretiation is usually weigh too fine to be used
+problem. This way, the overall inverse problem can be approached and regularized more physically compared
+with using the forward grid for inversion, too. The normally very fine spatial discretization of the model
+domain is employed by the forward solver. This discretization is usually weigh too fine to be used
 directly for inversion since usually seismic data can only resolve much coarser structures and the
-resolution also varies throughout the model domain. 
+resolving power the data possesses also varies throughout the model domain. 
 The separation concept of \ASKI{} \emph{naturally} alows to choose the spatial model
 resolution heterogeneously and \emph{anew} in each iteration of FWI.
 
-Instead of using time-dependent values of ground motion (i.e.\ samples of a time-series of seismic data), 
-\ASKI{} uses freqency-dependent complex values of ground motion, recorded at a certain receivers excited 
-by a certain seismic sources. This, mainly, has reasons of computational feasibility.
+Instead of using time-dependent values of ground motion (i.e.\ samples of time-serieses of seismic data), 
+\ASKI{} uses freqency-dependent complex values of ground displacement, recorded at certain receivers excited 
+by certain seismic sources. This, mainly, has reasons of computational feasibility.
 For time-domain forward methods, we implement an on-the-fly Fourier Transform in order to provide the
 required spectral waveforms. 
 
-Using sensitivity kernels $K$, data residuals $\delta d_i$ are connected to model uptdates $\delta m$ by 
-an integral relation $\delta d_i = \int_{\text{earth}} \delta \vec{m} \cdot \vec{K}_i$. In order to build a linear 
+Using sensitivity kernels $K$, data residuals $\delta d_i$ are connected to model uptdate values $\delta m_j$ by 
+an integral relation $\delta d_i = \int_{\text{Earth}} \delta \vec{m} \cdot \vec{K}_i$. In order to build a linear 
 system, the model update $\delta \vec{m}$ is assumed to be constant throughout small scattering volumes 
 $\Omega_j$, where $\Omega = \overset{\centerdot}{\bigcup}_j \Omega_j$. These volumes constitute the cells of the volumetric 
-inversion grid and the sensitivity matrix contains entries of preintegrated kernels $\int_{\Omega_j} K_i$.
+inversion grid and the sensitivity matrix contains entries of preintegrated kernels $\int_{\Omega_j} K_i$ (and
+model update values $\delta m_j$ are associated with cells $\Omega_j$ for a particular elastic parameter).
 
 The sensitivity kernels $K$ are computed from forward wavefields and strains produced on a set of points in 
 space, which
-is dependent on the particular forward method. This set of points is refered to as \emph{wavefield points}. The 
-wavefields are written to file, by the respective forward method, which may require large discspace. 
+is dependent on the particular forward method. This set of points is refered to in \ASKI{} as 
+\emph{wavefield points}. The 
+wavefields are written to file, by the respective forward method, which may require large disk space. 
 Providing methods for constructing quadrature rules for arbitrary point sets contained in 
-arbitrary volumes, 
-\ASKI{} computes integration weights for integration of functions on the wavefield points over the volumetric
+arbitrary (hexahedral or tetrahedral) volumes, 
+\ASKI{} computes integration weights for integration of functions given on the wavefield points 
+(particularly kernels) over the volumetric
 cells of the inversion grid. The inversion grid takes care of the localization of wavefield points 
 inside the inversion grid cells and, if requested, the transformation of cells to a hexahedral (or tetrahedral) 
 standard 
-cell for the computation of the integration weights. Hence, some combinations of wavefield points (i.e.\ 
-forward methods), integration weight types and inversion grid types are not possible. 
+cell for the computation of the integration weights. Hence, exotic combinations of wavefield points (i.e.\ 
+forward methods), integration weight types and inversion grid types might not be possible (e.g.\ using the
+\lcode{SPECFEM}-internal inversion grid built by the spectral elements along with wavefield points from 
+another forward method). 
 
-The preintegrated kernel values are also written to files, which may be flexibly read in for arbitrary 
-subsets of data
-by the independent binary programs conducting any sensitivity analysis 
-or an interation step in the iterative full waveform inversion.
+The pre-integrated kernel values are also written to files, which may be flexibly read in 
+(e.g.\ reading in kernels of specific data subsets only)
+by the sets of independent \ASKI{} executables conducting any sensitivity analysis 
+or interation steps in the iterative full waveform inversion.
 Those tools work on the sensitivity matrix, which in the FWI is used in a linear system of equations which
 relates data residua $\delta d_i$ to a model improvement $\delta m$. 
 In the course of the iterative full waveform inversion, it is naturally possible by \ASKI{} to gradually increase
-the frequency content of the inverted data and to choose smaller inversion grid cells in each iteration, i.e.\ increasing
-the spatial resolution dependent on frequency.
-
-
-%% \vspace*{1cm}
-%% {\bf {\Huge TODO} PUT A GENERAL OVERWIEW OF ASKI HERE, SO THAT THE SECTIONS IN ``BASIC STEPS'' DO NOT NEED TO 
-%% EXPLAIN EVERY BIT OF BASIC STUFF: in the following there is a collection of unsorted bits of documentation
-%% which could be involved in this section\\
-%% also include some pictures: a set of points inside the volumes of the inversion grid, a sensitivity kernel
-%% for one specific datum (real part of some frequency sample of a seismogram (src,rec,comp)) explaining that 
-%% positive high values at one scatterer mean that this very datum increases (significantly) if the current 
-%% model parameter is increased at this scatterer}
-
-%% All operations \ASKI{} can conduct are based on Waveform Sensitivity Kernels. 
-
-%% IN ESSENCE, PUT SOME SHORTENED, MORE INTUITIVELY UNDERSTANDABLE VERSION OF THE \ASKI{} PAPER (when existend) 
-%% HERE, WHICH EXPLAINS THE TERMINI ``SENSITIVITY KERNELS'', ``INERSION GRID'', ``WAVEFIELD POINTS'', ``INTEGRATION WEIGHTS''
-%% AND GIVES THE PRINCIPLE IDEAS OF COMPUTING THE KERNELS FROM WAVEFIELD GIVEN ON THE WAVEFIELD POINTS, INTEGRATING THEM ONTO THE
-%% INVERSION GRID (hence, connecting forward simulation = data with the model) AND SOLVING LINEAR SYSTEMS 
-%% CONTAINING THE SENSITIVITY VALUES. IT SHOULD ALSO BE EXPLAINED THAT ASKI USES DATA (hence, kernel sensitivity values) IN THE FREQUENCY DOMAIN AND WHY:
-
+the frequency content of the inverted data and to choose smaller inversion grid cells in each iteration, 
+i.e.\ increasing the spatial resolution dependent on frequency.

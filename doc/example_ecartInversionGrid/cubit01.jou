@@ -1,11 +1,10 @@
-## 
-## Cubit Version 14.0
-## Cubit Build 387010
-## Revised 2013-06-11 10:13:37 -0600 (Tue, 11 Jun 2013)
-## Running 11/05/2015 04:41:10 PM
+## /opt/Trelis-15.1/bin/trelis
+## Trelis Version 15.1.2
+## Trelis Build 7ccf2c4
+## Revised Fri Dec 5 10:35:15 2014 -0700
+## Running 08/04/2016 08:29:27 AM
 ## Command Options:
-## -warning = On
-## -information = On
+undo on
 reset
 brick x 15 y 15 z 20
 move volume 1 x 0 y 0 z 10
@@ -15,7 +14,7 @@ subtract volume 2 from volume 1
 webcut volume all with plane zplane offset 15 noimprint nomerge
 volume 3 scheme tetmesh
 surface 10 11 size 5
-surface 22 12 19 20 21 size 7
+surface 22 12 18 19 20 21 size 7
 mesh volume 3
 volume 1 scheme tetmesh
 volume 1 size 5

@@ -1,22 +1,22 @@
-!--------------------------------------------------------------------------
+!----------------------------------------------------------------------------
 !   Copyright 2016 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
 !
 !   This file is part of Gemini II.
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   Gemini II and ASKI version 1.1 are free software: you can
+!   Gemini II and ASKI version 1.2 are free software: you can
 !   redistribute it and/or modify it under the terms of the GNU
 !   General Public License as published by the Free Software
 !   Foundation, either version 2 of the License, or (at your option) 
 !   any later version.
 !
-!   Gemini II and ASKI version 1.1 are distributed in the hope that they
+!   Gemini II and ASKI version 1.2 are distributed in the hope that they
 !   will be useful, but WITHOUT ANY WARRANTY; without even the implied
 !   warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 !   See the GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with Gemini II and ASKI version 1.1.
+!   along with Gemini II and ASKI version 1.2.
 !   If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !--------------------------------------------------------------------
@@ -49,8 +49,8 @@
 		character (len=character_length_staname) :: staname   ! station name
 		character (len=2) :: location        ! location code
 		character (len=5) :: inst_name       ! short name of instrument (e.g. CMG-3)
-		real :: lat, lon                     ! latitude and longitude (degrees) of station
-		real :: alt                          ! altitude of station
+		real :: lat, lon                     ! latitude and longitude (degrees) or x and y (meter) of station
+		real :: alt                          ! altitude of station (meter)
 		type (date_time) :: tin              ! date and time of begin of operation
 		type (date_time) :: tout             ! date and time of end of operation
 	end type

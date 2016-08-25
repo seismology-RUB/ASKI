@@ -2,20 +2,20 @@
 !   Copyright 2016 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
 !   and Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.1 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.1 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
 !> \brief General module to read in parameters from a parameter file
@@ -47,6 +47,7 @@ module inputParameter
     interface ivec; module procedure getIostatIntegerVectorFromKeywordInputParameter; end interface
     interface ivecp; module procedure getIostatPointerIntegerVectorFromKeywordInputParameter; end interface
     interface rvec; module procedure getIostatRealVectorFromKeywordInputParameter; end interface
+    interface dvec; module procedure getIostatDoubleVectorFromKeywordInputParameter; end interface
     interface rvecp; module procedure getIostatPointerRealVectorFromKeywordInputParameter; end interface
     interface dvecp; module procedure getIostatPointerDoubleVectorFromKeywordInputParameter; end interface
     interface cvec; module procedure getIostatComplexVectorFromKeywordInputParameter; end interface
@@ -637,6 +638,32 @@ module inputParameter
         endif
     enddo
     end function getIostatRealVectorFromKeywordInputParameter
+!-------------------------------------------------------------------------------
+!> \brief get a double 1D array for given keyword
+!! \param[in] this input_parameter object
+!! \param word keyword
+!! \param iostat optional integer, contain iostat returned by read() on exit
+!! \param n size of 1D array
+!! \param res double 1D array for keyword word
+!! \return double 1D array read from value string
+!
+    function getIostatDoubleVectorFromKeywordInputParameter(this,word,n,iostat) result(res)
+    type (input_parameter), intent(in) :: this
+    character (len=*), intent(in) :: word
+    integer, optional :: iostat
+    integer :: n
+    double precision, dimension(n) :: res
+    integer :: i,ios
+    if(present(iostat)) iostat = -1
+    res = 0.d0
+    do i = 1,this%npar
+        if (trim(this%keyword(i)) == trim(adjustl(word))) then
+            read(this%value(i),*,iostat=ios) res
+            if(present(iostat)) iostat = ios
+            return
+        endif
+    enddo
+    end function getIostatDoubleVectorFromKeywordInputParameter
 !-------------------------------------------------------------------------------
 !> \brief get pointer to real 1D array for given keyword
 !! \details There is memory allocated for the return pointer within this function.

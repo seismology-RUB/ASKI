@@ -1,27 +1,27 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.1 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.1 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !
 !#########################################################################################
 !#########################################################################################
 !##    W  A  R  N  I  N  G 
 !## 
-!## SUBROUTINE createFaceNeighbourEcartInversionGrid DOES NOT YET WORK CORRECTLY, EVEN 
+!## SUBROUTINE createFaceNeighboursEcartInversionGrid DOES NOT YET WORK CORRECTLY, EVEN 
 !## FOR TET4 CELLS! THERE WERE SOME TEST SETUPS, WHERE THE NEIGHBOUR SEARCH WORKED OUT 
 !## FINE, FOR OTHER SETUPS IT DID NOT WORK OUT (in general, too few neighbours were found,
 !## so maybe a matter of threashold epsilon stuff in the decision processes?!)
@@ -46,7 +46,7 @@
 !!     + each following line contains n integer numbers (separated by white space, n = 4 in case of 
 !!       tet4 cells, n = 8 in case of hex8 cells), which define the corners (or higher order mid-edge 
 !!       points etc.) of the cell and correspond to the point indices in the respective nodes coordinates 
-!!       file, whereby the lowest point index is 1, corresponding to the second line (first point) in 
+!!       file, where the lowest point index is 1, corresponding to the second line (first point) in 
 !!       the nodes coordinates file.
 !!   THE ORDER OF THE POINTS IS ASSUMED TO CORRESPOND TO THE VTK CELL CONVENTIONS!
 !!   in case one of the cell connectivity files does not exist, or their first line containing value 0, no cells
@@ -64,7 +64,7 @@ module ecartInversionGrid
 !
   implicit none
 !
-  private :: createPointCellEcartInversionGrid,createFaceNeighbourEcartInversionGrid,&
+  private :: createPointCellEcartInversionGrid,createFaceNeighboursEcartInversionGrid,&
        writeFaceNeighbourEcartInversionGrid,readFaceNeighbourEcartInversionGrid,&
        locateWpInsideTet4CellEcartInversionGrid,vectorProductEcartInversionGrid,&
        transformToStandardTetEcartInversionGrid,getVolumeTet4EcartInversionGrid,&
@@ -238,7 +238,7 @@ contains
     inquire(file = trim(path)//trim(inpar.sval.'ECART_INVGRID_FILE_NEIGHBOURS'), exist = file_exists)
 !
     if(recreate_neighbours .or. .not.file_exists) then
-       call createFaceNeighbourEcartInversionGrid(this,errmsg)
+       call createFaceNeighboursEcartInversionGrid(this,errmsg)
        if(.level.errmsg == 2) goto 1
        call writeFaceNeighbourEcartInversionGrid(this,&
             trim(path)//trim(inpar.sval.'ECART_INVGRID_FILE_NEIGHBOURS'),is_binary,file_exists,lu,errmsg)
@@ -311,7 +311,10 @@ contains
        else
           read_tet4 = .true.
        end if
-    end if
+    else ! file_exists
+       call add(errmsg,1,"tet4 cell file '"//trim(path)//trim(inpar.sval.'ECART_INVGRID_FILE_CELLS_TET4')//"' "//&
+            "does not exist, hence assume 0 tet4 cells for this inversion grid",myname)
+    end if ! file_exists
 !
     ! read hex8 files?
     read_hex8 = .false.; this%ncell_hex8 = 0
@@ -340,7 +343,10 @@ contains
        else
           read_hex8 = .true.
        end if
-    end if
+    else ! file_exists
+       call add(errmsg,1,"hex8 cell file '"//trim(path)//trim(inpar.sval.'ECART_INVGRID_FILE_CELLS_HEX8')//"' "//&
+            "does not exist, hence assume 0 hex8 cells for this inversion grid",myname)
+    end if ! file_exists
 !
     if(.not.read_tet4 .and. .not.read_hex8) then
        call add(errmsg,2,"there are no cells to create",myname)
@@ -593,11 +599,11 @@ contains
 !------------------------------------------------------------------------
 !> \brief create neighbours this%face_neighbour of the inversion grid cells
 !
-  subroutine createFaceNeighbourEcartInversionGrid(this,errmsg)
+  subroutine createFaceNeighboursEcartInversionGrid(this,errmsg)
     type (ecart_inversion_grid) :: this
     type (error_message) :: errmsg
     ! local
-    character(len=37) :: myname = 'createFaceNeighbourEcartInversionGrid'
+    character(len=38) :: myname = 'createFaceNeighboursEcartInversionGrid'
     character(len=400) :: errstr
     integer :: icell,icell_tet4,jcell_tet4,iface,inb,nnb_potential,nnb_add,nnb,j
     real :: eps,origin_distance_tet4_test
@@ -623,7 +629,7 @@ contains
 ! BEWARE: SO FAR, THIS ROUTINE ONLY FINDS TET4 NEIGHBOURS OF TET4 CELLS! HEX8 CELLS ARE COMPLETELY IGNORED FOR NOW (complicated
     if(this%ncell_hex8>0) &
          call add(errmsg,1,"there are 8-node hexahedral cells in this inversion grid: "//&
-         "for this cell type, the neighbour search is not yet implemented and those "//&
+         "for this cell type, the neighbour search is not yet supported and those "//&
          "cells will simply have no neighbours and will not be a neighbour of any other cell",myname)
 !
 !
@@ -788,8 +794,8 @@ contains
 !##################################################################################
 !##################################################################################
 !
-!!$             ! now select from potential neighbours the real neighbours by removing those, which are no neighbours
-!!$             ! do this by investigating, if the linear system Ax=b has a solution, whereby
+!!$             ! now select from potential neighbours the real neighbours by removing those, which are no neighbours.
+!!$             ! do this by investigating, if the linear system Ax=b has a solution, where
 !!$             ! 
 !!$             !     ( p1 | p2 | p3 | -q1 | -q2 | -q3 )
 !!$             ! A = ( 1. | 1. | 1. |  0. |  0. |  0. ) , b = ( 0. , 0., 0., 1., 1.) , 
@@ -966,7 +972,8 @@ contains
 ! one point of the first tri face and an edge of the other tri face
 ! as described in section 4 of paper
 !   "Faster Triangle-Triangle Intersection Tests", Olivier Devillers, Philippe Guige, 
-!   INRIA Sophia Antipolis research report RR 4488, June 2002, http://hal.inria.fr/inria-00072100
+!   INRIA Sophia Antipolis research report RR 4488, June 2002, http://hal.inria.fr/inria-00072100,
+!   PDF: https://hal.inria.fr/inria-00072100/file/RR-4488.pdf
 ! in short here referred to as Tri Tri Test = TTT, the nomenclature p,q,r etc.
 ! is used as in the paper
 ! however, we modify this algorithm a little, in order to exclude edge- and point- 
@@ -1169,7 +1176,7 @@ contains
 !!$    if(allocated(WORK_SGESVD_A_tet4)) deallocate(WORK_SGESVD_A_tet4)
 !!$    if(allocated(WORK_SGESVD_Ab_tet4)) deallocate(WORK_SGESVD_Ab_tet4)
     if(allocated(idx_add)) deallocate(idx_add)
-  end subroutine createFaceNeighbourEcartInversionGrid
+  end subroutine createFaceNeighboursEcartInversionGrid
 !------------------------------------------------------------------------
 !> \brief find a permutation of p2,q2,r2 to start the search algorithm as in paper by Devillers/Guigue
 !! \details Confer paper by Devillers/Guigue, Figure 6: identify the location of p1 as either 
@@ -1927,7 +1934,7 @@ contains
     !   * SELECT ALL THOSE INDICES, FOR WHICH WAVEFIELD POINTS LIE ON THE "INSIDE"-SIDE OF THE FACE:
     !     compare two vectors: 
     !     1) vector n, orthogonal on face pointing outward
-    !     2) vector x' = x - p , whereby vector x is a wavefield point and p lies on the face
+    !     2) vector x' = x - p , where vector x is a wavefield point and p lies on the face
     !     if dot(n,x') > 0 , x is strictly on the "outside", i.e. that side of the face, where n points to
     !     FOR SIMPLICITY, do not explicitely compute x', but simplify dot(n,x') = dot(n,x) - dot(n,p)
     !
@@ -2038,8 +2045,8 @@ contains
 !! \param x vector of global x coordinate (contains x-values in standard cell on exit)
 !! \param y vector of global y coordinate (contains y-values in standard cell on exit)
 !! \param z vector of global z coordinate (contains z-values in standard cell on exit)
-!! \param jacobian jacobian of transformation from standard cell to real coordinate cell (to be multiplied to standard weights)
-!! \param type_standard_cell defines the shape of the standard cell, select specific routine dependent on type (4=Tetrahedron,6=Hexahedron)
+!! \param jacobian jacobian of transformation from standard cell to real coordinate cell (to be multiplied to standard weights). If ON INPUT type_standard_cell=-1, then instead of jacobian values actual integration weights are requested
+!! \param type_standard_cell defines on return the shape of the standard cell (specific integration weights routine can be chosen): (4=Tetrahedron,6=Hexahedron). If ON INPUT type_standard_cell=-1, then instead of jacobian values actual integration weights are requested
 !! \param errmsg error message
 !
   subroutine transformToStandardCellEcartInversionGrid(this,icell,x,y,z,jacobian,type_standard_cell,errmsg)
@@ -2113,7 +2120,7 @@ contains
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! for every wavefield point X=x,y,z compute its representation in coordinates X'=xi,eta,zeta in
 ! the standard tetrahedron (defined by nodes q1=(0,0,0), q2=(1,0,0), q3=(0,1,0), q4=(0,0,1) )
-! whereby the real nodes pj are mapped to qj (i.e. p1 <-> q1 , ... , p4 <-> q4) and the transformation
+! where the real nodes pj are mapped to qj (i.e. p1 <-> q1 , ... , p4 <-> q4) and the transformation
 ! from X' to X shall be
 ! X(xi,eta,zeta) = p1 + (p2-p1)*xi + (p3-p1)*eta + (p4-p1)*zeta
 !                = (1-xi-eta-zeta)*p1 + xi*p2 + eta*p3 + zeta*p4
@@ -2127,7 +2134,7 @@ contains
 ! ( p1(2) p2(2) p3(2) p4(2) )   (b2)   (x)
 ! ( p1(3) p2(3) p3(3) p4(3) ) * (b3) = (z)
 ! (  1     1     1     1    )   (b4)   (1)
-! using Cramers rule, which says that the solution may be computed as bi = Di/D0, whereby:
+! using Cramers rule, which says that the solution may be computed as bi = Di/D0, where:
 !
 !          ( p1(1) p2(1) p3(1) p4(1) )
 !          ( p1(2) p2(2) p3(2) p4(2) )

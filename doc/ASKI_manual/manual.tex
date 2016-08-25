@@ -104,7 +104,7 @@
 %%% lstinline is a good solution, in general, but it makes problems in line breaks!
 %\newcommand{\lcode}[1]{\lstinline[breaklines=true]$#1$}
 %
-%%% although there are no actual links, it uses the same font as lstinline (when \lstset{basicstyle =\ttfamily}), 
+%%% although there are no actual links, \nolinkurl uses the same font as lstinline (when \lstset{basicstyle =\ttfamily}), 
 %%% but produces better line breaks!
 \newcommand{\lcode}[1]{\nolinkurl{#1}}
 %
@@ -144,6 +144,7 @@
 %####################################################################
 %
 \begin{document}
+\sloppy
 %
 \setlength{\parindent}{0em}
 \setlength{\parskip}{0.5em}
@@ -171,55 +172,60 @@ Free Documentation License''.
 
 If you use \ASKI{} for your own research, please cite our paper \cite{Schumacher16}:
 
-F. Schumacher, W. Friederich and S. Lamara, \\
+F.\ Schumacher, W.\ Friederich and S.\ Lamara, \\
 "A flexible, extendable, modular and 
 computationally efficient approach to scattering-integral-based seismic full waveform 
 inversion", \\
 \emph{Geophysical Journal International}, (February, 2016) 204 (2): 1100-1119\\
-http://dx.doi.org/10.1093/gji/ggv505
+\url{http://dx.doi.org/10.1093/gji/ggv505}
 
 \vspace{1em}
 
 This documentation was written in the hope that it will be useful to the user,
 but it \emph{cannot be assured} that it is accurate in every respect or complete in any sense.
 In fact, at some places \emph{this manual is work in progress}.\\
-lease do not hesitate to report any inconsistencies via \url{http://www.rub.de/aski} or
-to improve this documentation by incorporating your experiences with \ASKI{} 
-and your personal experience of getting used to it (plus, let us know about it! Thanks). 
+Please do not hesitate to report any inconsistencies by
+opening (or adding to) an "issues" topic on \url{https://github.com/seismology-RUB/ASKI}
+or to improve this documentation by incorporating your experiences with \ASKI{} 
+and your personal experience of getting used to it (at best by modifying the source and issuing a pull request
+on gitHub, in any case let us know about it! Thanks). 
 When you have developed new \ASKI{} components or 
-have modified existing once, please extend / modify this document accoringly.
+have modified existing once, please extend / modify the \ASKI{} documentation accoringly.
 
-Furthermore, I am aware of the poor \LaTeX coding of this document. There is a lot of potential
+Furthermore, I am aware of the poor \LaTeX coding of this document (at the moment, \verb+\sloppy+ is used
+at the beginning of the document to avoid overfull hboxes in many places). There is a lot of potential
 to improve the document 
 style, hence the readability of the manual as a whole, as well as the coding style of the 
 particular \lcode{.tex} files. \emph{Please do not hesitate to improve!}
 
 The \LaTeX source files and all related components of this document are available via\\
-\url{http://www.rub.de/aski}
+\url{https://github.com/seismology-RUB/ASKI}~, subdirectory \lcode{doc/ASKI_manual/} of the repository.
 \begin{flushright}
 Florian Schumacher, \mydate \today
 \end{flushright}
-%
-%-------------------------------
-% CHAPTER Introduction
-\chapter*{How to use this manual}
-\phantomsection  % so hyperref creates bookmarks
-\input{howto}
-%
-%-------------------------------
-% CHAPTER Introduction
-\chapter*{What is \ASKI?} \label{guide,sec:ASKI}
-\phantomsection  % so hyperref creates bookmarks
-\input{what_is_aski}
 %
 %-------------------------------
 % TABLE OF CONTENTS
 \tableofcontents
 %
 %-------------------------------
+% CHAPTER Introduction
+\chapter*{What is \ASKI{}?} \label{guide,sec:ASKI}
+\phantomsection  % so hyperref creates bookmarks
+\addcontentsline{toc}{chapter}{What is \ASKI?}
+\input{what_is_aski}
+%
+%-------------------------------
+% CHAPTER How to get started
+\chapter*{How to get started}
+\phantomsection  % so hyperref creates bookmarks
+\addcontentsline{toc}{chapter}{How to get started}
+\input{howto}
+%
+%-------------------------------
 % CHAPTER Guide
 \setcounter{chapter}{-1}
-\chapter{Guide} \label{guide}
+\chapter{\ASKI{} workflows} \label{guide}
 %\phantomsection  % so hyperref creates bookmarks
 %\addcontentsline{toc}{chapter}{Guide}
 \input{guide}
@@ -255,6 +261,14 @@ Florian Schumacher, \mydate \today
 % > bibtex manual
 % > pdflatex manual
 % > pdflatex manual
+%
+%
+%-------------------------------
+% CHAPTER History (of the document versions, as required by the GNU Free Documentation License)
+\chapter*{History}
+\phantomsection  % so hyperref creates bookmarks
+\addcontentsline{toc}{chapter}{History}
+\input{history}
 %
 %-------------------------------
 % CHAPTER GNU Free Documentation License

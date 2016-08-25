@@ -1,6 +1,6 @@
 COMMAND:
 
-/home/florian/programme/ASKI/bin/invgrid2vtk -igtype ecartInversionGrid -igpar ecartInversionGrid_parfile_template -igpath ./ -o invgrid_cells > invgrid2vtk.out
+../../../bin/invgrid2vtk -igtype ecartInversionGrid -igpar ecartInversionGrid_parfile_template -igpath ./ -o invgrid_cells > invgrid2vtk_cells.out
 
 SCREEN OUTPUT:
 
@@ -25,4 +25,5 @@ Optional arguments:
       -bndcond: Type =  sval, Default = standard
 --------------------------------------------------------------------------------
  
+ created inversion grid with         2802  cells
  writing inversion grid with invgrid index as data to vtk file with basename 'invgrid_cells'

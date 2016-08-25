@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.1 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.1 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief compute data weights which focus overall sensitivity
 !!
@@ -119,7 +119,7 @@ contains
     real, dimension(:), pointer :: k
     real, dimension(:,:), allocatable :: rhs
     real, dimension(:,:), pointer :: sol
-!!$real, dimension(:,:), pointer :: KM !! FS FS REMOVE, FOR SETTING KERNEL MATRIX TO ABSOLUTE VALUES
+!!$real, dimension(:,:), pointer :: KM !! FS FS TEST: SETTING KERNEL MATRIX TO ABSOLUTE VALUES
 !
     nullify(k,sol)
     call addTrace(errmsg,myname)
@@ -141,8 +141,8 @@ contains
 !
     call copyMatrixKernelLinearSystem(KLSE_focus,this%KLSE,errmsg)
     if(.level.errmsg == 2) goto 1
-!!$KM => .KM.KLSE_focus !! FS FS REMOVE, FOR SETTING KERNEL MATRIX TO ABSOLUTE VALUES
-!!$KM = abs(KM) !! FS FS REMOVE, FOR SETTING KERNEL MATRIX TO ABSOLUTE VALUES
+!!$KM => .KM.KLSE_focus !! FS FS TEST: SETTING KERNEL MATRIX TO ABSOLUTE VALUES
+!!$KM = abs(KM) !! FS FS TEST: SETTING KERNEL MATRIX TO ABSOLUTE VALUES
 !
     k => getSumColumns(this%KLSE)
     if(.not.associated(k)) then

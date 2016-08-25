@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.1 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.1 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 program invgrid2vtk
   use inversionGrid
@@ -60,7 +60,7 @@ program invgrid2vtk
        "sval","")
   call addOption(ap,"-igpath",.true.,"(mandatory) is treated as current iteration step path, used for some "//&
        "inversion grids to write/read own files","sval","")
-  call addOption(ap,"-o",.true.,"(optional) output flile base name","sval","inversion_grid")
+  call addOption(ap,"-o",.true.,"(optional) output file base name","sval","inversion_grid")
   call addOption(ap,"-overwr",.false.,"(optional) if set, existing output files will be overwritten")
   call addOption(ap,'-nb',.true.,"(optional) explicit vector of cell indices for which the neighbours will be "//&
        "written as vtk files. Options -nb and -all_nb must not be set at the same time",'ivec','')
@@ -141,7 +141,7 @@ program invgrid2vtk
         goto 1
      end if
      if(.not.associated(icell_nb)) then
-        write(*,*) "ERROR: for some reason, there is no list of cell indeices returned by argument parser, "//&
+        write(*,*) "ERROR: for some reason, there is no list of cell indices returned by argument parser, "//&
              "even though there was no error parsing argument -nb. This is strange..."
         write(*,*) ""
         call usage(ap)
@@ -202,6 +202,7 @@ program invgrid2vtk
 !------------------------------------------------------------------------
 !  write basic vtk file
 !
+  write(*,*) "created inversion grid with ",.ncell.invgrid," cells"
   write(*,*) "writing inversion grid with invgrid index as data to vtk file with basename '"//trim(outbase)//"'"
 !
   call new(errmsg,myname)
@@ -214,6 +215,12 @@ program invgrid2vtk
   call new(errmsg,myname)
   call writeData(invgrid_vtk,11,(/(real(j),j=1,.ncell.invgrid)/),errmsg,data_name='cell_index',&
        overwrite=overwrite_output)
+!!!!!!!!
+! GENERATING A FILE WITH chunk index (ONLY FOR chunksInversionGrid AND IF TYPES inversion_grid, chunks_inversion_grid ARE NOT PRIVATE!)
+  ! call writeData(invgrid_vtk,11,(/(real(invgrid%chunks%cell_ichunk(invgrid%chunks%icell_internal(j))),&
+  !      j=1,.ncell.invgrid)/),errmsg,data_name='cell_index',&
+  !      overwrite=overwrite_output)
+!!!!!!!!
   if(.level.errmsg/=0) call print(errmsg)
   !call print(errmsg)
   if (.level.errmsg == 2) goto 1

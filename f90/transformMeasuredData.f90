@@ -1,32 +1,33 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.1 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.1 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief program for transforming time-domain measured data to ASKI-conform frequency-domain measured data files
 !!
 !! \details At the moment, two forms of input data are supported: plain text trace files and *.su files.
-!!  For both cases, a parameter file has to be provided (filename of parameter file as argument of options
-!!  -txt or -su, respectively) which contains some specifications about the location of the files, their naming
-!!  and their content. See templates of the respective parameter file for further documentation on its content.
+!!  For text-traces cases, a parameter file has to be provided (filename of parameter file as argument of option
+!!  -txt) which contains some specifications about the location of the files, their naming
+!!  and their content. See template of the respective parameter file for further documentation on its content
+!!  as well as the ASKI user manual.
 !!
 !! \author Florian Schumacher
 !! \date January 2015
 
-program createMeasuredData
+program transformMeasuredData
 
   use argumentParser
   use string
@@ -89,7 +90,7 @@ program createMeasuredData
   complex, dimension(:), allocatable :: spectrum
 
   type (error_message) :: errmsg
-  character(len=18) :: prog_name = 'createMeasuredData'
+  character(len=21) :: prog_name = 'transformMeasuredData'
 
   logical :: terminate_program,next,file_exists
   integer :: ios,icomp,ncomp,istat,nstat,nev,j
@@ -390,7 +391,7 @@ contains
   subroutine transformMeasuredDataSu()
     nstat = .nstat.(.statlist.invbasics)
     nev = .nev.(.evlist.invbasics)
-    write(*,*) "transforming Seismic Unix filesto ASKI spectra now"
+    write(*,*) "transforming Seismic Unix files to ASKI spectra now"
     write(*,*) "   assuming one file per receiver component in path '",trim(path_su_files),"' named 'EVID_COMP.su'"
     write(*,*) "   for all ",nev," shots, each containing ",nstat," traces for all receivers "
     write(*,*) "   ordered as ASKI receiver list, all having the same time discretization"
@@ -507,4 +508,4 @@ contains
     goto 1
   end subroutine transformMeasuredDataSu
 
-end program createMeasuredData
+end program transformMeasuredData

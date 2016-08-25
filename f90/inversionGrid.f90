@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.1 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.1 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief generic inversion grid module which forks to specific inversion grid modules
 !!
@@ -59,6 +59,13 @@ module inversionGrid
 !
   implicit none
 !
+  interface getInvgrid
+     module procedure getScartInversionGrid
+     module procedure getEcartInversionGrid
+     module procedure getSpecfem3dInversionGrid
+     module procedure getSchunkInversionGrid
+     module procedure getChunksInversionGrid
+  end interface getInvgrid
   interface dealloc; module procedure deallocateInversionGrid; end interface
   interface operator (.ncell.); module procedure getNcellInversionGrid; end interface
 !
@@ -117,7 +124,10 @@ contains
        end select
     end if
 !
-    ! dependent on type of inversion grid, check if the type of integration weights is incompatible with this inversion grid
+    ! Dependent on type of inversion grid, check if the type of integration weights is incompatible with this 
+    ! inversion grid.
+    ! The only integration weights type to check here, is type 6 (external weights), which is only compatible
+    ! with specfem3dInversionGrid. For all other inversion types, return .false.
     if(present(intw_type)) then
        select case(name)
        case('scartInversionGrid','ecartInversionGrid','schunkInversionGrid','chunksInversionGrid')
@@ -190,6 +200,41 @@ contains
        call getUnitFactorOfVolumeElementChunksInversionGrid(this%chunks,uf_vol,errmsg)
     end select
   end subroutine getUnitFactorOfVolumeElementInversionGrid
+!------------------------------------------------------------------------
+!> \brief get pointer to scart_inversion_grid of this inversion_grid
+  subroutine getScartInversionGrid(this,p)
+    type (inversion_grid), intent(in) :: this
+    type (scart_inversion_grid), pointer, intent(out) :: p
+    p => this%scart
+  end subroutine getScartInversionGrid
+!------------------------------------------------------------------------
+!> \brief get pointer to ecart_inversion_grid of this inversion_grid
+  subroutine getEcartInversionGrid(this,p)
+    type (inversion_grid), intent(in) :: this
+    type (ecart_inversion_grid), pointer, intent(out) :: p
+    p => this%ecart
+  end subroutine getEcartInversionGrid
+!------------------------------------------------------------------------
+!> \brief get pointer to specfem3d_inversion_grid of this inversion_grid
+  subroutine getSpecfem3dInversionGrid(this,p)
+    type (inversion_grid), intent(in) :: this
+    type (specfem3d_inversion_grid), pointer, intent(out) :: p
+    p => this%specfem3d
+  end subroutine getSpecfem3dInversionGrid
+!------------------------------------------------------------------------
+!> \brief get pointer to schunk_inversion_grid of this inversion_grid
+  subroutine getSchunkInversionGrid(this,p)
+    type (inversion_grid), intent(in) :: this
+    type (schunk_inversion_grid), pointer, intent(out) :: p
+    p => this%schunk
+  end subroutine getSchunkInversionGrid
+!------------------------------------------------------------------------
+!> \brief get pointer to chunks_inversion_grid of this inversion_grid
+  subroutine getChunksInversionGrid(this,p)
+    type (inversion_grid), intent(in) :: this
+    type (chunks_inversion_grid), pointer, intent(out) :: p
+    p => this%chunks
+  end subroutine getChunksInversionGrid
 !------------------------------------------------------------------------
 !> \brief create inversion grid of specific type
 !! \details Each specific type inversion grid module may use own specifications, 
@@ -372,12 +417,12 @@ contains
 !> \brief get inversion grid geometry information for vtk files
 !! \details Dependent on the type of inversion grid cells (i.e. hexahedra, tetrahedra, ...)
 !!  define an array of point coordinates and an array defining cells of a
-!!  certain cell_type as in vtk file format for unstructured grid.
+!!  certain cell_type as in vtk file format for unstructured grid (for geometry type 1 = cell center points, only define the point array).
 !!  We need the additional index mapping indx_map here (confer invgrid_vtk_file%req_indx) for the case of 
-!!  present(cell_indx_req), as the specific subroutines belowroutine may throw away invalid and duplicate 
+!!  present(cell_indx_req), as the specific subroutines below may throw away invalid and duplicate 
 !!  invgrid cell indices. in order to be able to still use the cell geometry information with data vectors 
 !!  of same length (and order) as cell_indx_req, indx_map maps the vtk cell index of the returned vtk cells 
-!!  to the original position in array cell_indx_req. also, if routine getGeometryVtkInversionGrid does not 
+!!  to the original position in array cell_indx_req. also, if a specific subroutine below (for some type of invgrid) does not 
 !!  preserve the order of vtk cells as requested by cell_indx_req, map indx_map will reconstruct this order 
 !!  (and be the identity otherwise)
 !! \param this inversion grid
@@ -388,11 +433,13 @@ contains
 !! \param cell_indx_out array of same size as the number of vtk cells (same order), which contains the invgrid cell index of a corresponding vtk cell
 !! \param cell_indx_req optional incoming array defining invgrid cell indices for which vtk cells should be returned only
 !! \param indx_map if cell_indx_req present, then indx_map(cell_indx_req(i)) = i for all valid and non duplicate cell_indx_req(i) , otherwise identity
+!! \param cell_type_requested optional string for requesting a specific cell type only. At the moment only for chunksInversionGrid the values 'EXTERNAL_CELLS' and 'BASE_CELLS' are supported
 !
   subroutine getGeometryVtkInversionGrid(this,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,errmsg,&
-       cell_indx_req,indx_map)
+       cell_indx_req,indx_map,cell_type_requested)
     type (inversion_grid) :: this
     integer, dimension(:), optional :: cell_indx_req
+    character(len=*), optional :: cell_type_requested
     ! outgoing
     integer :: geometry_type
     real, dimension(:,:), pointer :: points
@@ -408,23 +455,51 @@ contains
 !
     select case(this%type_name_inversion_grid)
     case('scartInversionGrid')
+       if(present(cell_type_requested)) call add(errmsg,1,"inversion grids of type 'scartInversionGrid' do not support the "//&
+            "presence of optional argument cell_type_requested: it is ignored here",myname)
        call getGeometryVtkScartInversionGrid(this%scart,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,&
             errmsg,cell_indx_req,indx_map)
+
     case('ecartInversionGrid')
+       if(present(cell_type_requested)) call add(errmsg,1,"inversion grids of type 'ecartInversionGrid' do not support the "//&
+            "presence of optional argument cell_type_requested: it is ignored here",myname)
        call getGeometryVtkEcartInversionGrid(this%ecart,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,&
             errmsg,cell_indx_req,indx_map)
+
     case('specfem3dInversionGrid')
+       if(present(cell_type_requested)) call add(errmsg,1,"inversion grids of type 'specfem3dInversionGrid' do not support the "//&
+            "presence of optional argument cell_type_requested: it is ignored here",myname)
        call getGeometryVtkSpecfem3dInversionGrid(this%specfem3d,geometry_type,points,cell_connectivity,cell_type,&
             cell_indx_out,errmsg,cell_indx_req,indx_map)
+
     case('schunkInversionGrid')
+       if(present(cell_type_requested)) call add(errmsg,1,"inversion grids of type 'schunkInversionGrid' do not support the "//&
+            "presence of optional argument cell_type_requested: it is ignored here",myname)
        call getGeometryVtkSchunkInversionGrid(this%schunk,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,&
             errmsg,cell_indx_req,indx_map)
+
     case('chunksInversionGrid')
-       call getGeometryVtkChunksInversionGrid(this%chunks,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,&
-            errmsg,cell_indx_req,indx_map)
+       if(present(cell_type_requested)) then
+          select case(cell_type_requested)
+          case('EXTERNAL_CELLS')
+             call getGeometryVtkChunksInversionGrid(this%chunks,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,&
+                  errmsg,cell_indx_req,indx_map)
+          case('BASE_CELLS')
+             call getBaseCellGeometryVtkChunksInversionGrid(this%chunks,geometry_type,points,cell_connectivity,cell_type,&
+                  cell_indx_out,errmsg,cell_indx_req,indx_map)
+          case default
+             call add(errmsg,2,"inversion grids of type chunksInversionGrid do not support a cell type request '"//&
+                  trim(cell_type_requested)//"', only 'EXTERNAL' and 'BASE_CELLS' are supported",myname)
+             return
+          end select ! cell_type_requested
+       else ! present(cell_type_requested)
+          call getGeometryVtkChunksInversionGrid(this%chunks,geometry_type,points,cell_connectivity,cell_type,cell_indx_out,&
+               errmsg,cell_indx_req,indx_map)
+       end if ! present(cell_type_requested)
+
     case default
        call add(errmsg,2,"inversion grid not yet defined",myname)
-    end select    
+    end select ! this%type_name_inversion_grid
   end subroutine getGeometryVtkInversionGrid
 !------------------------------------------------------------------------
 !> \brief get for all cells the indices of their face neighbour cells
@@ -538,8 +613,8 @@ contains
 !! \param c2 vector of second coordinate (contains y-values in standard cell on exit)
 !! \param c3 vector of third coordinate (contains z-values in standard cell on exit)
 !! \param uf_wp unit factor of wavefield points
-!! \param jacobian jacobian of transformation from standard cell to real coordinate cell (to be multiplied to standard weights)
-!! \param type_standard_cell defines the shape of the standard cell, select specific routine dependent on type (4=Tetrahedron,6=Hexahedron)
+!! \param jacobian jacobian of transformation from standard cell to real coordinate cell (to be multiplied to standard weights). If ON INPUT type_standard_cell=-1, then instead of jacobian values actual integration weights are requested
+!! \param type_standard_cell defines on return the shape of the standard cell (specific integration weights routine can be chosen): (4=Tetrahedron,6=Hexahedron). If ON INPUT type_standard_cell=-1, then instead of jacobian values actual integration weights are requested
 !! \param errmsg error message
 !
   subroutine transformToStandardCellInversionGrid(this,icell,c1,c2,c3,uf_wp,jacobian,type_standard_cell,errmsg)
@@ -782,15 +857,18 @@ contains
 !! \param c3 third coordinate
 !! \param coords_type 'wp','event','station'
 !! \param uf_wp unit factor of wavefield points; optional (recommended to be used along with 'wp')
+!! \param ichunk on return, ichunk contains the index of the chunk in which the point is located; optional (only sensible inversion grids that have "chunks")
 !
-  function pointInsideInversionGrid(this,c1,c2,c3,coords_type,uf_wp) result(l)
+  function pointInsideInversionGrid(this,c1,c2,c3,coords_type,uf_wp,ichunk) result(l)
     type (inversion_grid) :: this
     real, intent(in) :: c1,c2,c3
     character(len=*) :: coords_type
     real, optional :: uf_wp
+    integer, optional :: ichunk
     logical :: l
 !
     l = .false.
+    if(present(ichunk)) ichunk = -1
 !
     select case(coords_type)
     case('wp','event','station')
@@ -816,8 +894,9 @@ contains
        !l = pointInsideSpecfem3dInversionGrid(this%specfem3d,c1,c2,c3,coords_type,uf_wp) ! this routine does not yet exist
     case('schunkInversionGrid')
        l = pointInsideSchunkInversionGrid(this%schunk,c1,c2,c3,coords_type,uf_wp)
+       if(present(ichunk)) ichunk = 1
     case('chunksInversionGrid')
-       l = pointInsideChunksInversionGrid(this%chunks,c1,c2,c3,coords_type,uf_wp)
+       l = pointInsideChunksInversionGrid(this%chunks,c1,c2,c3,coords_type,uf_wp,ichunk)
     case default
        return
     end select

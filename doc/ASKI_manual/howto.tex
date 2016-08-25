@@ -14,25 +14,138 @@
 %   Free Documentation License''. 
 %-----------------------------------------------------------------------------
 %
-Only chapter Guide (page~\pageref{guide}) is intended to be read through which, for this reason, is held as compact 
-as possible. This chapter may itself be regarded as ``the manual'', with the appending chapters only 
-containing more specific detail on processes or objects which chapter Guide refers to.
+%
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\section*{How to use this manual}
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+%
+Only chapter~\myref{guide} is intended to be read through, presenting recipes (todo lists/algorithms)
+for different workflows that can be conducted by software package \ASKI{}.
+For this reason, that chapter is held as compact 
+as possible and may itself be regarded as ``the manual'', with the appending chapters only 
+containing more specific detail on processes or objects which chapter~\ref{guide} refers to.
 After all, the very modular character of \ASKI{} requires documentation which itself is modular.
 
-In other words: just start reading the respective section of chapter Guide, which you are interested in 
+In other words: just start reading the respective section of chapter~\ref{guide}, which you are interested in 
 and whenever you feel the need for more detail follow the respective references. This way, we try to focus
 the user on necessary information and successfully guide through the lot of details contained in this document. 
 
 When you conduct a specific \ASKI{} operation for the first time, we recommend you to first fully read through the 
 respective guiding list and the referred basic steps before you start running any programs. This way you will 
-get an impression of the repuirements for your operation.
+get an impression of the requirements for your operation.
 
-All chapters appending chapter Guide are not intended to be read through section by section but may well
+All chapters appending chapter~\ref{guide} are not intended to be read through section by section but may well
 serve the user as a reference. Especially section~\myref{programs_scripts,sec:bin_prog} can provide the 
 experienced user with additional executables that conduct some more features which are not referenced somewhere
 in the document.
 
-\vspace{1cm}
+\subsection*{Please preserve your experience!}
+If you struggled with the existing \ASKI{} documentation (user manual, comments in code, doxygen, developers 
+manual) because it was inconsistent, incomplete or simply wrong and you invested time to find out how it works, 
+\emph{please let future generations of users and developers benefit from your gained knowledge!}
+Everybody knows that documenting code and writing manuals consumes a lot of time, but correct documentation 
+is essential for everyone using and developing software, and I'm sure you know that from your own experience.
+So, please invest a bit more time in correcting/extending the \ASKI{} documentation
+(where applicable: user manual, comments in code, doxygen, developers manual) and
+at best modify the respective source files and issue a pull request on \lcode{gitHub}. In any case let us 
+know about it (via \url{https://github.com/seismology-RUB} or \url{http://www.rub.de/aski})!
+Otherwise your knowledge is lost forever (you might even lose your knowledge yourself after some while, 
+so please write it down).
 
+\emph{Thank you!} (on behalf of everybody)
 
+%
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\section*{Installing \ASKI} %\label{basic_steps,sec:install_ASKI}
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+%
+\begin{itemize}
+\item Clone the latest version of the master branch of the \ASKI{} \lcode{gitHub} repository to some directory 
+  (exemplarily called \lcode{/your/programs/}) on your local computer by executing\\
+  \lcode{git clone --depth 1 --branch master https://github.com/seismology-RUB/ASKI}\\
+  (in one line, of course) from local path \lcode{/your/programs/}~. This will create subdirectory \lcode{/your/programs/ASKI} containing
+  the code and documentation of the current release of the \ASKI{} main package.
 
+  Alternatively, go to \url{https://github.com/seismology-RUB/ASKI} and download the content of the master branch
+  as a \lcode{.zip} or try executing\\
+  \lcode{wget https://github.com/seismology-RUB/ASKI/archive/master.zip}\\
+  (in one line, of course) and extract it in such a way that the code files are contained in \lcode{/your/programs/ASKI/}~.
+
+  Webpage \url{http://www.rub.de/aski} might provide additional information for you, just have a look.
+\item Follow the directions in file \lcode{ASKI/README.md} for configuration and compilation of the \ASKI{} ececutables.
+\end{itemize}
+Throughout the \ASKI{} documentation, ``\ASKI{} installation directory'' refers to directory \lcode{ASKI/}, i.e.\
+\lcode{/your/programs/ASKI}, where you have cloned/extracted the \lcode{git} repository to.
+%
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\section*{Toy example: synthetic waveform inversion}
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+%
+In order to get familiar with applying \ASKI{} for full waveform inversion, you might consider to 
+download and reproduce the synthetic inversion presented in Florian's dissertation 
+\cite{_743d334d-dfa4-4a16-8cc5-91cdadc95271} (chapter 5.1) as well as in our GJI paper \cite{Schumacher16} 
+(section 4.1), see section~\myref{guide,sec:example_C_borehole}.
+%
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\section*{\ASKI{} versions}
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+%
+\ASKI{}'s release version numbering does not follow any standard of version numbering. 
+Since releases were not very frequent so far and the source code was not publically available under version control, 
+it was considered sufficient to have only a simple numbering for the purpose of distinguishing release versions.
+In case that developments and releases become more frequent in the future, the \ASKI{} developers might consider
+to follow some standard for future release version numbering.
+
+\subsection*{\ASKI{} \lcodetitle{0.3}}
+\ASKI{}'s first release version was numbered \lcode{0.3}, with \lcode{0} indicating a pre-release
+that was not very well tested at that point and \lcode{3} being the third version of internal
+development when porting from another internal versioning repository.
+
+\subsection*{\ASKI{} \lcodetitle{1.0}}
+After some while of intensive testing and application of \ASKI{} to synthetic and real-world cases, 
+as well as development of a lot of \ASKI{} tools, version \lcode{1.0} was released as the first
+ready-to-use version of \ASKI{}.
+
+\subsection*{\ASKI{} \lcodetitle{1.1}}
+In general, version \lcode{1.1} should be compatible with \lcode{1.0} in terms of file formats and general use
+of the software. The main reason for this release was the fix of a pointer problem with \lcode{gfortran}.
+Compared with the previous release, some more tools are available (\lcode{addSpikeCheckerToKim}, 
+\lcode{createSpectralFilters}, \lcode{create_ASKI_evstat_filters.py}) and forward-code-specific 
+definition of complex frequencies is available (e.g. for use with Gemini). Some bugs were fixed.
+
+\subsection*{\ASKI{} \lcodetitle{1.2}}
+Version \lcode{1.2} is just an intermediate version number and denotes the status of the code when moving the 
+development repository permanently to git and providing the current working ready-to-use version of \ASKI{} by the 
+master branch of repository \url{https://github.com/seismology-RUB/ASKI}.
+
+Significant changes to version \lcode{1.1}:
+\begin{itemize}
+\item 
+There is an additional subdirectory \lcode{devel/} containing developer tools and developer documentation.
+
+\item
+The source files of the \ASKI{} user manual as well as a compiled pdf of the manual are provided now in subdirectory
+\lcode{doc/}
+
+\item 
+Inversion grids of type \lcode{chunksInversionGrid} now provide base cell refinement capabilities (at the moment
+a random ``toy'' method is implmemented for illustration, but serious refinement method can now be implemented
+easily into module \lcode{chunksInversionGrid}.
+
+\item New/renamed/removed tools:
+
+  \lcode{chunksInvgrid2vtk} for special vtk files related to chunks and refined cells 
+
+  \lcode{createShoreLines} (Fortran executable) and \lcode{create_shore_lines.py} (Python program
+  utilizing the \lcode{f2py} interface generator) for generating shore line vtk files from native binary GSHHS 
+  shore line data files
+
+  Executable \lcode{createMeasuredData} was renamed in \lcode{transformMeasuredData}
+
+  Python script \lcode{create_ASKI_evstat_filters.py} is removed (functionality not required anymore)
+\end{itemize}
+
+\subsection*{The \lcodetitle{gitHub} master branch}
+After porting \ASKI{} to \url{https://github.com/seismology-RUB/ASKI} in August 2016, the current version of its
+master branch should serve as a stable version to use, along with the current versions of the forward code 
+packages supported by \ASKI{}.

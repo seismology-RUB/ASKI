@@ -1,24 +1,29 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.1 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.1 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief defines correlations between certain model parameters of modelParametrization
 !!
-!! \details 
+!! \details So far, there is only a quick hack done for constructing objects (for reasons of testing):
+!!  In the parameter correlation file as given by the main parameter file, assume only ONE line, 
+!!  containing for parameter vs the parameters of  rho , vp (in that order, space separated).
+!!  Please finish implementing this module by introduce a correlation matrix ("reciprocally-symmetric" 
+!   with diagonal elements equal to 1) which is constructed from a file.
+!!  The correlation coefficients should be accessed by functions using names of parameters to comunicate
 !!  
 !!
 !! \author Florian Schumacher
@@ -54,9 +59,9 @@ module parameterCorrelation
      logical, dimension(:,:), pointer :: correlate => null() !< indicates for each model parameter p_i, whether it correlates to other parameters q_j, i.e. whether p_i = c1*q_1 + ... + cn*q_n
      real, dimension(:,:), pointer :: corr_coef => null() !< correlation coefficients
      !! FS FS ADD PARAMETER CORRELATION HERE
-     ! introduce a correlation matrix ("reziprok symmetrisch mit Diagonalelementen 1")
-     ! which is constructed from a file (do a quick hack first)
-     ! the correlation coefficients are accessed by functions using names of parameters to comunicate
+     ! introduce a correlation matrix ("reciprocally-symmetric with diagonal elements equal to 1")
+     ! which is constructed from a file (so far only a quick hack below)
+     ! the correlation coefficients should be accessed by functions using names of parameters to comunicate
   end type parameter_correlation
 !
 contains
@@ -135,7 +140,7 @@ contains
     !    ! now read the rest of the blocks ...
     ! end do ! while ios/=0
     
-    !! FS FS DIRTY HACK: ASSUME ONLY ONE LINE, CONTAINING FOR vs THE PARAMETERS OF  1) rho, 2) vp
+    !! FS FS QUICK HACK: ASSUME ONLY ONE LINE, CONTAINING FOR vs THE PARAMETERS OF   rho,  vp  (in that order, space separated)
      read(lu,"(a400)",iostat=ios) line
      if(ios/=0) goto 2
      this%correlate(3,1:2) = .true. ! leave the diagonal if this%correlate .false. is actually sensible!!

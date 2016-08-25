@@ -1,0 +1,159 @@
+#------------------------------------------------------------------------------
+#  PARAMETER FILE FOR INVERSION "base_directory_of_your_main_path", ITERATION STEP ???
+#------------------------------------------------------------------------------
+#
+#  HOWTO USE THE PARAMETER FILE:
+#
+# comment lines, STARTING with "#" are ignored
+# empty lines and lines containing blanks only are ignored
+# lines not containing "=" are ignored
+#
+# specify one parameter per line, valid lines having the form "keyword = value"
+# (blanks leading or following the keyword, the "=", or the value are ignored)
+#
+# in a non comment line, all characters in front of "=" (without leading and appending blanks)
+# are interpreted as the keyword, allowing for blank characters within the keyword (e.g. for lines  "   key word = value   ",
+# the string "key word" is used as the keyword)
+# all characters behind "=" (without leading and appending blanks) are interpreted as the value string from 
+# which the value is read, which in particular means that "#" comments at the end of a line (such as 
+# " keyword = value  # comment ") are NOT allowed (in the latter case, the string "value  # comment" would be used
+# to read a value from)
+#
+# by ASKI convention, specify PATHS (i.e. directory names, which will be 
+# concatenated with a filename of a file in that directory) always ending on '/'
+# specify FILENAMES always WITHOUT leading '/'
+#------------------------------------------------------------------------------
+
+#---------------------------------------------------------------------------
+#  PATH SPECIFIC MODE
+#---------------------------------------------------------------------------
+
+#  set the following flag to .true. if you intend to use the ASKI functionality of 
+#  path specific kernel reference models (usually only for the very first iteration
+#  and a 1D method)
+#  if you want to use one global kernel reference model (for all paths, i.e. kernels)
+#  set this flag to .false.
+#
+  USE_PATH_SPECIFIC_MODELS = .false.
+
+#---------------------------------------------------------------------------
+#  FREQUENCY SUBSET
+#---------------------------------------------------------------------------
+
+#  frequency discretization of this iteration step, must be subset of global frequency discretization 
+#  for this inversion defined in main parameter file
+#  define subset by ITERATION_STEP_NUMBER_OF_FREQ <= MEASURED_DATA_NUMBER_OF_FREQ
+#  and a vector ITERATION_STEP_INDEX_OF_FREQ of frequency indices (of length ITERATION_STEP_NUMBER_OF_FREQ)
+#  for which all indices contained in vector ITERATION_STEP_INDEX_OF_FREQ must also be contained in global
+#  vector MEASURED_DATA_INDEX_OF_FREQ
+#  all indices here are assumed in accordance with the global frequency step MEASURED_DATA_FREQUENCY_STEP
+#
+  ITERATION_STEP_NUMBER_OF_FREQ = 
+  ITERATION_STEP_INDEX_OF_FREQ = 
+
+
+#---------------------------------------------------------------------------
+#  INVERSION GRID
+#---------------------------------------------------------------------------
+
+#  Type of inversion grid:
+#    chunksInversionGrid
+#      ASKI internal, method independent spherical inverison grid using (one or several) chunks in 
+#      the concept of a cubed sphere and variable cell refinement
+#
+#    schunkInversionGrid
+#      ASKI internal and method independent spherical simple chunk inverison grid using one chunks in 
+#      the concept of a cubed sphere which is assumed rather small in lateral width (as certain
+#      assumptions are made on the inversion grid cells not to be distorted too much)
+#
+#    scartInversionGrid
+#       ASKI internal and method independent simple Cartesian inversion grid containing of layeres of 
+#       regular hexahedra, layer-dependent refinement possible
+#
+#    ecartInversionGrid
+#       method independent, external Cartesian inversion grid provided e.g. by CUBIT which may contain tetrahedra, 
+#       hexahedra are not fully supported yet
+#
+#    specfem3dInversionGrid
+#       method dependent inversion grid for METHOD = SPECFEM3D 
+#       uses SPECFEM elements as inversion grid:
+#       use spectral elements as the inversion grid cells and read in the geometry including information     
+#       on neighbour cells, using ALL GLL points in an element as wavefield points, reading in their jacobian
+#
+  TYPE_INVERSION_GRID = 
+
+
+#  specific parameter file used to create an inversion grid of type TYPE_INVERSION_GRID, 
+#  relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/
+#
+  PARFILE_INVERSION_GRID = 
+
+#---------------------------------------------------------------------------
+#  INTEGRATION WEIGHTS
+#---------------------------------------------------------------------------
+
+#  Type of integration weights: 
+#    0 = all weights the same, weight = 1/number_of_points_in_box, i.e. no integration, just build average
+#    1 = Scattered Data Integration, as in D. Levin [1999], polynomial degree 1
+#    2 = Scattered Data Integration, as in D. Levin [1999], polynomial degree 2, i.e. approximation order 3 (?)
+#    3 = Scattered Data Integration, as in D. Levin [1999], polynomial degree 3, i.e. approximation order 4 (?)
+#    4 = for each cell compute the highest possible order of SDI integration (trying degrees 3,2,1 , in that order). if not even SDI degree 1 is successful, choose weights of type 5
+#    5 = average of function values, multiplied with volume of box (i.e. linear integration)
+#    6 = external integration weights, to be used along with a suitable inversion grid (e.g. specfem3dInversionGrid)
+# 
+  TYPE_INTEGRATION_WEIGHTS = 
+
+
+#  File containing integration weights, relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/
+#
+  FILE_INTEGRATION_WEIGHTS = integration_weights
+
+
+#---------------------------------------------------------------------------
+#  FILES AND PATHS
+#---------------------------------------------------------------------------
+
+#  File containing forward grid points, relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/
+#
+  FILE_WAVEFIELD_POINTS = 
+
+
+#  File containing the reference model for module kernelReferenceModel, relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/
+#
+  FILE_KERNEL_REFERENCE_MODEL = 
+
+
+#  Base filename of vtk stats output files (related to inversion grid, wavefield points, integration weights, 
+#  events, stations), relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/
+#
+  FILEBASE_BASIC_STATS = output_files/stats
+
+
+#  Folder relative to which some sensitivity analysis and inversion programs write their output (relatively small output 
+#  like models, coefficients etc., NO wavefields/kernels etc.!), 
+#  relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/
+#
+  PATH_OUTPUT_FILES = output_files/
+
+
+#  Paths, relative to MAIN_PATH_INVERSION/ITERATION_STEP_PATH/ which contain
+#  the synthetic wavefields/data and sensitivity kernels
+#
+#  NAMING CONVENTION OF FILES IN THESE DIRECTORIES, AS EXPECTED BY PROGRAMS:
+#  FILE_KERNEL_DISPLACEMENT: will by convention be: kernel_displ_EVENTID
+#  FILE_KERNEL_GREEN_TENSOR: will by convention be: kernel_gt_STATIONNAME
+#    file_kernel_green_tensor and file_kernel_displacement will be basenames only.
+#    every method then deals with the naming by its own (could be multiple files or having some extension etc.)
+#  FILE_SPECTRAL_KERNEL: will in case of pre-integrated kernels on inversion grid by convention be: spectral_kernel_PARAMETRIZATION_EVENTID_STATIONNAME
+#  FILE_SPECTRAL_KERNEL: will in case of plain kernel values on wavefield points by convention be: spectral_kernel_ON-WP_PARAMETRIZATION_EVENTID_STATIONNAME
+#  FILE_SYNTHETIC_DATA: must by convention be: synthetics_EVENTID_STATIONNAME_COMP
+#  FILE_KERNEL_REFERENCE_MODEL: Only used in case USE_PATH_SPECIFIC_MODELS = .true. ; must by convention be: krm_EVENTID_STATIONNAME
+
+#  FILE_SYNTHETIC_DATA: will by convention be: synthetics_EVENTID_STATIONNAME
+#
+  PATH_KERNEL_DISPLACEMENTS = kernel_displacements/
+  PATH_KERNEL_GREEN_TENSORS = kernel_green_tensors/
+  PATH_SENSITIVITY_KERNELS = sensitivity_kernels/
+  PATH_SYNTHETIC_DATA = synthetic_data/
+  PATH_KERNEL_REFERENCE_MODELS = kernel_reference_models/
+

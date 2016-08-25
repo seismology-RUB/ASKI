@@ -1,28 +1,30 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Wolfgang Friederich and Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.1 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.1 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief simple spherical inversion grid using one chunk of a cubed sphere
 !!
 !! \details The inversion domain that can be covered by a simple chunk inversion grid
 !!  is one chunk of a cubed sphere with specific maximum depth, center location and 
 !!  rotation about the local vertical. From outside the module (e.g. from module wavefieldPoints)
-!!  always global geographic cartesian coordinates in [km] are assumed, with 3-axis pointing towards 
-!!  the north pole, 1-axis towards the equator at lon=0 and 2-axis towards the equator at lon=90 degrees.
+!!  always global Cartesian coordinates in [km] are assumed as "wp" coordinates ("wavefield points"), 
+!!  with 3-axis pointing towards the north pole, 1-axis towards the equator at lon=0 and 2-axis 
+!!  towards the equator at lon=90 degrees. "event" coordinates are lat,lon (degrees) and depth in km, 
+!!  "station" coordinates are lat,lon (degrees) and altitude in m.
 !!  This coordinate system is referred to as "Global". Internally, the module handles two more sets of 
 !!  coordinate system: 
 !!  One is referred to as "Local", or "LOCAL_CURV" and is essentially the same as "Global", except
@@ -432,8 +434,9 @@ contains
 !
        deallocate(lat,lon,z)
     case('wp')
-       ! if the optional argument uf_wp is given, check if wavefield point coordinates are given in km,
-       ! otherwise transform to km first, then execute the transformations below
+       ! if the optional argument uf_wp is present, check if wavefield point coordinates are given in km
+       ! and if necessary transform to km first before executing the transformations below
+       ! if uf_wp is not present, IT IS ASSUMED THAT WAVEFIELD POINT COORDINATES ARE IN km !
        if(present(uf_wp)) then
           if(uf_wp /= 1.0e3) then
              ! multiplying by uf_wp brings the coordinates to SI units of m and then dividing by 1000 brings them to km
@@ -722,8 +725,8 @@ contains
 !! \param y vector of global y coordinate (contains y-values in standard cell on exit)
 !! \param z vector of global z coordinate (contains z-values in standard cell on exit)
 !! \param uf_wp unit factor of wavefield points
-!! \param jacobian jacobian of transformation from standard cell to real coordinate cell (to be multiplied to standard weights)
-!! \param type_standard_cell defines the shape of the standard cell, select specific routine dependent on type (4=Tetrahedron,6=Hexahedron)
+!! \param jacobian jacobian of transformation from standard cell to real coordinate cell (to be multiplied to standard weights). If ON INPUT type_standard_cell=-1, then instead of jacobian values actual integration weights are requested
+!! \param type_standard_cell defines on return the shape of the standard cell (specific integration weights routine can be chosen): (4=Tetrahedron,6=Hexahedron). If ON INPUT type_standard_cell=-1, then instead of jacobian values actual integration weights are requested
 !! \param errmsg error message
 !
   subroutine transformToStandardCellSchunkInversionGrid(this,icell,x,y,z,uf_wp,jacobian,type_standard_cell,errmsg)

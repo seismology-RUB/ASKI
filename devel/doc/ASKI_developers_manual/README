@@ -1,0 +1,32 @@
+-----------------------------------------------------------------------------
+   Copyright 2016 Florian Schumacher
+
+   This is the ASKI developer's manual as a LaTeX document with main latex
+   file ASKI_developers_manual.tex
+
+   Permission is granted to copy, distribute and/or modify this document
+   under the terms of the GNU Free Documentation License, Version 1.3
+   or any later version published by the Free Software Foundation;
+   with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+   A copy of the license is included in the section entitled ``GNU
+   Free Documentation License''. 
+-----------------------------------------------------------------------------
+
+
+ ATTENTION: THERE ARE STILL SEVERAL PROBLEMS TO COMPILE THIS DOCUMENT RESULTING
+ IN A LOT OF WARNINGS. YOU PROBABLY NEED TO COMPILE THIS DOCUMENT IN MODE 
+ ``nonstopmode'' by:
+ 
+ pdflatex \\nonstopmode\\input ASKI_developers_manual.tex
+ bibtex ASKI_developers_manual
+ pdflatex \\nonstopmode\\input ASKI_developers_manual.tex
+ pdflatex \\nonstopmode\\input ASKI_developers_manual.tex
+ pdflatex \\nonstopmode\\input ASKI_developers_manual.tex
+ 
+
+I am aware that this document is very far from being perfectly typeset! 
+The reason is, that I did not yet find time to improve the document style
+persitently. Please, do not hesitate to improve the document!
+
+
+Florian Schumacher, Ruhr-Universitaet Bochum, August 2016

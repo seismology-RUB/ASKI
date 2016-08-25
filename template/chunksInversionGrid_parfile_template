@@ -94,15 +94,37 @@ CHUNKS_INVGRID_BASE_NLON = 66 20
 ###########################
 #
 #
-# (NOT YET IMPLEMENTED)
-# (ideas: give here the absolute paths of the station and event list files, as well 
-#         as a data model space info file containing the paths. according to the 
-#         thereby defined ray coverage, the base cells could be locally refined in 
-#         a recursive manner (each cell could e.g. halfened in each dimension of 
-#         space recursively if a certain criterion is met). 
-#         the refinement criteria could be dependent on a maximum global depth defined,
-#         a threashold value could handle the number of rays which a cell
-#         must be intersected with before it is refined, etc.
+# EXPERIMENTAL FEATURE FOR TESTING ONLY!
+#
+# SET
+# CHUNKS_INVGRID_CREF_METHOD = NONE
+# FOR NOT USING THIS FEATURE! 
+#
+# at the moment, 
+#   CHUNKS_INVGRID_CREF_METHOD = EXPERIMENTAL_RANDOM_SUBDIVISION
+# is supported requiring two integer values given by CHUNKS_INVGRID_CREF_PARAMETERS  (if real values are given, 
+# they are rounded down by int()):
+#   first value: input value seed for function srand(seed) (you can reproduce random results, using the same seed 
+#                value)
+#   second value: upper bound of subcells by which any base cell can be subdivided (number of subcells cannot exceed
+#                 this number); note: if subcells are subdivided themselves, these sub-subcells add to this number,
+#                 but their parent cell (original subcell) will NOT be seen as an external inversion grid cell. This
+#                 means, that the actual number of subcells that is used as cells of the inversion grid can be 
+#                 smaller than 'second value'.
+# By the simple (and old-school) pseudo-random generator 'rand', a cell will be divided by 2, 3 or 4 in every dimension.
+#
+# ideas for serious usage: 
+#    give here the absolute paths of the station and event list files, as well 
+#    as a data model space info file containing the paths. according to the 
+#    thereby defined ray coverage, the base cells could be locally refined in 
+#    a recursive manner (each cell could e.g. be halfened in each dimension of 
+#    space recursively if a certain criterion is met). 
+#    the refinement criteria could be dependent on a maximum global depth defined,
+#    a threashold value could handle the number of rays which a cell
+#    must be intersected with before it is refined, etc.
+#
+CHUNKS_INVGRID_CREF_METHOD = NONE
+CHUNKS_INVGRID_CREF_PARAMETERS = 
 
 
 ###########################

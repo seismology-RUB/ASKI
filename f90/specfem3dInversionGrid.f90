@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.1 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.1 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief inversion grid consisting SPECFEM3D elements as inversion grid cells
 !!
@@ -857,8 +857,8 @@ contains
 !! \param x vector of global x coordinate (contains x-values in standard cell on exit)
 !! \param y vector of global y coordinate (contains y-values in standard cell on exit)
 !! \param z vector of global z coordinate (contains z-values in standard cell on exit)
-!! \param jacobian contains the actual integration weights!! (cannot communicate NGLLX,NGLLY,NGLLZ to module integrationWeights)
-!! \param type_standard_cell defines the shape of the standard cell, select specific routine dependent on type (4=Tetrahedron,6=Hexahedron)
+!! \param jacobian contains the actual integration weights!! (cannot communicate NGLLX,NGLLY,NGLLZ to module integrationWeights). If ON INPUT type_standard_cell=-1, then instead of jacobian values actual integration weights are requested
+!! \param type_standard_cell defines on return the shape of the standard cell (specific integration weights routine can be chosen): (4=Tetrahedron,6=Hexahedron). If ON INPUT type_standard_cell=-1, then instead of jacobian values actual integration weights are requested
 !! \param errmsg error message
 !
   subroutine transformToStandardCellSpecfem3dInversionGrid(this,icell,x,y,z,jacobian,type_standard_cell,errmsg)

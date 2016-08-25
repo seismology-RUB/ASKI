@@ -1,0 +1,933 @@
+%-----------------------------------------------------------------------------
+%   Copyright 2016 Florian Schumacher
+%
+%   This file is part of the ASKI developers manual as a LaTeX 
+%   document with main file ASKI_developers_manual.tex
+%
+%   Permission is granted to copy, distribute and/or modify this document
+%   under the terms of the GNU Free Documentation License, Version 1.3
+%   or any later version published by the Free Software Foundation;
+%   with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+%   A copy of the license is included in the section entitled ``GNU
+%   Free Documentation License''. 
+%-----------------------------------------------------------------------------
+%
+%#########################################################################
+% ATTENTION: THERE ARE STILL SEVERAL PROBLEMS TO COMPILE THIS DOCUMENT RESULTING
+% IN A LOT OF WARNINGS. YOU PROBABLY NEED TO COMPILE THIS DOCUMENT IN MODE 
+% ``nonstopmode'' by:
+% 
+% pdflatex \\nonstopmode\\input ASKI_developers_manual.tex
+% bibtex ASKI_developers_manual
+% pdflatex \\nonstopmode\\input ASKI_developers_manual.tex
+% pdflatex \\nonstopmode\\input ASKI_developers_manual.tex
+% pdflatex \\nonstopmode\\input ASKI_developers_manual.tex
+% 
+%#########################################################################
+%
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[english]{babel} %language selection
+\selectlanguage{english}
+
+\pagenumbering{arabic}
+
+\usepackage[affil-it]{authblk}
+\usepackage{times} % 'times new roman' script style
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[pdftex]{graphicx}
+
+\usepackage[nodayofweek]{datetime}
+\newdateformat{mydate}{\shortmonthname[\THEMONTH] \THEYEAR}
+\newdateformat{myyear}{\THEYEAR}
+
+% use package url with [obeyspaces] in order to correctly display \nolinkurl WITH spaces 
+%(used in \newcommand{\lcode} below). As hyperref internally loads package url, you can pass
+% option obeyspaces of package url to package hyperref as follows
+\PassOptionsToPackage{obeyspaces}{url}\usepackage{hyperref}
+%\hypersetup{colorlinks, 
+%           citecolor=black,
+%           filecolor=black,
+%           linkcolor=black,
+%           urlcolor=black,
+%           bookmarksopen=true,
+%           pdftex}
+%\hfuzz = .6pt % avoid black boxes
+
+% the following is an ugly solution of allowing line breaks in urls additionally after every normal 
+% alphabetic character which (if \nolinkurl is used in \newcommand{\lcode} below) at all allows line 
+% breaks of long routine names like 'transformToStandardCellInversionGrid', BUT of course also breaks
+% any other term formatted by \lcode at any character, which is maybe not very nice.
+\let\origUrlBreaks\UrlBreaks
+%\renewcommand*{\UrlBreaks}{\origUrlBreaks\do\a\do\b\do\c\do\d\do\e\do\f\do\g\do\h\do\i\do\j\do\k\do\l\do\m\do\n\do\o\do\p\do\q\do\r\do\s\do\t\do\u\do\v\do\w\do\x\do\y\do\z\do\A\do\B\do\C\do\D\do\E\do\F\do\G\do\H\do\I\do\J\do\K\do\L\do\M\do\N\do\O\do\P\do\Q\do\R\do\S\do\T\do\U\do\V\do\W\do\X\do\Y\do\Z}
+
+
+%% POSSIBLE PACKAGES TO DISPLAY CODE
+%%
+%% package alltt: verbatim environment within which math is displayed correctly
+%% usage: \begin{alltt}\end{alltt}
+%\usepackage{alltt}
+%%
+%% package listings: provides environments to display code fragments (with a lot of special characters) in a more evolved fashion than verbatim (alltt)
+%% only uncomment (both next lines), if used in \newcommand{\lcode} below
+%\usepackage{listings}
+%\lstset{basicstyle =\ttfamily}%\small}
+
+\usepackage[paperwidth=21.0cm,paperheight=29.7cm, left=2.5cm,right=2.5cm,top=2.0cm,
+            bottom=2.0cm,headheight=0in,footskip=1.0cm]{geometry}
+%-------------------------------
+%
+% COMMANDS FOR IN-LINE PHRASES IN CODE-STYLE
+%
+%%% ttfamily does not properly support any special characters
+%\newcommand{\lcode}[1]{ {\ttfamily #1 }}
+%
+%%% lstinline is a good solution, in general, but it makes problems in line breaks!
+%\newcommand{\lcode}[1]{\lstinline[breaklines=true]$#1$}
+%
+%%% although there are no actual links, \nolinkurl uses the same font as lstinline (when \lstset{basicstyle =\ttfamily}), 
+%%% but produces better line breaks!
+\newcommand{\lcode}[1]{\nolinkurl{#1}}
+%
+%%% need \lcodetitle, since \nolinkurl in a title of a numerated (sub)section (not *) causes problems in bookmark 
+%%% view in adobe reader (why?! what is the actual problem?), \lcodetitle, however, does NOT support stuff like '_' etc.
+\newcommand{\lcodetitle}[1]{ {\ttfamily #1} }
+%
+%
+\newcommand{\ASKI}{ {\ttfamily ASKI} }
+%
+%
+% OTHER NEW COMMANDS
+%
+\newcommand{\inotice}[1]{ \fbox{\parbox[t]{0.9\textwidth}{{\bf Important:} \\#1}} }
+\newcommand{\notice}[1]{ \fbox{\parbox[t]{0.9\textwidth}{#1}} }
+\newcommand{\myref}[1]{\ref{#1} (page~\pageref{#1})}
+\newcommand{\myaref}[1]{$\rightarrow$~\ref{#1} (page~\pageref{#1})}
+%
+%-------------------------------
+%
+% END OF PREAMBLE
+%####################################################################
+%
+\begin{document}
+\sloppy
+%
+\setlength{\parindent}{0cm}
+\addtolength{\parskip}{0.5em}
+% TeX’s first attempt at breaking lines is performed without even trying hyphenation: 
+% TeX sets its “tolerance” of line breaking oddities to the internal value \pretolerance
+% an “infinite” tolerance is represented by the value 10000, but may lead to very bad line breaks indeed!
+%\pretolerance=10000
+%
+%-------------------------------
+% TITLE PAGE(s)
+%
+\input{title}
+%
+%
+%-------------------------------
+% LICENSE
+Copyright \copyright {\myyear \today} Florian Schumacher.
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3
+or any later version published by the Free Software Foundation;
+with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+A copy of the license is included in the section entitled ``GNU
+Free Documentation License''.
+
+\vspace{1cm}
+
+If you use \ASKI{} for your own research, please cite our paper \cite{Schumacher16}:
+
+F.\ Schumacher, W.\ Friederich and S.\ Lamara, \\
+"A flexible, extendable, modular and 
+computationally efficient approach to scattering-integral-based seismic full waveform 
+inversion", \\
+\emph{Geophysical Journal International}, (February, 2016) 204 (2): 1100-1119\\
+\url{http://dx.doi.org/10.1093/gji/ggv505}
+
+\vspace{1em}
+
+This documentation was written in the hope that it will be useful to the user,
+but it \emph{cannot be assured} that it is accurate in every respect or complete in any sense.
+In fact, at some places \emph{this manual is work in progress}.\\
+Please do not hesitate to report any inconsistencies via \url{http://www.rub.de/aski} or
+to improve this documentation by incorporating your experiences with \ASKI{} 
+and your personal experience of getting used to it (at best by modifying the source and issuing a pull request
+on gitHub, in any case let us know about it! Thanks).
+When you have developed new \ASKI{} components or 
+have modified existing once, please extend / modify the \ASKI{} documentation accoringly.
+
+Furthermore, I am aware of the poor \LaTeX coding of this document (at the moment, \verb+\sloppy+ is used
+at the beginning of the document to avoid overfull hboxes in many places). There is a lot of potential
+to improve the document 
+style, hence the readability of the manual as a whole, as well as the coding style of the 
+particular \lcode{.tex} files. \emph{Please do not hesitate to improve!}
+
+The \LaTeX source files and all related components of this document are available via
+\url{https://github.com/seismology-RUB/ASKI}~, subdirectory \lcode{devel/doc/ASKI_developers_manual/}
+of the repository.
+\begin{flushright}
+Florian Schumacher, \mydate \today
+\end{flushright}
+
+%% \newpage
+%% %
+%% %-------------------------------
+%% % SECTION Introduction
+%% %#############################################################
+%% \section*{Guide Through This Manual}
+%% %#############################################################
+%% %
+%% Bracketed comments starting with ``{\bf TODO IN THE FUTURE:}'' are intended to mark ideas for future work. 
+%% So please ignore if you are just applying the code.
+%
+%-------------------------------
+% TABLE OF CONTENTS
+\newpage
+\tableofcontents
+\newpage
+
+%-------------------------------
+% SECTION how is the code documented in general
+%#############################################################
+\section{Introduction for new \ASKI{} developers} \label{sec:intro}
+%#############################################################
+%
+The development of (what became) the software package \ASKI{} started in 2010 and from the beginning, auxilliary
+Fortran modules were utilized (such as e.g.\ \lcode{errorMessage} and many more) which were developed by
+Wolfgang Friederich (in many cases a lot earlier than 2010) and applied in the seismology group of Ruhr-University
+Bochum (RUB) in a lot of different software projects (e.g.\ also in Gemini) via a separate ``include'' repository. 
+As a result, \ASKI{} modules 
+originating from this ``auxilliary software library'' most likely provide more functionality than \ASKI{} 
+requires. After moving the \ASKI{} developers repository to \url{gitHub.com} in 2016, the \ASKI{} modules from 
+``include'' were permanently forked from the RUB-internal code repository and may now be optimized
+for used with \ASKI{} (not intended to merge them back into the original ``include'' repository at RUB, except
+for bug-fixes and fundamental enhancement of general functionality). So, if you wonder why you come accross 
+subroutines that are not used in \ASKI{} (so far!!), this might be a reason why.
+
+\subsection*{How is the code documented in general?}
+The code files are commented extensively. Furthermore, almost all Fortran modules, derived types, 
+subroutines and functions are documented using doxygen syntax, even though doxygen output is not
+really optimal for Fortran code. doxygen documentation can be produced using the doxygen config
+file \lcode{doc/doxygen.conf}:
+After installing doxygen (and possibly modifying file \lcode{doxygen.conf} according to your needs), 
+you should be able to produce doxygen html and latex documents
+executing \lcode{doxygen doxygen.conf} from path \lcode{doc/}, which should create subfolder \lcode{doc/doxygen_output} 
+containing directories \lcode{html} and \lcode{latex}. For the html documentation, open
+\lcode{doc/doxygen_output/html/index.html} by a webbrowser of your choice. For producing a latex pdf document, 
+execute \lcode{make all} from \lcode{doc/doxygen_output/latex}, which should document 
+\lcode{doc/doxygen_output/latex/refman.pdf}
+
+\subsection*{Please preserve your experience!}
+If you struggled with the existing \ASKI{} documentation (user manual, comments in code, doxygen, developers 
+manual) because it was inconsistent, incomplete or simply wrong and you invested time to find out how it works, 
+\emph{please let future generations of users and developers benefit from your gained knowledge!}
+Everybody knows that documenting code and writing manuals consumes a lot of time, but correct documentation 
+is essential for everyone using and developing software, and I'm sure you know that from your own experience.
+So, please invest a bit more time in correcting/extending the \ASKI{} documentation
+(where applicable: user manual, comments in code, doxygen, developers manual), otherwise your knowledge
+is lost forever (you might even lose your knowledge yourself after some while, so please write it down!).
+
+\emph{Thank you!} (on behalf of everybody)
+
+%
+%-------------------------------
+% SECTION ASKI versioning
+%#############################################################
+\section{\ASKI{} versions}
+%#############################################################
+%
+\ASKI{}'s release version numbering does not follow any standard of version numbering. 
+Since releases were not very frequent so far and the source code was not publically available under version control, 
+it was considered sufficient to have only a simple numbering for the purpose of distinguishing release versions.
+In case that developments and releases become more frequent in the future, the \ASKI{} developers might consider
+to follow some standard for future release version numbering.
+
+\subsection*{\ASKI{} \lcodetitle{0.3}}
+\ASKI{}'s first release version was numbered \lcode{0.3}, with \lcode{0} indicating a pre-release
+that was not very well tested at that point and \lcode{3} being the third version of internal
+development when porting from another internal versioning repository.
+
+\subsection*{\ASKI{} \lcodetitle{1.0}}
+After some while of intensive testing and application of \ASKI{} to synthetic and real-world cases, 
+as well as development of a lot of \ASKI{} tools, version \lcode{1.0} was released as the first
+ready-to-use version of \ASKI{}.
+
+\subsection*{\ASKI{} \lcodetitle{1.1}}
+In general, version \lcode{1.1} should be compatible with \lcode{1.0} in terms of file formats and general use
+of the software. The main reason for this release was the fix of a pointer problem with \lcode{gfortran}.
+Compared with the previous release, some more tools are available (\lcode{addSpikeCheckerToKim}, 
+\lcode{createSpectralFilters}, \lcode{create_ASKI_evstat_filters.py}) and forward-code-specific 
+definition of complex frequencies is available (e.g. for use with Gemini). Some bugs were fixed.
+
+\subsection*{\ASKI{} \lcodetitle{1.2}}
+Version \lcode{1.2} is just an intermediate version number and denotes the status of the code when moving the 
+development repository permanently to git and providing the current working ready-to-use version of \ASKI{} by the 
+master branch of repository \url{https://github.com/seismology-RUB/ASKI}.
+
+Significant changes to version \lcode{1.1}:
+\begin{itemize}
+\item 
+There is an additional subdirectory \lcode{devel/} containing developer tools and developer documentation.
+
+\item
+The source files of the \ASKI{} user manual as well as a compiled pdf of the manual are provided now in subdirectory
+\lcode{doc/}
+
+\item 
+Inversion grids of type \lcode{chunksInversionGrid} now provide base cell refinement capabilities (at the moment
+a random ``toy'' method is implmemented for illustration, but serious refinement method can now be implemented
+easily into module \lcode{chunksInversionGrid}.
+
+\item New/renamed/removed tools:
+
+  \lcode{chunksInvgrid2vtk} for special vtk files related to chunks and refined cells 
+
+  \lcode{createShoreLines} (Fortran executable) and \lcode{create_shore_lines.py} (Python program
+  utilizing the \lcode{f2py} interface generator) for generating shore line vtk files from native binary GSHHS 
+  shore line data files
+
+  Executable \lcode{createMeasuredData} was renamed in \lcode{transformMeasuredData}
+
+  Python script \lcode{create_ASKI_evstat_filters.py} is removed (functionality not required anymore)
+\end{itemize}
+
+\subsection*{The \lcodetitle{gitHub} master branch}
+After porting \ASKI{} to \url{https://github.com/seismology-RUB/ASKI}, the current version of its master branch should
+serve as a stable version to use, along with the current versions of the forward code packages supported by \ASKI{}.
+
+%
+%-------------------------------
+% SECTION developers tools 
+%#############################################################
+\section{\ASKI tools for developers} \label{sec:devel_tools}
+%#############################################################
+%
+%-------------------------------------
+\subsection{\lcodetitle{adapt\_GPL\_headers.py}} \label{ssec-devel_tools:adapt_GPL_headers.py}
+%-------------------------------------
+Script \lcode{devel/adapt_GPL_headers.py} adapts GPL (and GFDL) headers of given files.
+Executing \lcode{adapt_GPL_headers.py -h} will print a usage message.
+
+For the \ASKI{} source files given as the positional arguments list (at least 1 must be
+given), the license headers are adapted by year and/or \ASKI{} version, as specified by options
+\lcode{-y, --year} and \lcode{-ver, --version}, respectively (at least one such option must be given, 
+as otherwise there is nothing to do).
+
+The program detects file headers of specific form, having the following properties:
+\begin{itemize}
+\item[] {\bf max length:} The headers are expected within the first \lcode{NLINE} lines of a file (default: 20)
+\item[] {\bf start line:} The headers start at the first line containing the following characters (possibly 
+  preceded by some commetary characters): 76 \lcode{-} characters.
+\item[] {\bf end line:} The headers end by the first line after start line containing the following characters 
+  (possibly preceded by some commetary characters): 76 \lcode{-} characters.
+\item[] {\bf text segment:} there must be at least one line (between start and end line) that contains one of the
+  following text samples:
+  \begin{itemize}
+  \item[] \lcode{under the terms of the GNU General Public License}
+  \item[] \lcode{under the terms of the GNU Free Documentation License}
+  \end{itemize}
+\item[] {\bf assumption:} first line after start line does \emph{not} contain ``ASKI version~`` (if so, it is ignored)
+      but contains ``Copyright~'' followed by the year (year = the word following the \emph{first} occurence of 
+      ``Copyright~'' in that line). The year will be replaced by a new value (if \lcode{-y, --year} is indicated).
+      If in the original header, the year ends a sentence, i.e.\ ends on a period ``.'', this period
+      will be preserved. \emph{Nowhere else in the header will the year be searched for and adapted!}
+\end{itemize}
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-h, --help}}
+print usage message
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-y YEAR, --year YEAR}}
+If set, then the copyright year (i.e.\ the word following the first occurence of ``Copyright~`` in the 
+first line of the header text body) will be set to the given value \lcode{YEAR} (character string, not 
+checked if it is a number).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-ver VERSION, --version VERSION}}
+If set, then the \ASKI{} version will be set to the given value \lcode{VERSION}
+(character string, not checked if it contains numbers). Give the version here
+by numbers only, e.g. \lcode{1.3} for \ASKI{} version 1.3
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-n NLINES, --nlines NLINES}}
+Optional: if set, then the header is expected to be contained within
+the first \lcode{NLINE} lines of each indicated file (if not set, default value of 20 is used).
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Positional arguments}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{ASKI_src_files ...}}
+List of filenames (relative or absolute) indicating all files for which the header should be adapted.
+You may as well use regular expressions on the command line such as\\
+\lcode{f90/* py/* doc/ASKI_manual/*.tex devel/* devel/*/*}\\
+The program generates warnings if particular files cannot be adapted (because there is no header found
+as expected) and continues to process the rest of the files. 
+
+%-------------------------------------
+\subsection{\lcodetitle{create\_Makefile\_rule.py}} \label{ssec-devel_tools:create_Makefile_rule.py}
+%-------------------------------------
+Calling\\
+\lcode{devel/create_Makefile_rule.py newTool}\\
+from the \ASKI{} installation directory will print a complete Makefile rule for target \lcode{newTool}
+to screen (output should be re-directed into a file by something like \lcode{> output.txt}).
+Any required libraries (\lcode{BLAS}, \lcode{LAPACK} etc.) should be accounted for correctly.
+Otherwise you should update script \lcode{create_makefile_rule.py}, in particular routine 
+\lcode{required_libs_for_depobs}: please add any library requirements for new/modified modules that you have
+developed.
+
+%-------------------------------------
+\subsection{\lcodetitle{create\_rules\_mk.py}} \label{ssec-devel_tools:create_rules_mk.py}
+Script \lcode{create_rules_mk.py} (contained in \lcode{devel/}) can be utilized to re-create file 
+\lcode{rules.mk}. From the \ASKI{} installation directory, call\\
+\lcode{devel/create_rules_mk.py > rules.mk}\\
+(you might want to backup the existing \lcode{rules.mk} before you overwrite it, just in case).
+
+
+%
+%-------------------------------
+% SECTION extend to new forward code
+%#############################################################
+\section{Add support for another external forward code} \label{sec:extend_forward_code}
+%#############################################################
+%
+\ASKI{} does not implement an intrinsic code for simulation of seismic wave propagation in order to 
+solve the forward problem, but instead provides generalized interfaces to different external wave 
+propagation codes. At the moment, the 1D semi-analytical code Gemini \cite{friederich_wd1995} and the 3D spectral 
+element code SPECFEM3D \cite{TrKoLi08} are supported in \emph{both}, Cartesian and spherical framework. 
+Additionally \ASKI{} supports the 3D nodal discontinuous Galerkin code NEXD \cite{Lambrecht.2015}
+and we plan to implement support for the Finite Difference code SOFI \cite{bohlen2002parallel}
+in the future. 
+
+Here is a conceptual recipe describing the steps that need to be done to add another forward code to the 
+ASKI software package:
+
+%-------------------------------------
+\subsection{What functionality / information must the forward code provide / produce for use with \ASKI{}?} \label{ssec-extend:forward_output}
+%-------------------------------------
+The forward code must be able to provide information/definitions of the quantities listed in the following. 
+Therefore, the forward code most likely need to be extended / modified for use with \ASKI{}. However, the forward 
+code is absolutely free in the way it provides this information, i.e.\ any standard (parameter) files can be
+used to provide information (the code is not to be modified in this case) or any files of some own file format 
+can be produced (even parallel output can used, provided the knowledge of how to read it/locate the files), 
+or any assumptions can be made on the quantities (assumptions on filenames, (sub)grids, model
+structure (e.g.\ 1D), etc.). Information on the following quantities just needs to exist somehow (either by
+standard functionality of the program, by assumptions or by files of arbitrary (new) format. How this information
+is communicated to \ASKI{} is explained below in sec.~\ref{ssec-extend:ASKI_interface}.
+
+\subsubsection{forward grid}
+The forward code must provide point coordinates of the grid on which it produces
+wavefield output (see below displacements / Green functions). For grid-based forward codes, it is efficient 
+(thus recommended) to use a (sub)grid of the simulation grid. An independent point grid can be chosen just as well, 
+but this requires additional interpolation of wavefields (and, thus, additional costs). For modal methods (that
+do not have a simulation point grid), a suitable point grid must be chosen on which the wavefields are evaluated.
+
+In \ASKI{}, these forward grid points (on which the wavefields are provided) are referred to as \emph{wavefield points}
+and they are completely independent of the chosen inversion grid, except that they should be contained in the
+inversion grid cells and they cover the domain sufficiently dense such that each inversion grid cell contains
+enough wavefield points (``enough'' depends on the method of pre-integration).
+
+\subsubsection{elastic model on wavefield points}
+The forward code must provide model values on the wavefield points in the model prametrization as chosen in 
+the \ASKI{} main paramter file (at the moment only elastic parametrizations, see user manual, chapter ``Files'', 
+section on main parameter file), e.g.\ if model parametrization \lcode{isoLameSI} is chosen, values of 
+isotropic Lam\'e paramters and densitiy in SI units must be available.
+
+In \ASKI{}, these model values are referred to as \emph{kernel reference model}.
+
+\subsubsection{spectral displacement wavefield propagating from seismic sources into medium as well as its strains}
+On the wavefield points, the forward code must provide values of spectral displacement excited by each of the seismic 
+sources involved in an inversion. The displpacement components (direction of particle movement) must be provided 
+in directions of global Cartesian coordinates (even for spherical media). Otherwise the implemented kernel formulae 
+do not work. For time-domain forward methods, the forward code must be extended by an
+on-the-fly Fourier transform in order to provide this quantity (transformation of the wavefields to 
+frequency domain \emph{after} the complete simulation i.e.\ not on-the-fly is of course also possible, but in 
+case of SPECFEM was considered unsuitable due to huge memory requirements).
+
+In the same way, \ASKI{} requires strains on the wavefield points, i.e.\ quantities
+\[
+\frac{1}{2}\left(\frac{\partial u_k}{\partial x_\ell} + \frac{\partial u_\ell}{\partial x_k}\right)
+\]
+for all global Cartesian directions $k$ and $\ell$, where $u$ denotes particle displacement.
+
+In \ASKI{}, these spectral displacment and strain values are referred to as \emph{kernel displacement}.
+
+\subsubsection{spectral synthetic data in format required by \ASKI{}}
+Essentially the same values as for kernel displacement valuesspectral, but evaluated at the receiver positions 
+in directions of the used station components (by which the measured data is provided, see user manual chapter
+``Basic steps'', section on data in \ASKI{}). Also these values must be provided in the file format of synthetic
+data (see user manual, chapter ``Files'', section on synthetic data files).
+
+In the future, it would be better to have a set of interface modules for synthetic data (just as
+for wavefield points, kernel reference model, kernel displacement, kernel Green tensor \myaref{ssec-todo:new})
+
+\subsubsection{spectral Green's functions originating at receiver positions as well as its strains}
+``Green's functions originating at receiver positions'' here means the spectral displacement field 
+(on wavefiled points) excited by a
+unit point force at the receiver position (pointing into the direction of a particular station component, i.e.\
+there is such a Green's function for each station component) using an impulsive source-time function (Dirac-delta
+impulse). For time-domain forward methods that need to use an approximation to the Dirac-delta impulse (e.g.\ a
+very thin Gaussian source-time-function), it is highly recommended to deconvolve it from the resulting wavefield:
+In case of SPECFEM this was found out to be necessary, because the inversion process fitted phase-shifted 
+seismograms when just using a thin Gaussian.
+
+In the same way, \ASKI{} requires the strains of Green's functions on the wavefield points, i.e.\ quantities
+\[
+\frac{1}{2}\left(\frac{\partial g_k}{\partial x_\ell} + \frac{\partial g_\ell}{\partial x_k}\right)
+\]
+for all global Cartesian directions $k$ and $\ell$, where $g$ denotes the particle displacement of a particular
+Green's function.
+
+In \ASKI{}, these spectral displacment and strain values are referred to as \emph{kernel Green tensor}.
+
+\subsubsection{some script running all simulations in a FWI iteration}
+For iterative FWI with \ASKI{}, in each iteration the kernel displacement wavefields must be produced for each
+event in the event list and kernel Green tensor wavefields must be produced for each station in the station list
+at each station component involved in the inverted data set. In order to conduct all required simulations 
+conveniently (and consistently!), it is highly recommended to have some kind of script that gets information
+from \ASKI{} parameter files (about event, station locations, paths where to write the file output etc), 
+sets all required parameter files of the forward code and conducts the simulation (by issuing a system call
+or something). For SPECFEM this is done by a (huge) python script 
+\lcode{run_specfem3d(Globe/Cartesian)ForASKI_simulations.py}
+
+
+%-------------------------------------
+\subsection{Make \ASKI{} understand the forward code: \ASKI{} interface sub-modules} \label{ssec-extend:ASKI_interface}
+%-------------------------------------
+In order to make \ASKI{} understand a new forward code, several things have to be extended / modified in \ASKI{}'s 
+source code. First of all, a forward code is denoted by a character string (without spaces) that is read from 
+key \lcode{FORWARD_METHOD} of the main parameter file. All modules and routines for which any action depends on the
+forward code will check the value of this character string. 
+
+In function \lcode{validTypeInversionGrid} of module \lcode{inversionGrid}, it should be implemented whether
+the new forward method is incompatible with some inversion grids (e.g.\ Cartesian methods should be incompatible
+with spherical inversion grids and vice verca) or integration weight types (e.g.\ ``external'' integration weights,
+type 6, are only supported by special methods).
+
+In functions \lcode{methodHasComplexKernelFrequency} and \lcode{getComplexKernelFrequency} of module 
+\lcode{complexKernelFrequency}, please define whether the new forward code uses complex frequencies
+(such as Gemini) and define how they compute from frequency index and frequency step. 
+
+Furthermore, for all modules \lcode{wavefieldPoints}, \lcode{kernelReferenceModel},
+\lcode{kernelDisplacement},
+\lcode{kernelGreenTensor} the following steps need to be done, \emph{exemplarily} described here for 
+\lcode{kernelDisplacement} and new forward code name NEWCODE
+\begin{enumerate}
+\item Carefully study the functionality of module \lcode{kernelDisplacement} in terms of what routines can
+  be called from outside and what they provide (e.g.\ strains and displacement fields are provided on all wavefield 
+  points for one frequency that was read in before by \lcode{readFrequencyKernelDisplacement}).
+  It is helpful to compare the submodules of existing forward methods (e.g. \lcode{specfem3dKernelDisplacement}).
+  This way, you should find out how a submodule \lcode{newcodeKernelDisplacement} for code NEWCODE could be 
+  organized best and it can even give you a hint how method NEWCODE could best provide any file output that is to
+  be newly implemented.
+\item Create the new module \lcode{newcodeKernelDisplacement} (can be of different name, could be more than one
+  module, but please keep it simple!):
+  \begin{enumerate}
+  \item Declare derived type \lcode{newcode_kernel_displacement} defining the kernel displacement object of the new 
+    forward method (e.g.\ arrays and scalars for values and meta data required to manage the wavefield output
+    provided by the forward code).
+  \item For each function or subroutine in module \lcode{kernelDisplacement} that forks to a particular 
+    forward method, implement a realization for your new module (either as a full routine in module 
+    \lcode{newcode_kernel_displacement} or as a short piece of code in the if-statements of module 
+    \lcode{kernelDisplacement} if the respective feature is not supported or has a trivial/general implementation).
+    This assures that the new forward code is allowed to define its own file formats or to re-use standard 
+    (parameter)files (providing here the knowledge of how to access these files or any required information).
+    \emph{Make sure} that the respective routine in \lcode{kernelDisplacement} works correctly when it is called, 
+      refer to the (doxygen) commentary of the \lcode{kernelDisplacement} routine: e.g.\ usually only pointers to 
+      values are passed to module \lcode{kernelDisplacement} and deallcation has to be done 
+  \end{enumerate}
+\item Add the new forward method to module \lcode{kernelDisplacement}:
+  \begin{enumerate}
+  \item Use the module by \lcode{use newcodeKernelDisplacement}.
+  \item For each function or subroutine in module \lcode{kernelDisplacement} that forks to a particular 
+    forward method, add an \lcode{else if} branch and call the respective routine in module 
+    \lcode{newcodeKernelDisplacement} (or implement trivial solution directly).
+  \end{enumerate}
+\item Update \lcode{rules.mk}:
+  If module \lcode{newcodeKernelDisplacement} uses modules \lcode{module1}, \lcode{module2}, \lcode{module3} (etc.)
+  add a new line of form \\
+  \lcode{newcodeKernelDisplacement.o: module1.o module2.o module3.o}\\
+  Otherwise, \lcode{rules.mk} does not need to be modified.
+  Alternatively, use \lcode{create_rules_mk.py} \myaref{ssec-devel_tools:create_rules_mk.py}
+\item Update \lcode{Makefile}: Every rule (to compile an \ASKI{} executable) that depends on 
+  \lcode{kernelDisplacement.o} must now additionally depend on \lcode{newcodeKernelDisplacement.o}~.
+  As an alternative to expanding the rules manually, you may utilize script \lcode{py/create_Makefile_rule.py}
+  \myaref{ssec-devel_tools:create_Makefile_rule.py}
+\end{enumerate}
+
+%-------------------------------------
+\subsection{Import updated model to the forward code for next iteration of FWI} \label{ssec-extend:forward_import}
+%-------------------------------------
+In order to do iterative FWI with \ASKI{}, the model derived in an iteration of FWI must be used as background 
+Earth model for the next iteration of FWI. Hence, it must be transferred back into the forward solver. 
+This process can be very different, dependent on the type of forward method (modal method or grid-based) and 
+dependent on whether only a sub grid was used as wavefield points for \ASKI{} and whether the simulation domain
+of the forward code exceeds the \ASKI{} inversion domain.
+
+\ASKI{} handles inverted Earth models (model updates as well as new model values) by different files that are
+not self-consistent (values in \lcode{.kim} files correspond to inversion grid cells, which themselves are defined
+elsewhere, namely in an individual way by the respective inversion grid sub module). This storage of information
+is intended for internal \ASKI{} use only. Therefore, \ASKI{} offers to export such inverted models in a 
+self-consistent format that may be used by the individual fortward code to communicate the model information
+(\ASKI{} executable \lcode{exportKim}, option \lcode{-otxt}, see \ASKI{} user manual). The resulting text file
+contains coordinates of inversion grid cell centers as well as the model values which are assigned to these points.
+The cell centers act as some kind of unstructured grid of control nodes on which the model values are given.
+Furthermore, information about neighbouring cells (i.e.\ neighbouring control nodes) as well as approximate average
+spatial extend of the inversion grid cells (i.e.\ the influence radius of the control nodes) are given in the file.
+
+Since in \ASKI{} the forward and inversion grid are in general independent of each other (and forward codes do not
+even need to be grid-based), you will require an individual transference of \ASKI{} inverted models to the model 
+description of the new forward code. Modal methods will have to approximate expansion coefficients from the model
+values on the control nodes (inversion grid cell centers) and grid-based forward codes using structured grids may 
+realize much simpler interpolation methods than those using unstructured grids. E.g.\ for the \lcode{SPECFEM} and
+\lcode{NEXD} forward methods, an unstructured 3D interpolation after Shepard \cite{Shepard68} was implemented, 
+which is founded on inverse-distance weighting and accounts for issues of nearby points, direction and slope. 
+For sure, the current implementation of subroutine \lcode{shepard_interpolation_model_ASKI} in module 
+\lcode{model_ASKI} of the \lcode{SPECFEM3D_Cartesian_for_ASKI} extension package (file \lcode{model_external_values.f90})
+can be improved w.r.t.\ computational performance, but it may well serve you as an illustration how to implement
+Shepard's agorithm. 
+
+%-------------------------------------
+\subsection{As an option: use forward-code-specific quadrature rules for kernel pre-integration} \label{ssec-extend:external_intw}
+%-------------------------------------
+Using integration weights of type 6 (``external integration weights'') is only supported along with a suitable 
+type of inversion grid, at the moment only \lcode{specfem3dInversionGrid}. This type of integration weights
+is potentially useful for element-based (weak-form) forward methods: Their own quadrature rules for integration onto 
+their elements may be re-used by ASKI for kernel pre-integration. Also this may be beneficial for special kinds of 
+forward grids in combination with specific inversion grids, where you have certain pre-knowledge of how to 
+integrate over the cells with high precision. 
+
+In order to realize the use of these special kinds of integration rules, the inversion grid module needs to provide the
+integration weights: routine \lcode{transformToStandardCellInversionGrid} must be called with 
+\lcode{type_standard_cell} equal to $-1$ on input in order to request the inversion grid to return full 
+integration weights instead of jacobian values in return variable \lcode{jacobian}.
+Hence, this is only possible for specific types of inversion grids that support this input value (at the moment 
+only \lcode{specfem3dInversionGrid}). So you might need to add another inversion grid type to \ASKI{} that works 
+with your forward code (see sec.~\ref{ssec-invgrid:external}{}) or modify an existing inversion grid submodule 
+accordingly. In particular, routine \lcode{validTypeInversionGrid} must accept the use of type 6 integration 
+weights along with your inversion grid type.
+
+%-------------------------------
+% SECTION new executable
+%#############################################################
+\section{Create new executables of the \ASKI{} toolbox based on its software library} \label{sec:executables}
+%#############################################################
+%
+New Fortran executables can be created using existing \ASKI{} Fortran modules (or creating new ones, of course). 
+A list of all \ASKI{} Fortran modules along with short descriptions about what functionality they provide, is
+provided by the doxygen documentation (chapter 1 in the LaTex document and ``Modules'' (\lcode{namespaces.html})
+in the html document).
+In order to make life easier for all \ASKI{} users, the command line behaviour should be very similar to all
+other Fortran executables of \ASKI{} (i.e.\ using module \lcode{argumentParser} and printing usage message
+if some input is incorrect and, if required, setting \lcode{main_parfile} as last positional argument).
+
+In order to correctly compile the new executable, here having exemplary name \lcode{newTool}, you need to:
+\begin{enumerate}
+\item Update \lcode{rules.mk}:
+  If program \lcode{newTool} uses modules \lcode{module1}, \lcode{module2}, \lcode{module3} (etc.)
+  add a new line of form\\
+  \lcode{newTool.o: module1.o module2.o module3g.o}\\
+  If any of the modules, e.g.\ \lcode{module2} was newly created and
+  itself depends on other modules, e.g.\ \lcode{module4}, \lcode{module5},
+  add a new line of form\\
+  \lcode{module2.o: module4.o module5.o}
+
+  If \lcode{newTool} does not use any modules and is not dependent on other files, \lcode{rules.mk} does not need 
+  to be modified. 
+
+  As an alternative to modifying \lcode{rules.mk} manulally (especially when extending existing modules that are
+  used in many other modules), you can ultilize \lcode{create_rules_mk.py}
+  \myaref{ssec-devel_tools:create_rules_mk.py}
+
+\item Add a new rule for \lcode{newTool} to \lcode{Makefile}: 
+  \begin{enumerate}
+  \item Run script\\
+    \lcode{devel/create_Makefile_rule.py newTool > rule.txt}\\
+    from the \ASKI{} installation directory \myaref{ssec-devel_tools:create_Makefile_rule.py}
+  \item Add content of \lcode{rule.txt} to \lcode{Makefile} (GNU-Make rule to compile executable \lcode{newTool}).
+    The required libraries (\lcode{BLAS}, \lcode{LAPACK} etc.) should have been accounted for correctly
+    (otherwise you should update script \lcode{create_makefile_rule.py}, in particular routine 
+    \lcode{required_libs_for_depobs}; please add any library requirements for \lcode{newTool}).
+  \item All general \ASKI{} executables from which all \ASKI{} users benefit, should be part of the rule of
+    target \lcode{all}, so please add \lcode{newTool} there unless \lcode{newTool} is a very special executable
+    that should be compiled explicitely by experienced users only (then, please stress this in the documentation).
+  \end{enumerate}
+\end{enumerate}
+
+
+%-------------------------------
+% SECTION inversion grid
+%#############################################################
+\section{Inversion grids} \label{sec:inversion_grid}
+%#############################################################
+%-------------------------------------
+\subsection{Add another type of inversion grid} \label{ssec-invgrid:new-type}
+%-------------------------------------
+\begin{enumerate}
+\item Create a new module (here using exemplary name \lcode{newInversionGrid}):
+  \begin{enumerate}
+  \item Declare derived type \lcode{new_inversion_grid} defining the new inversion grid.
+  \item For each function or subroutine in module \lcode{inversionGrid} implement a realization for
+    inversion grids of type \lcode{new_inversion_grid} (either as a full routine in module \lcode{newInversionGrid}
+    or as a short piece of code in \lcode{select} statements of module \lcode{inversionGrid} if the respective feature is not
+    supported or has a trivial/general implementation).
+  \end{enumerate}
+\item Add the new inversion grid type (here using exemplary name \lcode{newInversionGrid}) to module
+  \lcode{inversionGrid}:
+  \begin{enumerate}
+  \item Use the module by \lcode{use newInversionGrid}.
+  \item Increase \lcode{character_length_type_inversion_grid} if necessary.
+  \item Extend string \lcode{all_valid_types_inversion_grid}.
+  \item Add pointer of type \lcode{new_inversion_grid} to derived type \lcode{inversion_grid}.
+  \item For each function or subroutine, add a \lcode{case} in the \lcode{select} clauses and call the 
+    inversion-grid-specific routine (or implement trivial solution).
+  \end{enumerate}
+\item Update \lcode{rules.mk}:
+  If module \lcode{newInversionGrid} uses modules \lcode{module1}, \lcode{module2}, \lcode{module3} (etc.)
+  add a new line of form \\
+  \lcode{newInversionGrid.o: module1.o module2.o module3.o}\\
+  Otherwise, add a new line of the form\\
+  \lcode{newInversionGrid.o:}
+\item Update \lcode{Makefile}: Every rule (to compile an \ASKI{} executable) that depends on 
+  \lcode{inversionGrid.o} must now additionally depend on \lcode{newInversionGrid.o}
+\end{enumerate}
+
+%-------------------------------------
+\subsection{Using element grid of element-based forward method as inversion grid} \label{ssec-invgrid:external}
+%-------------------------------------
+%
+For element-based forward methods (such as e.g.\ SPECFEM3D), it can be beneficial to use the volumetric elements
+as inversion grid cells along with using the contained forward grid points as wavefield points: The localization
+of wavefield points inside the inversion grid cells is known in this case and, optionally, also quadrature rules 
+for numerical integration can be either known or should be computable (semi-)analytically.
+If you would like to add this kind of functionality for your own newly added element-based forward method, you
+are advised to have a close look at the realization of module \lcode{specfem3dInversionGrid}.
+
+By SPECFEM3D, for instance, all forward grid points in a certain spatial subdomain are stored element-wise in a 
+known order in some file, so that it is possible for module \lcode{specfem3dInversionGrid} to extract the 8 
+corner points of the spectral elements from that set of coordinates (which are required for the 8-corner hexahedral 
+vtk cell output) and to trivially locate the wavefield points inside the elements (and give their position
+inside the hexahedral reference element $[-1,1]\times[-1,1]\times[-1,1] \subset \mathbb{R}^3$).
+
+As an optional feature, the module \lcode{specfem3dInversionGrid} can provide the integration weights for 
+numerical integration of the kernels on the spectral element that are also used by the spectral element method.
+These have a high numerical accuracy due to the special distribution of points inside the element (GLL points).
+In this case \ASKI{} can benefit from this knowledge and does not need to compute its own integration weights.
+Alternatively, other types of \ASKI{} integration rules can be used along with an inversion grid of type 
+\lcode{specfem3dInversionGrid}.
+
+%
+%-------------------------------------
+\subsection{\lcodetitle{chunksInversionGrid}: implement a method of cell refinement} \label{ssec-invgrid:chunks-cell-ref}
+%-------------------------------------
+First, you should make yourself familiar with module \lcode{chunksInversionGrid}. Unfortunately, this module has
+kept growing and became some kind of monsterous construct. There is definitely a lot of commentary in the
+code, which mostly is formatted using doxygen syntax (regarding routines and variables descriptions), so it
+might be worth referring to the doxygen documentation.
+Additionally, fig.~\ref{ssec-invgrid:chunks-cell-ref,fig:ichunk} shows the positioning of chunks in 
+\lcode{LOCAL_FLAT} projection.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.65\textwidth]{images/chunksInversionGrid_6-chunks_ichunk_LOCAL_FLAT_numbers.png}
+  \caption{distribution of chunks of the chunksInversionGrid in \lcode{LOCAL_FLAT} projection}
+  \label{ssec-invgrid:chunks-cell-ref,fig:ichunk}
+\end{figure}
+
+In order to make \ASKI{} support a new method of base cell refinement for inversion grids of type 
+\lcode{chunksInversionGrid}, module \lcode{chunksInversionGrid} must be extended, as indicated by comments
+\begin{verbatim}
+!##################################
+! ADD YOUR REFINEMENT METHOD HERE
+!##################################
+\end{verbatim}
+in file \lcode{chunksInversionGrid.f90}. In particular,
+\begin{itemize}
+\item In routine \lcode{readCheckParFileChunksInversionGrid}, the new value of keyword 
+  \lcode{CHUNKS_INVGRID_CREF_METHOD} (name of refinement method) must pass all checks and (if required) any 
+  expected values must be read from keyword \lcode{CHUNKS_INVGRID_CREF_PARAMETERS}.
+  Alternatively, you may need to introduce another keyword to read in some filenames
+  or introduce some naming convention for files containing additional information.
+\item Routine \lcode{doCellRefinementChunksInversionGrid} must execute one or more new subroutines (to be 
+  implemented specifically for the new refinement method) which do the actual refinement, as described in
+  the commented toy subroutine \\\lcode{requiredSubroutinesForNewRefinementMethod}.
+\end{itemize}
+ 
+
+%-------------------------------
+% SECTION todo / new ideas / pending things to implmement
+%#############################################################
+\section{Things ``to do'' for the \ASKI{} developers} \label{sec:todo}
+%#############################################################
+Please make sure to remove those aspects from this section of the \ASKI{} developers manual which you have fixed.
+
+%-------------------------------------
+\subsection{Todos that are straightforward to realize} \label{ssec-todo:todo-simple}
+%-------------------------------------
+
+\subsubsection{use function \lcodetitle{nextPathDataModelSpaceInfo} everywhere}
+%
+Originally, loops over event-station paths were done manually (by first getting the paths by 
+\lcode{getPathsDataModelSpaceInfo} and then looping over them). Some of these implementations might
+be more clear if a construct like\\
+\lcode{do while( nextPathDataModelSpaceInfo(...) )}\\
+was used, \emph{directly} accessing information on components and frequencies via function 
+\lcode{nextPathDataModelSpaceInfo} (instead of using \lcode{getIndxDataSamples} inside the manual loop 
+over the paths).
+
+Especially in the module \lcode{dataModelSpaceInfo} itself, the old approach (looping over paths manually) is
+done thoroughly, as well as in \lcode{investigateDataResiduals} (sensible also for 
+\lcode{computeDataFromKernelSystem}?!)
+
+\subsubsection{finish implementing module \lcodetitle{parameterCorrelation}}
+%
+So far, there is only a quick hack done for constructing objects (for reasons of testing):
+In the parameter correlation file as given by the main parameter file, assume only ONE line, 
+containing for parameter vs the parameters of  rho , vp (in that order, space separated).
+Please refer to comments in code file \lcode{parameterCorrelation.f90} containing \lcode{FS FS}
+(always referring to author Florian Schumacher).
+
+%-------------------------------------
+\subsection{Todos that might require some more work} \label{ssec-todo:todo-complex}
+%-------------------------------------
+\subsubsection{completion of module \lcodetitle{ecartInversionGrid}}
+The module \lcode{ecartInversionGrid} is exensively (!) documented in the code file \lcode{ecartInversionGrid.f90},
+mostly \emph{without} doxygen syntax (so you can only access the documentation by reading the code file's commentary
+sections).
+
+The following subroutines/functionality must still be implemented for \emph{hexahedral} (i.e.\ \lcode{hex8}) cells:
+\begin{enumerate}
+\item \lcode{locateWpInsideHex8CellEcartInversionGrid}
+\item \lcode{transformToStandardHexEcartInversionGrid}
+\item \lcode{getVolumeHex8EcartInversionGrid}
+\item \lcode{createFaceNeighboursEcartInversionGrid}: only face neighbours are searched for among \lcode{tet4}
+  cells, \emph{which still is unstable, see below}. Still to do: include \lcode{hex8} cells in the
+  search, i.e.\ search for neighbours among \lcode{hex8} cells \emph{and} between \lcode{hex8} and \lcode{tet4} cells.\\
+  \emph{Alternatively}, a neighbour search (i.e.\ creation of the neighbours file) could be done outside this module by 
+  arbitrary software, e.g.\ already at the stage of exporting the grid from Trelis (if possible?!) by script 
+  \lcode{cubit2ASKIecartInversionGrid.py}.
+\end{enumerate}
+
+Also, the neighbour search among the \lcode{tet4} cells in subroutine \lcode{createFaceNeighboursEcartInversionGrid} 
+(following the approach of testing signed areas of triangles which are spanned by one point of the first tri face 
+and an edge of the other tri face, as described in section 4 of paper \cite{devillers:inria-00072100}) 
+turned out to be still unstable and must be fixed: please compare example files and \lcode{README} in\\
+\lcode{doc/ASKI_developers_manual/TODO_ecartInversionGrid_cell_neighbours/}\\
+(the inversion grid given there is also given as an example in the user manual and in
+\lcode{doc/example_ecartInversionGrid/}, as of August 2016).
+For some \lcode{tet4} cells not all neighbours are found correctly, for some cells not even one of the neighbours
+is found. The reason for that should be due to the numerical implementation of the search algorithm (possibly 
+problems comparing floating point numbers).
+
+\subsubsection{improvement of the \ASKI{} user manual, section entitled ``What is \ASKI{}?''}
+We might include some pictures there: a set of points inside the volumes 
+of the inversion grid, a sensitivity kernel for one specific datum (real part of some frequency 
+sample of a seismogram (src,rec,comp)) explaining that positive high values at one scatterer mean 
+that this very datum increases (significantly) if the current model parameter is increased at this scatterer, etc.
+
+%-------------------------------------
+\subsection{Ideas for new \ASKI{} functionality} \label{ssec-todo:new}
+%-------------------------------------
+\subsubsection{file-interface to module \lcodetitle{dataModelSpaceInfo}}
+The parsing of dataModelSpaceInfo files in module \lcode{dataModelSpaceInfo} (routine 
+\lcode{createFromFileDataModelSpaceInfo}) is very inconvenient (as it is implemented in Fortran).
+Alternatively (as an \emph{additional} feature!), module \lcode{dataModelSpaceInfo} can support to read in
+a text file that contains listed information of all data samples and/or model values (maybe two separate files
+for data samples and model values?!), i.e.\ basically arrays \lcode{evid}, \lcode{staname}, \lcode{comp}, 
+\lcode{ifreq}, \lcode{imre}, \lcode{wdata}, \lcode{normalization_mdata}, \lcode{normalization_sdata}, 
+\lcode{normalization_kernel}, as columns (for model values file: this means arrays \lcode{param}, \lcode{cell}, 
+respectively). Also memorize values like \lcode{ndata}, \lcode{nmval}, \lcode{parametrization} in these files.
+\emph{Additionally} on could remember in these files information like paths, number of paths,
+which receiver components, frequencies are contained in which paths, 
+all different comp, all different ifreq, etc.
+The best thing would be to memorize all (or a lot of) information required by 
+the programs, e.g.\ all data indices per path, etc. This could allow for quicker access in the application 
+of the programs (although everything is working now).
+
+\subsubsection{forward-method interface modules for synthetic data}
+It would be much better to have a set of interface modules for synthetic data (just as
+for wavefield points, kernel reference model, kernel displacement, kernel Green tensor), because the forward code
+requires knowledge about the \ASKI{}-internal file format of synthetic data. These interface modules of synthetic
+data could use the \lcode{discreteFourierTransform} module (if required) and know the location, name and format 
+of any synthetic data files written by the forward code.
+
+\subsubsection{support integer list of formats like ``3-5,9,13,19-21''}
+For some input on the command line (the \ASKI{} Fortran executables usually use the module \lcode{argumentParser}), 
+explicit vectors of integer values are required (e.g. \lcode{-subs} of executable \lcode{chunksInvgrid2vtk}). At 
+the moment, all indices have to be given on the command line explicitely (space-separated). Usually one has to apply 
+quotes like \\
+\lcode{-subs "3 4 5 9 13 19 20 21"}\\
+This can get very long and lengthy and unconvenient for a user that does not want to use option \lcode{-all_subs}.
+
+Such integer vectors are also used in another respect in \ASKI{}, namely for defining frequency indices in 
+parameter files (main parameter file and iteration-step-specific parameter file). If an input line there
+becomes too long (because of so many space-separated items in the line), it might even not be possible to read 
+this line properly by module \lcode{inputParameter}, since it uses a maximum character length for value strings
+of 500.
+
+This functionality could be realized by implementing a new module (called something like \lcode{integerRanges})
+which knows how to transform strings of form ``3-5,9,13,19-21'' to integer arrays \lcode{3 4 5 9 13 19 20 21}.
+This module could even support different kinds of string formatting which it automatically detects (if it does
+not detect a known format, it returns an error).
+It is thinkable to also support formats like \lcode{all-except:3-5,9,13,19-21}, but in this case it must be clear
+to module \lcode{integerRanges} what ``all'' means, i.e.\ to which entirety the numbers refer.
+
+\subsubsection{other methods of smoothing kernel inverted models}
+In module \lcode{linearModelRegularization} the only supported smoothing method at the moment is implemented in subroutine 
+\lcode{addNeighbourAverageSmoothingLinearModelRegularization} and builds averages over direct face neighbours
+(possibly accounting for different boundary conditions on boundaries where there are no neighbours or boundaries
+that should not be smoothed over (last aspect not yet implemented but possible after somehow defining internal 
+boundaries)).
+
+An alternative method that \emph{does not require neighbour information} and is more physically motivated is 
+suggested in the following:
+\begin{itemize}
+\item Given a fixed radius $r$, detect for each inversion grid cell $c$ all other cells $c_n$ for which the
+  distance between the center points of $c$ and $c_n$ is $\le r$ (regard those cells as ``neighbours'' in this 
+  sense, i.e. ``central-radius-neighbours'', although they do not need to be \emph{face} neighbours in the 
+  above sence). This detection of ``closeby'' cells
+  should be implemented in module \lcode{inversionGrid} and its containing submodules as an alternative ``neighbour search''
+  called something like \lcode{getIndicesCentralRadiusNeighboursInversionGrid}
+\item Then build smoothing conditions as averages on all central-radius-neighbours. Optionally, the weight $w_n$
+  of neighbour $c_n$ in the linear combination of this average may depend on the distance between center points of
+  $c$ and $c_n$ (as a result: cell further away have a smaller influence on the smoothed value).
+\item As an alternative to searching for central-radius-neighbours by a fixed radius $r$ (constant $r$ throughout 
+  the inversion grid, regardless of the spatial extent of inversion grid cell $c$ which constitutes the local 
+  spatial resolution of the inversion grid), the search may be performed by a dynamic radius $r_c$ which 
+  depends on the particular inversion grid cell $c$ for which neighbours should be found. $r_c$ may e.g.\ be computed
+  by multiplying the radius of cell $c$ by a fixed given factor $f>1$ (constand $f$ throughout the inversion grid).
+  Thereby, the influence of the smoothing operation would correspond to the local spatial resolution of the 
+  inversion grid (in regions of finer spatial resolution, the smoothing would have a smaller range of influence, 
+  in regions with coarser spatial resolution, the model values on the inversion grid cells would depend on values
+  at larger distances). This variety of the central-radius neighbours search comes closes to the search of face
+  neighbours.
+\end{itemize}
+
+
+
+%
+%-------------------------------
+% BIBLIOGRAPHY
+\bibliographystyle{alpha}
+\bibliography{bibliography}
+\phantomsection  % so hyperref creates bookmarks
+\addcontentsline{toc}{section}{References}
+%
+%-------------------------------
+% SECTION History (of the document versions, as required by the GNU Free Documentation License)
+\newpage
+\section*{History}
+\phantomsection  % so hyperref creates bookmarks
+\addcontentsline{toc}{section}{History}
+\input{history}
+%
+%-------------------------------
+% SECTION GNU Free Documentation License
+\newpage
+\input{fdl-1.3}
+%
+
+\end{document}

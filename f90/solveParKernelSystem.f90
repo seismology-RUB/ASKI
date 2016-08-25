@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.1 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.1 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 program solveParKernelSystem
   use inversionBasics
@@ -626,19 +626,6 @@ program solveParKernelSystem
   !call print(errmsg)
   if (.level.errmsg == 2) goto 20
   call dealloc(errmsg)
-!!$!! FS FS TEST
-!!$write(*,*) "store linear system for debugging reasons in text file 'test-ASKI_solveParKernelSystem_Matrix.dat'"
-!!$KM => .KM.KLSE
-!!$lu = get(fuh)
-!!$open(unit=lu,file='test-ASKI_solveParKernelSystem_Matrix.dat',status='unknown',form='formatted',action='write',iostat=ios)
-!!$do lu1 = 1,size(KM,1)
-!!$   !write(lu,*) residuals(i),KM(lu1,:)
-!!$   write(lu,*) KM(lu1,:)
-!!$end do ! i , rows of system
-!!$close(lu)
-!!$call undo(fuh)
-!!$call blacs_abort(0,1)
-!!$!! FS FS TEST
 !------------------------------------------------------------------------
 !  read in measured and synthetic data, compute difference residual and misfit
 !

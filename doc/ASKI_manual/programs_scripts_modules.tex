@@ -15,12 +15,18 @@
 %   Free Documentation License''. 
 %-----------------------------------------------------------------------------
 %
+%% ATTENTION NOTE FOR USERS ACCIDENTLY GETTING STARTED WITH ASKI (in a hurry) WITHOUT
+%% FOLLOWING THE INTENDED PROCEDURE HOW TO READ THIS MANUAL
+\inotice{This chapter is \emph{not} intended to be read through item by item (as a manual)! If you are new to \ASKI{} and
+  accidently looked up this chapter in the hope to find what you're looking for, you are strongly advised to
+  quickly read section ``How to get started'' at the beginning of this document, explaining how to use this manual.}
+
 This chapter collects scripts, binary programs or modular program components contained 
 in the \ASKI{} package. It is not refered to any code, here, but give details on application
 by the user or background knowledge.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-\section{Executable Programs} \label{programs_scripts,sec:bin_prog}
+\section{Executable Fortran Programs} \label{programs_scripts,sec:bin_prog}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 The commands are executed in the form:
@@ -40,7 +46,7 @@ Calling an executable without arguments will print a very short help message on 
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{addSpikeCheckerToKim}} \label{programs_scripts,sec:bin_prog,sec:addSpikeCheckerToKim}
+\subsection{\lcodetitle{addSpikeCheckerToKim}} \label{programs_scripts,sec:bin_prog,sec:addSpikeCheckerToKim}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \emph{This is a hard-coded preliminary tool! Do not expect to see a help message when executing} 
 \lcode{addSpikeCheckerToKim} \emph{without arguments, execution of the source code will start 
@@ -55,7 +61,61 @@ This executable is intended to serve the experienced user and must be compiled s
 \lcode{make addSpikeCheckerToKim}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{combineInvertedModels}} \label{programs_scripts,sec:bin_prog,sec:combine_inverted_models}
+\subsection{\lcodetitle{chunksInvgrid2Vtk}} \label{programs_scripts,sec:bin_prog,sec:chunks_invgrid_2_vtk}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Create special \lcode{.vtk} file(s) of a \lcode{chunksInversiongrid}-type inversion grid.
+Use this executable complementary to \lcode{invgrid2vtk} \myaref{programs_scripts,sec:bin_prog,sec:invgrid_vtk}, 
+especially if the inversion grid has base cell refinement or multiple chunks. 
+
+\subsubsection{Mandatory options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-igpar invgrid_parfile}}
+\lcode{invgrid_parfile} is \lcode{PARFILE_INVERSION_GRID} as in \ASKI{} iteration step parameter file (assuming
+inversion grid type \lcode{chunksInversionGrid} here!).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-igpath invgrid_path}}
+\lcode{invgrid_path} is treated as current iteration step path, used for inversion grid to write/read own files.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Optional options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-o outbase}}
+\lcode{outbase} is output base name (default is \lcode{inversion_grid})
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-base}}
+If set, produce a \lcode{.vtk} file containing the inversion grid's base cells only; assigned cell data:
+base cell indices. In case of no base cell refinement: output is equal to \lcode{invgrid2vtk} output file
+(inversion grid consists of base cells only).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-base_ichk}}
+If set, produce a \lcode{.vtk} file containing the inversion grid's base cells only; assigned cell data:
+chunk indices. This is only interesting for multi-chunk inversion grids (otherwise: constant data equal to $1$).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-ichunk}}
+If set, produce a \lcode{.vtk} file containing the inversion grid cells; assigned cell data:
+chunk indices. In case of no base cell refinement, output is equal to \lcode{-base_ichk}.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-subs "ibc_1 ... ibc_n"}}
+Given a vector of \lcode{n} base cell indices \lcode{ibc_1},...,\lcode{ibc_n}, for each indicated base cell 
+a \lcode{.vtk} file will be written containing the subcells of that base cell (with assigned data: cell indices).
+If a base cell is not refined, output file will contain base cell only. Output file extension will contain base
+cell index. \emph{In the future}: may be helpful to also accept ranges like "20:40".
+Must not be set simultaneously along with \lcode{-all_subs}.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-all_subs}}
+Same as \lcode{-subs} but for \emph{all} base cell indices. Must not be set simultaneously along with \lcode{-subs}.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-overwr}}
+If set, existing output files will be overwritten.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-bin}}
+If set, the output vtk files will be binary, otherwise they will be ascii.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-recr}}
+If set, the existing inversion grid file(s) (if any existing, and if type creates any) will be recreated with 
+current invgrid parfile specifications. If not set (default), an existing inversion grid will be read in only, 
+\emph{without any effect of potential changes in the parfile!}
+%
+\subsection{\lcodetitle{combineInvertedModels}} \label{programs_scripts,sec:bin_prog,sec:combine_inverted_models}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Compute linear combination   \lcode{ coef1 * kim1 + coef2 * kim2 }   of two models on inversion grid
 \lcode{kim1}, \lcode{kim2}.
@@ -90,7 +150,7 @@ If set, the program computes relative to \lcode{kim1}, i.e.\ \\
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{computeCorrectionSyntheticData}} \label{programs_scripts,sec:bin_prog,sec:comp_correct_syn_data}
+\subsection{\lcodetitle{computeCorrectionSyntheticData}} \label{programs_scripts,sec:bin_prog,sec:comp_correct_syn_data}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Computes additional files in iteration-step-specific subdirectory \lcode{SYNTHETIC_DATA} which are named as
 \lcode{corr_EVENTID_STATIONNAME_COMPONENT}. These files contain the quantities $c_i^0$ (as defined in our GJI paper
@@ -106,7 +166,7 @@ Main parameter file of inversion.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{computeDataFromKernelSystem}} \label{programs_scripts,sec:bin_prog,sec:comp_data_kernel_sys}
+\subsection{\lcodetitle{computeDataFromKernelSystem}} \label{programs_scripts,sec:bin_prog,sec:comp_data_kernel_sys}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Computes the 'measured' data d in the equation  d-s(-sc) = K (m1 - mref)  for given model m1.
 
@@ -129,7 +189,7 @@ Main parameter file of inversion.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{computeFocussedMisfit}} \label{programs_scripts,sec:bin_prog,sec:comp_focus_misfit}
+\subsection{\lcodetitle{computeFocussedMisfit}} \label{programs_scripts,sec:bin_prog,sec:comp_focus_misfit}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Compute focussed misfit of a dataset applying the focussing coefficients produced by executable 
 \lcode{focusSpectralKernels}.
@@ -147,7 +207,7 @@ Main parameter file of inversion.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{computeKernelCoverage}} \label{programs_scripts,sec:bin_prog,sec:compute_kernel_coverage}
+\subsection{\lcodetitle{computeKernelCoverage}} \label{programs_scripts,sec:bin_prog,sec:compute_kernel_coverage}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Summate the absolute values of the column vectors of a given kernel matrix (for a given number \lcode{nwin} of 
 frequency windows).
@@ -180,7 +240,7 @@ If set, the output files will be overwritten (if existing). By default, nothing 
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{computeKernels}} \label{programs_scripts,sec:bin_prog,sec:com_kernel}
+\subsection{\lcodetitle{computeKernels}} \label{programs_scripts,sec:bin_prog,sec:com_kernel}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 This executable computes (and pre-integrates) spectral sensitivity kernels. 
 There are two possibele ways to define a set of spectral kernels that are computed:
@@ -224,11 +284,11 @@ Data model space input file to define a set of paths. (way 2)
 \lcode{path2 = max_number_of_paths} as to data-model-space description. (way 2)
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-wp}}
-If set, then plain kernel values on WAVEFIELD POINTS are produced. Otherwise (if not set), pre-integrated kernels on inversion grid cells are computed
+If set, then plain kernel values on \emph{wavefield points} are produced. Otherwise (if not set), pre-integrated kernels on inversion grid cells are computed
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{computeMisfit}} \label{programs_scripts,sec:bin_prog,sec:comp_misfit}
+\subsection{\lcodetitle{computeMisfit}} \label{programs_scripts,sec:bin_prog,sec:comp_misfit}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Reads in measured and synthetic data characterized by data model space info file and computes the data misfit.
 
@@ -248,75 +308,34 @@ Vector of \lcode{nf} frequency indices. Additionally to the misfit of the whole 
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{createMeasuredData}} \label{programs_scripts,sec:bin_prog,sec:create_measured_data}
+\subsection{\lcodetitle{createShoreLines}} \label{programs_scripts,sec:bin_prog,sec:shore_lines}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Fourier transform of time-domain data to \ASKI{}-conform frequency-domain measured data; frequency 
-discretization of measured data as defined in main parfile.
+This application creates a \lcode{.vtk} file containing shore lines trimmed to the domain of the
+currently used inversion grid and transformed to the currently used \lcode{VTK_PROJECTION}.
+
+
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{Positional arguments}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{filename_GSHHS_bin}}
+Name of GSHHS file in native binary format, containing the shore line data. Such files can be downloaded
+via \url{https://www.ngdc.noaa.gov/mgg/shorelines/data/gshhg/latest/}. you should download the 
+dataset in form of native binary files (probably package named like \lcode{gshhg-bin-?.?.?.zip}) and choose here
+a file of specific resolution e.g.\ \lcode{gshhs_c.b}, 
+\lcode{gshhs_l.b}, \lcode{gshhs_i.b}, \lcode{gshhs_h.b}, \lcode{gshhs_f.b}.
+If you are interested in the file format of GSHHS native binary files, as expected by \ASKI{}, see
+\myref{files,sec:GSHHS_bin}.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{outfile_base}}
+Absolute output file base (will be concatenated by ``\lcode{.vtk}'' for vtk output). \emph{Existing output files 
+will be overwritten!}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{main_parfile}}
 Main parameter file of inversion.
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{Mandatory options}
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{\lcode{-txt parfile_txt}}
-Input data files are plain text files, containing one time series per file. \lcode{parfile_txt} is the filename
-of a parameter file with details on location, naming and content of the files, as provided by \\
-\lcode{template/createMeasuredData_parfile_txt_template} .
-The content of this parameter file is described below.
-Exactly one of options \lcode{-txt}, \lcode{-su} must be set.
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{\lcode{-su su_files_path}}
-Input data files are seismic unix. \lcode{su_files_path} is the path where seismic unix files can be found which 
-have filenames of form \lcode{eventID_COMP.su}. Every such seismic unix file is assumed to contain the same 
-number of data traces, one trace for each station as defined in the \ASKI{} stations file (in that order).
-The time discretization of the time series will be taken from each file separately, but it is assumed that
-all traces contained in a seismic unix file have the very same time discretization (time step and number of samples
-are always taken from the first trace of a file).
-Exactly one of options \lcode{-txt}, \lcode{-su} must be set.
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{Optional options}
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{\lcode{-htaper taper_portion}}
-If set, a cosign-hanning taper is applied to time-domain traces before Fourier Transform. The argument 
-\lcode{taper_portion} gives the portion of the end of the time-series (between 0.0 and 1.0) to which the
-taper is applied. If not set, a taper \emph{is} applied with default portion of 0.05 (i.e.\ 5 percent).
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{The parameter file for option \lcode{-txt}}
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-In the following, the required keywords of the parameter file for option \lcode{-txt} are described 
-(documenting commentary is also contained in the template parfile\\
-\lcode{template/createMeasuredData_parfile_txt_template}).
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\textbf{\lcode{PATH_TXT_TRACES}}\\
-Path where all \lcode{.txt} trace files can be found (must end on \lcode{/}).
-The trace files in that path are expected to have filenames of form \lcode{EVID_STANAME_COMP.txt} .
-
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\textbf{\lcode{FILE_DATA_MODEL_SPACE_INFO}}\\
-Data model space info file defining the set of data samples for which the conversion will be done:
-For all receiver components (present in the file) of all data paths (present in the file), the 
-complete spectrum will be generated as defined by global frequency discretization from main parfile.
-I.e.\ any specific frequency definition in the data model space info file will be ignored.
-
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\textbf{\lcode{DT,NSTEP}}\\
-Global time discretization (timestep and number of samples) for \emph{all} \lcode{.txt} trace files.
-If some of your data have other time discretizations than others, you would need to 
-re-run this executable for each time discretization, properly re-defining the data subset 
-through the data model space info file file.
-
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\textbf{\lcode{COLUMN_OF_TRACE}}\\
-Integer value defining the column of the \lcode{.txt} trace files in which the actual time-series
-is found. E.g.\ if the files contain the time as first column and amplitude values as second column, set
-\lcode{COLUMN_OF_TRACE = 2}; if only one column with amplitude values is contained in the files, 
-set \lcode{COLUMN_OF_TRACE = 1}.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{createSpectralFilters}} \label{programs_scripts,sec:bin_prog,sec:create_spec_filters}
+\subsection{\lcodetitle{createSpectralFilters}} \label{programs_scripts,sec:bin_prog,sec:create_spec_filters}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Generate spectral filter files as used in \ASKI{} from source wavelets or as Butterworth
 high-/low-/bandpass filters (de)convolved by other wavelets or spectral filters.
@@ -414,7 +433,7 @@ For instance, if the file contains the time as first column and amplitude values
 \lcode{STF_COLUMN_OF_TRACE = 1}, etc. All other columns are ignored!
 \lcode{STF_DT} and \lcode{STF_NSTEP} define the time discretization by which the selected column will be interpreted.
 The first sample is interpreted to have time $0.0$ . This should not pose a problem, since program
-createMeasuredData makes the very same assumption and all forward methods should produce their 
+transformMeasuredData makes the very same assumption and all forward methods should produce their 
 spectral synthetics in the same way (as displacement wavefields w.r.t.\ a Dirac impuls at time 0.0
 and with the Fourier transform starting with the first time-sample at time 0.0).
 
@@ -450,7 +469,7 @@ wavelet trace. For instance, if the file contains the time as first column and a
 \lcode{CONV_WAVEL__COLUMN_OF_TRACE = 1}, etc. All other columns are ignored!
 \lcode{CONV_WAVEL_DT} and \lcode{CONV_WAVEL_NSTEP} define the time discretization by which the selected column will be interpreted.
 The first sample is interpreted to have time $0.0$ . This should not pose a problem, since executable
-createMeasuredData makes the very same assumption and all forward methods should produce their 
+transformMeasuredData makes the very same assumption and all forward methods should produce their 
 spectral synthetics in the same way (as displacement wavefields w.r.t.\ a Dirac impuls at time 0.0
 and with the Fourier transform starting with the first time-sample at time 0.0).
 
@@ -482,7 +501,7 @@ Option \lcode{stationf} is not yet supported by this executable.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{createStartmodelKim}} \label{programs_scripts,sec:bin_prog,sec:create_startmod_kim}
+\subsection{\lcodetitle{createStartmodelKim}} \label{programs_scripts,sec:bin_prog,sec:create_startmod_kim}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  Create a file of type \lcode{kernel_inverted_model} (\lcode{.kim}) containing pre-defined values on the inversion grid. Can be used to create a start model for the full waveform inversion process.
 
@@ -575,10 +594,11 @@ If set, the output vtk files will be binary, otherwise they will be ascii.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{exportKim}} \label{programs_scripts,sec:bin_prog,sec:exp_Kim}
+\subsection{\lcodetitle{exportKim}} \label{programs_scripts,sec:bin_prog,sec:exp_Kim}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Program exportKim produces a text file (option \lcode{-otxt}) containing information of cell centers and radii 
-(i.e\. rough expansion) of all inversion grid cells and all cell neighbours, as well as model values and 
+(radius $\simeq$ some approximate average spatial expansion of the cell from the cell center) 
+of all inversion grid cells and all cell neighbours, as well as model values and 
 respective invgrid cell indices for each model parameter, as contained in a given kernelInvertedModel file. 
 This text file may be used by any forward method to define the simulation model for the next iteration step, 
 or by any tool handling final models.\\
@@ -632,7 +652,7 @@ At least one of \lcode{-otxt},  \lcode{-ovtk} must be set.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{focusSpectralKernels}} \label{programs_scripts,sec:bin_prog,sec:focus_spec_kernel}
+\subsection{\lcodetitle{focusSpectralKernels}} \label{programs_scripts,sec:bin_prog,sec:focus_spec_kernel}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Compute Backus-Gilbert focussing of sensitivity kernels on a defined focussing region in the model space. 
 
@@ -687,7 +707,7 @@ List of model parameters which will be focussed on, e.g.\ \lcode{"vp vs"} .
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{initBasics}} \label{programs_scripts,sec:bin_prog,sec:in_basics}
+\subsection{\lcodetitle{initBasics}} \label{programs_scripts,sec:bin_prog,sec:in_basics}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Initiating and testing all basic requirements for ASKI programs (parameter files, event and station list, inversion grid, wavefield points, integration weights, reference model).
 
@@ -712,7 +732,7 @@ after having already created the respective files, you should set \lcode{-recr}.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{investigateDataResiduals}} \label{programs_scripts,sec:bin_prog,sec:invest_data_residuals}
+\subsection{\lcodetitle{investigateDataResiduals}} \label{programs_scripts,sec:bin_prog,sec:invest_data_residuals}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Gets some statistics about the data residuals of a given data (sub)set.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -734,17 +754,17 @@ Main parameter file of inversion.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{invgrid2vtk}} \label{programs_scripts,sec:bin_prog,sec:invgrid_vtk}
+\subsection{\lcodetitle{invgrid2vtk}} \label{programs_scripts,sec:bin_prog,sec:invgrid_vtk}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Create vtk file(s) of the given inversion grid (useful to look at, to see if the specifications are correct).
 
 \subsubsection{Mandatory options}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-igtype invgrid_type}}
-\lcode{invgrid_type} is \lcode{TYPE_INVERSION_GRID} as in ASKI iteration step parameter file.
+\lcode{invgrid_type} is \lcode{TYPE_INVERSION_GRID} as in \ASKI{} iteration step parameter file.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-igpar invgrid_parfile}}
-\lcode{invgrid_parfile} is \lcode{PARFILE_INVERSION_GRID} as in ASKI iteration step parameter file.
+\lcode{invgrid_parfile} is \lcode{PARFILE_INVERSION_GRID} as in \ASKI{} iteration step parameter file.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{\lcode{-igpath invgrid_path}}
 \lcode{invgrid_path} is treated as current iteration step path, used for inversion grid to write/read own files.
@@ -771,11 +791,11 @@ If set, the output vtk files will be binary, otherwise they will be ascii.
 \paragraph{\lcode{-recr}}
 If set, the existing inversion grid file(s) (if any existing, and if type creates any) will be recreated with 
 current invgrid parfile specifications. If not set (default), existing inversion grid will be read in only, 
-POSSIBLY WITHOUT ANY EFFECT OF POTENTIAL CHANGES IN THE PARFILE!
+\emph{possibly without any effect of potential changes in the parfile!}
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{kdispl2vtk}} \label{programs_scripts,sec:bin_prog,sec:kdispl_2_vtk}
+\subsection{\lcodetitle{kdispl2vtk}} \label{programs_scripts,sec:bin_prog,sec:kdispl_2_vtk}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Extract kernel displacement spectra to vtk files for certain wavefield and strain components and frequencies.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -813,7 +833,7 @@ Exactly one of options \lcode{-ucomp}, \lcode{-all_ucomp} must be set.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{kernel2vtk}} \label{programs_scripts,sec:bin_prog,sec:kernel_2_vtk}
+\subsection{\lcodetitle{kernel2vtk}} \label{programs_scripts,sec:bin_prog,sec:kernel_2_vtk}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Program kernel2vtk writes the pre-integrated spectral sensitivity kernels as vtk files for specific paths, parameters, components and frequencies.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -851,7 +871,7 @@ If set, then the original kernels on the wavefield points are produced (recalcul
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{kgt2vtk}} \label{programs_scripts,sec:bin_prog,sec:kgt_2_vtk}
+\subsection{\lcodetitle{kgt2vtk}} \label{programs_scripts,sec:bin_prog,sec:kgt_2_vtk}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Extract kernel green tensor spectra to vtk files for certain wavefield and strain components and frequencies.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -895,7 +915,7 @@ Exactly one of options \lcode{-ucomp}, \lcode{-all_ucomp} must be set.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{krm2kim}} \label{programs_scripts,sec:bin_prog,sec:krm_kim}
+\subsection{\lcodetitle{krm2kim}} \label{programs_scripts,sec:bin_prog,sec:krm_kim}
 Interpolate kernel reference model onto inversion grid and produce a \lcode{.kim} file of it.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -915,7 +935,7 @@ the given file \lcode{kernel_reference_mode_file} is used to read in the kernel 
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{paths2vtk}} \label{programs_scripts,sec:bin_prog,sec:path_to_vtk}  
+\subsection{\lcodetitle{paths2vtk}} \label{programs_scripts,sec:bin_prog,sec:path_to_vtk}  
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Plots all paths contained in the data space definition as vtk lines. 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -932,7 +952,7 @@ Main parameter file of inversion.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{solveCglsKernelSystem}} \label{programs_scripts,sec:bin_prog,sec:solve_cgls_kernel_sys}
+\subsection{\lcodetitle{solveCglsKernelSystem}} \label{programs_scripts,sec:bin_prog,sec:solve_cgls_kernel_sys}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Solves linear system of sensitivity kernel equations in parallel by a conjugate-gradient method.
 The algorithm applied here is the "CGLS1" from paper \cite{bjorck1998stability}.
@@ -1095,7 +1115,7 @@ to some value $\le 0$.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{solveKernelSystem}} \label{programs_scripts,sec:bin_prog,sec:sol_Ker_Sys}
+\subsection{\lcodetitle{solveKernelSystem}} \label{programs_scripts,sec:bin_prog,sec:sol_Ker_Sys}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Do inversion step by solving the kernel linear system defined by data model space info and regularization constraints. 
 This program is executed in a serial way using the LAPACK library.
@@ -1157,7 +1177,7 @@ Supported types are (see for descriptions above in section about executable \lco
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{solveParKernelSystem}} \label{programs_scripts,sec:bin_prog,sec:solve_par_kernel_sys}
+\subsection{\lcodetitle{solveParKernelSystem}} \label{programs_scripts,sec:bin_prog,sec:solve_par_kernel_sys}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Solves linear system of sensitivity kernel equations in parallel by ScaLAPACK libraries.
 
@@ -1268,7 +1288,7 @@ e.g.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{spec2timeKernels}} \label{programs_scripts,sec:bin_prog,sec:spec_time_kernels}
+\subsection{\lcodetitle{spec2timeKernels}} \label{programs_scripts,sec:bin_prog,sec:spec_time_kernels}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Compute \lcode{time_kernel} files from existing \lcode{spectral_kernel} files (by inverse Fourier transform) 
 for the time windows as specified by options t0,dt,nt1,nt2: The total set of time samples consists of 
@@ -1338,7 +1358,7 @@ points. If not set, normal kernel files (pre-integrated) are transformed.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
-\subsection{\lcode{timeKernel2vtk}} \label{programs_scripts,sec:bin_prog,sec:timeKernel_2_vtk}
+\subsection{\lcodetitle{timeKernel2vtk}} \label{programs_scripts,sec:bin_prog,sec:timeKernel_2_vtk}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Produces vtk files from \emph{one existing} binary time sensitivity kernel file for a selection of time steps defined by vectors of starting and end indices \lcode{-nt1} , \lcode{-nt2}.
 
@@ -1379,6 +1399,129 @@ exist!) and writte as vtk files. If not set, normal time kernel files (pre-integ
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
+\subsection{\lcodetitle{transformMeasuredData}} \label{programs_scripts,sec:bin_prog,sec:transform_measured_data}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Fourier transform of time-domain data to \ASKI{}-conform frequency-domain measured data; frequency 
+discretization of measured data as defined in main parfile.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Positional arguments}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{main_parfile}}
+Main parameter file of inversion.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Mandatory options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-txt parfile_txt}}
+Input data files are plain text files, containing one time series per file. \lcode{parfile_txt} is the filename
+of a parameter file with details on location, naming and content of the files, as provided by \\
+\lcode{template/transformMeasuredData_parfile_txt_template} .
+The content of this parameter file is described below.
+Exactly one of options \lcode{-txt}, \lcode{-su} must be set.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-su su_files_path}}
+Input data files are seismic unix. \lcode{su_files_path} is the path where seismic unix files can be found which 
+have filenames of form \lcode{eventID_COMP.su}. Every such seismic unix file is assumed to contain the same 
+number of data traces, one trace for each station as defined in the \ASKI{} stations file (in that order).
+The time discretization of the time series will be taken from each file separately, but it is assumed that
+all traces contained in a seismic unix file have the very same time discretization (time step and number of samples
+are always taken from the first trace of a file).
+Exactly one of options \lcode{-txt}, \lcode{-su} must be set.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Optional options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-htaper taper_portion}}
+If set, a cosign-hanning taper is applied to time-domain traces before Fourier Transform. The argument 
+\lcode{taper_portion} gives the portion of the end of the time-series (between 0.0 and 1.0) to which the
+taper is applied. If not set, a taper \emph{is} applied with default portion of 0.05 (i.e.\ 5 percent).
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{The parameter file for option \lcode{-txt}}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+In the following, the required keywords of the parameter file for option \lcode{-txt} are described 
+(documenting commentary is also contained in the template parfile\\
+\lcode{template/transformMeasuredData_parfile_txt_template}).
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{PATH_TXT_TRACES}}\\
+Path where all \lcode{.txt} trace files can be found (must end on \lcode{/}).
+The trace files in that path are expected to have filenames of form \lcode{EVID_STANAME_COMP.txt} .
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{FILE_DATA_MODEL_SPACE_INFO}}\\
+Data model space info file defining the set of data samples for which the conversion will be done:
+For all receiver components (present in the file) of all data paths (present in the file), the 
+complete spectrum will be generated as defined by global frequency discretization from main parfile.
+I.e.\ any specific frequency definition in the data model space info file will be ignored.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{DT,NSTEP}}\\
+Global time discretization (timestep and number of samples) for \emph{all} \lcode{.txt} trace files.
+If some of your data have other time discretizations than others, you would need to 
+re-run this executable for each time discretization, properly re-defining the data subset 
+through the data model space info file file.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\textbf{\lcode{COLUMN_OF_TRACE}}\\
+Integer value defining the column of the \lcode{.txt} trace files in which the actual time-series
+is found. E.g.\ if the files contain the time as first column and amplitude values as second column, set
+\lcode{COLUMN_OF_TRACE = 2}; if only one column with amplitude values is contained in the files, 
+set \lcode{COLUMN_OF_TRACE = 1}.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+%
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\section{Python Scripts and Applications} \label{programs_scripts,sec:py}
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+%
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsection{\lcodetitle{create\_ASKI\_dir.py}} \label{programs_scripts,sec:py,sec:createdir}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+For description see \myaref{basic_steps,sec:create_dir}
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsection{\lcodetitle{create\_shore\_lines.py}} \label{programs_scripts,sec:py,sec:shore_lines}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+This application creates a \lcode{.vtk} file containing shore lines trimmed to the domain of the
+currently used inversion grid and transformed to the currently used \lcode{VTK_PROJECTION}.
+It is based on the Fortran-to-python interface generator \lcode{f2py} and thus needs special attention for
+compiling an additionally required module (see \myaref{basic_steps,sec:shoreLines,ssec:py} if you have
+not yet compiled it).
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Positional arguments}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{filename_GSHHS_bin}}
+Name of GSHHS file in native binary format, containing the shore line data. Such files can be downloaded
+via \url{https://www.ngdc.noaa.gov/mgg/shorelines/data/gshhg/latest/}. you should download the 
+dataset in form of native binary files (probably package named like \lcode{gshhg-bin-?.?.?.zip}) and choose here
+a file of specific resolution e.g.\ \lcode{gshhs_c.b}, 
+\lcode{gshhs_l.b}, \lcode{gshhs_i.b}, \lcode{gshhs_h.b}, \lcode{gshhs_f.b}.
+If you are interested in the file format of GSHHS native binary files, as expected by \ASKI{}, see
+\myref{files,sec:GSHHS_bin}.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{outfile_base}}
+Absolute output file base (will be concatenated by ``\lcode{.vtk}'' for vtk output). Existing output files 
+will \emph{not} be overwritten, but an alternative non-existend extension of the filename will be used.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{main_parfile}}
+Main parameter file of inversion.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsection{\lcodetitle{plot\_ASKI\_data\_spectrum.py}} \label{programs_scripts,sec:py,sec:plotspec}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+This application plots text files containing complex spectral values (in Fortran format) as ocurring
+in \ASKI{} for e.g.\ measured and synthetic data or filters.
+Executing \lcode{plot_ASKI_data_spectrum.py} without arguments will plot a usage message.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Positional arguments}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{spectrum_file}}
+Filename of file to be plotted
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{column_to_plot}}
+Optional positional argument (integer value), defining which column of complex numbers contained in
+the file should be plotted. If not given, the first column is plotted. 
+
+%
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Integration Weights} \label{programs_scripts,sec:fmod_intw}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1396,7 +1539,7 @@ For each inversion grid cell $\Omega_c \subset \RRR$ which contains wavefield po
 
 There are several types of integration weights supported (indicated by dummy variable \lcode{intw_type} of 
 subroutine \lcode{createIntegrationWeights}):
-%
+
 %----------------------------------------------------------
 \setcounter{subsection}{-1}
 \subsection{Compute Average (no integration)} \label{programs_scripts,sec:fmod_intw,sub:average}

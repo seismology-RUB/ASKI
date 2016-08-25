@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.1 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.1 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief hold basic requirements for a specific iteration step
 !!
@@ -512,23 +512,6 @@ contains
        if (.level.errmsg == 2) return
        call dealloc(evstat_vtk)
        !
-!!$! FS FS START
-!!$! for reasons of testing, write paths vtk file
-!!$call init(evstat_vtk,.evlist.invbasics,.statlist.invbasics,&
-!!$     reshape( (/ 'S001','R012','S002','R011','S003','R010' /) , (/2,3/) ),this%invgrid,trim(this%iter_path)//&
-!!$     !paths,this%invgrid,trim(this%iter_path)//&
-!!$     trim(this%inpar.sval.'FILEBASE_BASIC_STATS')//'_path',trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),&
-!!$     errmsg,vtk_title='paths')
-!!$if (.level.errmsg == 2) return
-!!$!call writePaths(evstat_vtk,get(fuh),errmsg,overwrite=.true.)
-!!$!call writeData(evstat_vtk,get(fuh),(/1.,2.,3./),errmsg,data_name='test_data_on_paths',&
-!!$!     overwrite=.true.)
-!!$call writeData(evstat_vtk,get(fuh),(/ (1.,-1),(2.,-2.),(3.,-3.)/),errmsg,data_name='test_complex_data_on_paths',&
-!!$     overwrite=.true.)
-!!$call undo(fuh)
-!!$if (.level.errmsg == 2) return
-!!$call dealloc(evstat_vtk)
-!!$! FS FS END
        ! write number of wavefield points per invgrid box to invgridVtkFile
        idata => getNwpPerBoxIntegrationWeights(this%intw)
        call new(errmsg2,myname)

@@ -2,24 +2,25 @@
 THIS IS A VERY SHORT DOCUMENTATION ON HOW TO GET
 STARTED WITH
 
-    A S K I  - version 1.1
+    A S K I  - version 1.2
 
 ####################################################
 
 ASKI and some of its components, as well as documentation and some examples
-are available via http://www.rub.de/aski
-Please also refer to this address in case you want to get in touch with the
-authors, who are very eager on any feedback, especially about problems you may 
-encounter installing or using the software.
+are available on https://github.com/seismology-RUB/ASKI .
+Please find contact addresses on https://github.com/seismology-RUB, or visit 
+http://www.rub.de/aski in case you want to get in touch with the authors. If you 
+encounter any problems installing or using the software, it will be helpful to 
+open (or add to) an "issues" topic on https://github.com/seismology-RUB/ASKI .
 
-The authors are Florian Schumacher (Ruhr-University Bochum, Germany)
+The main authors are Florian Schumacher (Ruhr-University Bochum, Germany)
 and Wolfgang Friederich (Ruhr-University Bochum, Germany), 2016.
 
-ASKI version 1.1 is free software: you can redistribute it and/or modify
+ASKI version 1.2 is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 2 of the License, or
 any later version.
-ASKI version 1.1 is distributed in the hope that it will be useful,
+ASKI version 1.2 is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
@@ -28,10 +29,20 @@ you may also see <http://www.gnu.org/licenses/>.
 
 
 ##########
+DOCUMENTATION
+##########
+Please refer to documents in ASKI/doc/ :
+- the ASKI user manual (ASKI_manual.pdf)
+- Florian Schumacher's doctoral dissteration about waveform sensitivity kernels and the modularized 
+  iterative full waveform inversion concept on which ASKI is based (dissertation_florian_schumacher.pdf)
+- the accepted version of our GJI 2016 paper, re-typeset in a standard layout (ASKI_paper_gji_2016.pdf)
+
+
+##########
 REQUIREMENTS
 ##########
 GNU Make
-Fortran compiler (sufficient standard) (so far tested: GNU Fortran (Ubuntu 5.2.1-22ubuntu2) 5.2.1 20151010)
+Fortran compiler (sufficient standard) (so far tested: GNU Fortran (Ubuntu 5.4.0-6ubuntu1~16.04.2) 5.4.0 20160609) ,
 BLAS and LAPACK  libraries for all applications ,
 BLACKS, SCALAPACK and MPI libraries optionally for few parallel applications (e.g. available via <http://www.netlib.org/>)
 
@@ -39,23 +50,26 @@ BLACKS, SCALAPACK and MPI libraries optionally for few parallel applications (e.
 ##########
 INSTALLATION
 ##########
-0) Extract the directory ASKI_1.1 containing all files and subdirectories to some path,
-   if not done yet
+0) You should already have been successful in downloading the source code of the ASKI main package by either
+   + cloning the master branch of the ASKI repository on gitHub.com:
+     git clone --depth 1 --branch master https://github.com/seismology-RUB/ASKI
+   + or downloading a zipped version of the source code from there;
+     wget https://github.com/seismology-RUB/ASKI/archive/master.zip
+   The directory to where you have cloned, extracted the master branch, will in the following be referred to as ASKI/
 
 1) Adjust the software to your system and personal requirements by:
-   + setting the variables COMPILER, MPICOMPILER in file ASKI_1.1/Makefile appropriately
-   + setting the variables BLAS, LAPACK, (BLACS, SCALAPACK, MPILIB) in file ASKI_1.1/Makefile in order to correctly bind the libraries
-   + adjusting the variable FFLAGS in file ASKI_1.1/Makefile , if required
+   + setting the variables COMPILER, MPICOMPILER in file ASKI/Makefile appropriately
+   + setting the variables BLAS, LAPACK, (BLACS, SCALAPACK, MPILIB) in file ASKI/Makefile in order to correctly bind the libraries
+   + adjusting the variable FFLAGS in file ASKI/Makefile , if required
 
-2) Run command "make all" in ASKI_1.1/ to compile all serial programs (nearly all functionality)
+2) Run command "make all" in ASKI/ to compile all serial programs (nearly all functionality)
 
-3) Run command "make parallel" in ASKI_1.1/ to compile all parallel programs (two optional linear system solvers which run in parallel)
+3) Run command "make parallel" in ASKI/ to compile all parallel programs (two optional linear system solvers which run in parallel)
 
-Now ASKI_1.1/bin should contain all binaries and no error should have occurred (at best...).
+Now ASKI/bin should contain all binaries and no error should have occurred (at best...).
 
 
 ##########
 USAGE
 ##########
-Refer to the manual ASKI_manual.pdf for any details on using ASKI, available via
-http://www.rub.de/ASKI
+Refer to the user manual ASKI/doc/ASKI_manual.pdf for any details on using ASKI

@@ -1,45 +1,29 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.1 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.1 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! TODO
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! need ONE routine whicH is called from outside which
-!!  - sets up the complete linear system, requireing as input:
-!!    * data model space
-!!    * spacial regularization parameters (if any)
-!!    * type of right hand side (which misfit?, only data minus synt?, additional terms on r.h.s.?)
-!!    * 
+!> \brief set up and handle kernel matrix system by serial processing (not parallel)
 !!
-!! internally, there should be several routines doing specific tasks, like
-!!    * setting up kernel matrix
-!!    * adding spacial regularization equations (?)
-!!    * reading in data
-!!    * reading in synthetics
-!!    * 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!
-!> \brief set up and handle kernel matrix system
-!!
-!! \details Given a data_sample_info object and general prequesits
-!!  of the inversion and iteration step, the kernel matrix is set up
-!!  and solved using module linearSystem. The result is interpreted
-!!  and an overall weighted sensitivity may be computed. 
+!! \details Given an object of type data_model_space_info, the kernel matrix as well as
+!!  the right-hand-side of the linear system can be set up, possibly adding regularization
+!!  equations or regularizing columns to the kernel matrix.
+!!  The set-up linear system can be solved serially by module serialLinearSystem. The 
+!!  computed solution can be related to the original entries in the data_model_space_info
+!!  object. An overall weighted sensitivity may be computed. 
 !!
 !! \author Florian Schumacher
 !! \date July 2015

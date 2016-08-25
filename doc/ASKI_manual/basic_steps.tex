@@ -14,18 +14,14 @@
 %   Free Documentation License''. 
 %-----------------------------------------------------------------------------
 %
+%% ATTENTION NOTE FOR USERS ACCIDENTLY GETTING STARTED WITH ASKI (in a hurry) WITHOUT
+%% FOLLOWING THE INTENDED PROCEDURE HOW TO READ THIS MANUAL
+\inotice{This chapter is \emph{not} intended to be read through item by item (as a manual)! If you are new to \ASKI{} and
+  accidently looked up this chapter in the hope to find what you're looking for, you are strongly advised to
+  quickly read section ``How to get started'' at the beginning of this document, explaining how to use this manual.}
+
 In general, in this chapter we provide only basic information. For more detail on 
 specific steps or objects, we always refer to the respective sections below in this document.
-%
-%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-\section{Installing \ASKI} \label{basic_steps,sec:install_ASKI}
-%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-%
-\begin{itemize}
-\item Download main package \lcode{ASKI_1.1.tar.gz} from \url{http://www.rub.de/aski}
-\item Unpack tar ball (containing the directory \lcode{ASKI_1.1/}) somewhere
-\item Follow the directions in file \lcode{ASKI_1.1/README}
-\end{itemize}
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Create Main Parameter File} \label{basic_steps,sec:main_parfile}
@@ -140,9 +136,9 @@ where $i$ is the imaginary unit.
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 For measured data given in some basic data formats like Seismic Unix and time-series given as textfiles per trace,
-the executable \lcode{createMeasuredData} \myaref{programs_scripts,sec:bin_prog,sec:create_measured_data} 
+the executable \lcode{transformMeasuredData} \myaref{programs_scripts,sec:bin_prog,sec:transform_measured_data} 
 converts the time-domain data to the special frequency-domain
-form required by \ASKI{}. Executing \lcode{createMeasuredData} (without arguments), will print a short help message how to use it.
+form required by \ASKI{}. Executing \lcode{transformMeasuredData} (without arguments), will print a short help message how to use it.
 
 Otherwise you might well prepare measured data files on your own as required by \ASKI{}, see sections~\myref{basic_steps,sec:data_general} 
 and~\myref{files,sec:measured_data}. 
@@ -194,19 +190,23 @@ parameters in the respective inversion grid parameter file.
 \subsection{\lcodetitle{chunksInversionGrid}} \label{basic_steps,sec:invgrid,sub:chunks}
 %----------------------------------------------------------
 %
-The chunks inversion grid consists of 1, 2, 3 or 6 chunks of a cubed sphere (such as the 
-schunk inversion grid). The chunk width is always 90 degrees, except for 1-chunk grids
+The chunks inversion grid consists of 1, 2, 3 or 6 chunks of a cubed sphere (for the order and positioning
+of the chunks, see fig.~\ref{basic_steps,sec:invgrid,sub:chunks,fig:grid-ichunk}). 
+The chunk width is always 90 degrees, except for 1-chunk grids
 where smaller chunks are allowed. The inversion grid base cells are equi-angularly distributed,
 resulting in cells which are more or less evenly distributed in size (by contrast to the 
 schunk inversion grid, where the lateral projections of the cells onto the tangential plane
 have an equi-distant distribution on the plane).\\ 
-2 chunk grids consist of two neighbouring 90-degree chunks, 3 chunk grids of three chunks 
+2-chunk grids consist of two neighbouring 90-degree chunks, 3-chunk grids of three chunks 
 which are ALL neighbours of each other (i.e. essentially half of the Earth).\\
 Inside the chunks, the inversion grid cells are constructed on the basis of regularly distributed
-base cells in the fashion of the schunk inversion grid, having a certain number of refinement
-blocks in depth inside which a fixed regular lateral resolution and depth resolution can be chosen.
-(THE FOLLOWING FEATURE IS NOT YET IMPLEMENTED: thereafter, by certain mechanisms, the base cells
-can be locally refined, e.g. due to ray coverage of the data)
+base cells in the fashion of the schunk inversion grid (or scart inversion grid), having a certain number of refinement
+blocks in depth inside which a fixed regular (equi-angular) lateral resolution and fixed depth resolution can be chosen.
+Thereafter, by certain mechanisms the base cells
+can be locally refined, i.e.\ subdivided into a specific distribution of subcells.
+\emph{At the moment, only an experimental random refinement
+is implemented for illustration} (see fig.~\ref{basic_steps,sec:invgrid,sub:chunks,fig:grid-ref}{}),
+in the future, cell refinements based e.g.\ on the ray coverage of the data could be implemented.
 
 \begin{figure}[ht]
   \centering
@@ -215,9 +215,38 @@ can be locally refined, e.g. due to ray coverage of the data)
   \label{basic_steps,sec:invgrid,sub:chunks,fig:grid}
 \end{figure}
 
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.65\textwidth]{images/chunksInversionGrid_refined_manual.png}
+  \caption[]{Example of a chunks inversion grid (with 3 chunks in global projection) with
+  randomly refined base cells:\\\hspace{\textwidth}
+  %% \verb+CHUNKS_INVGRID_CREF_METHOD = EXPERIMENTAL_RANDOM_SUBDIVISION+\\\hspace{\textwidth}
+  %% \verb+CHUNKS_INVGRID_CREF_PARAMETERS = 0 10+\\\hspace{\textwidth}
+  %% \verb+CHUNKS_INVGRID_BASE_NREF_BLOCKS = 2+\\\hspace{\textwidth}
+  %% \verb+CHUNKS_INVGRID_BASE_NLAY = 4 3+\\\hspace{\textwidth}
+  %% \verb+CHUNKS_INVGRID_BASE_THICKNESS = 180. 250.+\\\hspace{\textwidth}
+  %% \verb+CHUNKS_INVGRID_BASE_NLAT = 18 12+\\\hspace{\textwidth}
+  %% \verb+CHUNKS_INVGRID_BASE_NLON = 18 12+}
+  \protect\lcode{CHUNKS_INVGRID_CREF_METHOD = EXPERIMENTAL_RANDOM_SUBDIVISION}\\\hspace{\textwidth}
+  \protect\lcode{CHUNKS_INVGRID_CREF_PARAMETERS = 0 10}\\\hspace{\textwidth}
+  \protect\lcode{CHUNKS_INVGRID_BASE_NREF_BLOCKS = 2}\\\hspace{\textwidth}
+  \protect\lcode{CHUNKS_INVGRID_BASE_NLAY = 4 3}\\\hspace{\textwidth}
+  \protect\lcode{CHUNKS_INVGRID_BASE_THICKNESS = 180. 250.}\\\hspace{\textwidth}
+  \protect\lcode{CHUNKS_INVGRID_BASE_NLAT = 18 12}\\\hspace{\textwidth}
+  \protect\lcode{CHUNKS_INVGRID_BASE_NLON = 18 12}}
+  \label{basic_steps,sec:invgrid,sub:chunks,fig:grid-ref}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.65\textwidth]{images/chunksInversionGrid_6-chunks_ichunk_LOCAL_FLAT_numbers.png}
+  \caption{distribution of chunks of the chunksInversionGrid in \lcode{LOCAL_FLAT} projection}
+  \label{basic_steps,sec:invgrid,sub:chunks,fig:grid-ichunk}
+\end{figure}
+
 The inversion grid is defined via a paramter file, a template of which is file 
 \lcode{template/chunksInversionGrid_parfile_template} (the template file defines the inversion grid
-shown in the above figure).
+shown in fig.~\ref{basic_steps,sec:invgrid,sub:chunks,fig:grid}{}).
 The meaning of the keywords in the parameter file defining an inversion grid of type \lcode{chunksInversionGrid}
 are as follows:
 
@@ -256,6 +285,36 @@ Thickness of layers in each block in km (real array).\\
 Number of cells in latitude/longitude direction for each layer block.\\
 (compare \lcode{scartInversionGrid}~\myref{basic_steps,sec:invgrid,sub:scart}: definition and usage of \lcode{NREF_BLOCKS}, 
 \lcode{NLAY}, \lcode{THICKNESS}, \lcode{NX}, \lcode{NY})
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{\lcode{CHUNKS_INVGRID_CREF_METHOD}, \lcode{CHUNKS_INVGRID_CREF_PARAMETERS}}
+Definition of individual base cell refinement. If only base cells should be used, and no base cell refinement
+should be done at all, set \lcode{CHUNKS_INVGRID_CREF_METHOD = NONE} (in this case, \lcode{CHUNKS_INVGRID_CREF_PARAMETERS} has
+no meaning).
+
+At the moment, only the following experimental method is supported (for illustration and testing):\\
+\lcode{CHUNKS_INVGRID_CREF_METHOD = EXPERIMENTAL_RANDOM_SUBDIVISION} , requiring 
+two integer values given by \lcode{CHUNKS_INVGRID_CREF_PARAMETERS}  (if real values are given, 
+they are rounded down by \lcode{int()}):\\
+\emph{first value}: 
+input value seed for function \lcode{srand(seed)} (you can reproduce random results, using the same seed value)\\
+\emph{second value}: upper bound of subcells by which any base cell can be subdivided (number of subcells cannot exceed
+this number). \emph{Note}: if subcells are subdivided themselves, these sub-subcells add to this number,
+but their parent cell (original subcell) will \emph{not} be seen as an external inversion grid cell. This
+means, that the actual number of subcells of a base cell that are used as cells of the inversion grid can be 
+smaller than \emph{second value}.\\
+By the simple (and old-school) pseudo-random generator \lcode{rand}, a cell will be divided by 2, 3 or 4 in 
+every dimension (also subcells will themselves be subdivided until upper limit is reached).
+
+\emph{Ideas for future development}:\\ 
+Give here the absolute paths of the station and event list files, as well 
+as a data model space info file containing the paths. According to the 
+thereby defined ray coverage, the base cells could be locally refined in 
+a recursive manner (each cell could e.g.\ be halfened in each dimension of 
+space recursively if a certain criterion is met). 
+The refinement criteria could be dependent on a maximum global depth and
+a threashold value could handle the number of rays which a cell
+must be intersected with before it is refined, etc.
+
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{\lcode{CHUNKS_INVGRID_FILE}}
 Filename of binary inversion grid file (relative to \lcode{MAIN_PATH_INVERSION}/\lcode{ITERATION_STEP_PATH/})
@@ -488,11 +547,17 @@ Example:\\
 %----------------------------------------------------------
 %
 {\bf EXPERIMENTAL FEATURE:} \emph{so far, this type of inversion grid works for tetrahedral cells only,
-since support for hexahedreal cells is not completed throughout. However, even for tetrahedra the automatic detection 
-of neighbours did not work properly in some test cases! So if you intend to use this inversion grid, please have a look 
-at the grid and all neighbours (neighbours only required for model smoothing in case of solving the Kernel system of equations).
-You can do that by using executable} \lcode{invgrid2vtk} \emph{along with option} \lcode{-nb} \emph{. Execute} 
-\lcode{invgrid2vtk} \emph{(without arguments)} \myaref{programs_scripts,sec:bin_prog,sec:invgrid_vtk} \emph{for further details on how to use it.}
+since support for hexahedreal cells is not completed throughout (neighbour detection not yet implemented,
+no localization of wavefield points / computation of integration weights implemented, no computation of cell volume). 
+However, even for tetrahedra the automatic detection 
+of neighbours did not work properly in some test cases (compare \ASKI{} developers manual, ``To do'' section)! 
+The neighbours are only required for model smoothing in case of regularizing the Kernel system of equations by smoothing
+conditions (and possibly for importing inverted models in the forward code, depends on the forward method in use).
+If you need neighbours, please check them by executable} \lcode{invgrid2vtk} \emph{along with option} \lcode{-all_nb} \emph{. Execute} 
+\lcode{invgrid2vtk} \emph{(without arguments)} \myaref{programs_scripts,sec:bin_prog,sec:invgrid_vtk} \emph{for further details on how to use it.
+Otherwise, kernel computation and pre-integration of kernels onto the inversion grid, as well as plotting 
+etc., should work properly! Alternatively you may implement an alternative smoothing method that does not require neighbours
+(compare the suggestions in the \ASKI{} developers manual, ``To do'' section).}
 
 An \lcode{E}xternal \lcode{CART}esian inversion grid is defined by several text files containing the definintion 
 of nodes (i.e.\  essentially the corner points, or rather the control nodes of the inversion grid cells) and the 
@@ -679,9 +744,15 @@ if you want to use \lcode{Gemini II} as a forward solver for \ASKI{}.
 \subsection*{\lcode{SPECFEM3D_Cartesian}}
 The Cartesian spectral element code \lcode{SPECFEM3D_Cartesian} (by \cite{TrKoLi08}), 
 version \lcode{3.0} is fully supported by this \ASKI{} release version, cf.~\cite{Specfem3D_Cartesian_for_ASKI}.
+A copy of the code (extended for use with \ASKI{}), as well as the code package \lcode{SPECFEM3D_Cartesian_for_ASKI}
+and documentation is available via \url{https://github.com/seismology-RUB/SPECFEM3D_Cartesian_for_ASKI}
+(follow the directions in file \lcode{README.md} and the provided manual).
 \subsection*{\lcode{SPECFEM3D_GLOBE}}
 The global spectral element code \lcode{SPECFEM3D_GLOBE} (by \cite{TrKoLi08}), 
 version \lcode{7.0.0}, is fully supported by this \ASKI{} release version, cf.~\cite{Specfem3D_Globe_for_ASKI}.
+A copy of the code (extended for use with \ASKI{}), as well as the code package \lcode{SPECFEM3D_GLOBE_for_ASKI}
+and documentation is available via \url{https://github.com/seismology-RUB/SPECFEM3D_GLOBE_for_ASKI}
+(follow the directions in file \lcode{README.md} and the provided manual).
 \subsection*{\lcode{NEXD}}
 The nodal discontinous Galerkin code \lcode{NEXD} (by \cite{Lambrecht.2015}) is fully supported by this 
 \ASKI{} release version. \lcode{NEXD}, including \ASKI{} support, will be available 
@@ -731,7 +802,8 @@ how you can choose specific subsets to be used.
 %----------------------------------------------------------
 \subsection{How Data Samples are Characterized}
 %----------------------------------------------------------
-As the sensitivities are calculated in frequency domain, the data live in frequency domain, too.\\
+Since \ASKI{} derives a model update in an iteration of FWI by frequency-domain sensitivity equations, 
+the data needs to be provided frequency domain, too.\\
 A data sample is uniquely characterized by a seismic \emph{source}, a \emph{component} 
 of a seismic \emph{station}, and a \emph{frequency}, as well as whether it is the \emph{real} or \emph{imaginary} part 
 of the complex spectral values. Refer to \myref{basic_steps,sec:data_general} for details on data in \ASKI{}.
@@ -772,6 +844,9 @@ defined in the parameter file of the current iteration step. Those files mainly 
 the wavefield points and the integration weights, where the respective filenames are extended (by something 
 with ``.vtk''). It is \emph{highly recommended} to call \lcode{initBasics -recr} in order to assure that all
 those \lcode{.vtk} files are produced and to actually have a look at them before continuing any \ASKI{} operation!
+
+If you use a spherical setting, you might find it useful for your plots to generate \lcode{.vtk} files containing 
+shore lines in the specific \lcode{VTK_PROJECTION} of the inversion grid in use \myaref{basic_steps,sec:shoreLines}.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Compute Spectral Waveform Sensitivity Kernels} \label{basic_steps,sec:compute_kernels}
@@ -905,6 +980,42 @@ This can be used for traditional linear computation of checkerboard data by forw
 of the sensitivity matrix with an artificial model vector containing checker anomalies.
 A model containing checker or spike-like anomalies can be produced by the preliminary hard-coded executable
 \lcode{addSpikeCheckerToKim} \myaref{programs_scripts,sec:bin_prog,sec:addSpikeCheckerToKim}.
+%
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\section{Generate Shore Line Vtk Files} \label{basic_steps,sec:shoreLines}
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+%
+\ASKI{} provides two implementational realizations for creating shore line \lcode{.vtk} files from GSHHS data 
+provided in native binary format. The current version of this widely used geographical dataset is available
+via \url{https://www.ngdc.noaa.gov/mgg/shorelines/data/gshhg/latest/}. You should download the 
+dataset in form of native binary files (probably package named like \lcode{gshhg-bin-?.?.?.zip}).
+
+The files \lcode{gshhs_c.b}, \lcode{gshhs_l.b}, \lcode{gshhs_i.b}, \lcode{gshhs_h.b}, \lcode{gshhs_f.b} 
+(different resolutions), can be
+used as an input for the following executables.
+
+%----------------------------------------------------------
+\subsection{excutable purely written in Fortran}
+%----------------------------------------------------------
+The executable \lcode{createShoreLines} \myaref{programs_scripts,sec:bin_prog,sec:shore_lines} 
+is purely written in Fortran and is by default compiled when you compile the \ASKI{} binaries.
+
+%----------------------------------------------------------
+\subsection{python program based on Fortran-to-python interface generator \lcodetitle{f2py}} \label{basic_steps,sec:shoreLines,ssec:py}
+%----------------------------------------------------------
+The python program \lcode{create_shore_lines.py} \myaref{programs_scripts,sec:py,sec:shore_lines}
+is based on the Fortran-to-python interface generator \lcode{f2py} and requires an additional module to be
+compiled manually before you are able to use it.
+
+Make sure your system has installed the \lcode{f2py} interface generator.
+
+Go to the \ASKI{} installation directory \lcode{ASKI_1.1/}. In \lcode{Makefile}, adjust the \lcode{f2py_COMPILER}
+and \lcode{BLAS_F2PY}, if necessary. Excecute\\
+\lcode{make shore_lines_module_for_python}
+
+The additional module \lcode{create_shore_lines_f2py.so} should have been created in directory \lcode{ASKI_1.1/py}
+which is neede by python program \lcode{create_shore_lines.py}.
+
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Path-Specific Approach to an Iteration of Waveform Inversion} \label{basic_steps,sec:path_specific}

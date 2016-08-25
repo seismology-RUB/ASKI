@@ -1,3 +1,28 @@
+!----------------------------------------------------------------------------
+!   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
+!
+!   This file is part of ASKI version 1.2.
+!
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
+!   it under the terms of the GNU General Public License as published by
+!   the Free Software Foundation, either version 2 of the License, or
+!   (at your option) any later version.
+!
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
+!   but WITHOUT ANY WARRANTY; without even the implied warranty of
+!   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!   GNU General Public License for more details.
+!
+!   You should have received a copy of the GNU General Public License
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
+!----------------------------------------------------------------------------
+
+!##################################################
+! THIS IS A HARD-CODED EXECUTABLE, REQUIRING THIS
+! SOURCE FILE TO BE ADAPTED (and re-compiled) 
+! BEFORE USING IT!
+!##################################################
+
 program addSpikeCheckerToKim
   use kernelInvertedModel
   use errorMessage
@@ -38,6 +63,7 @@ program addSpikeCheckerToKim
   first_anomaly_is_positive = .false.
 
   invgrid_parfile = '../schunk_invgrid_parfile'
+  !invgrid_parfile = '../chunks_invgrid_parfile'
 
   filename_kim = 'krm_on_invgrid.kim'
   filebase_kim_checker = 'krm_checker_'
@@ -106,6 +132,7 @@ program addSpikeCheckerToKim
 
   call new(errmsg,'addSpikeCheckerToKim')
   call createInversionGrid(invgrid,'schunkInversionGrid',invgrid_parfile,'',11,errmsg,recreate=.false.)
+  !call createInversionGrid(invgrid,'chunksInversionGrid',invgrid_parfile,'../',11,errmsg,recreate=.false.)
   if(.level.errmsg /= 0) call print(errmsg)
   if(.level.errmsg == 2) goto 1
   call dealloc(errmsg)
@@ -160,7 +187,7 @@ program addSpikeCheckerToKim
            if(cellInChecker()) then
               model_values_abs(icell) = model_values_abs(icell) * (1.0 + sign_checker_anomaly*percent_anomaly*0.01)
               model_values_rel(icell) = sign_checker_anomaly*percent_anomaly
-           end if           
+           end if
         end do ! ilat
      end do ! ilon
   end do ! idepth

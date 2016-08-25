@@ -1,7 +1,9 @@
 computeKernelCoverage.o: iterationStepBasics.o vectorPointer.o errorMessage.o inversionBasics.o argumentParser.o invgridVtkFile.o dataModelSpaceInfo.o kernelLinearSystem.o fileUnitHandler.o string.o modelParametrization.o
 streamAccess.o: flexibleType.o kindDefinitions.o
 seismicStation.o: mathConstants.o errorMessage.o flexibleType.o dateTime.o
+chunksInvgrid2vtk.o: string.o errorMessage.o inversionGrid.o argumentParser.o invgridVtkFile.o chunksInversionGrid.o
 wavefieldPoints.o: geminiWavefieldPoints.o realloc.o nexdWavefieldPoints.o errorMessage.o inversionGrid.o specfem3dWavefieldPoints.o fileUnitHandler.o
+transformMeasuredData.o: errorMessage.o dataSu.o seismicNetwork.o string.o fileUnitHandler.o seismicStation.o asciiDataIO.o seismicEventList.o inversionBasics.o argumentParser.o discreteFourierTransform.o dataModelSpaceInfo.o inputParameter.o complexKernelFrequency.o seismicEvent.o
 specfem3dInversionGrid.o: mathConstants.o specfem3dForASKIFiles.o errorMessage.o vectorPointer.o inputParameter.o
 computeKernels.o: errorMessage.o seismicNetwork.o iterationStepBasics.o fileUnitHandler.o spectralWaveformKernel.o seismicStation.o seismicEventList.o inversionBasics.o argumentParser.o kernelDisplacement.o componentTransformation.o dataModelSpaceInfo.o kernelGreenTensor.o kernelReferenceModel.o seismicEvent.o string.o modelParametrization.o
 asciiDataIO.o: realloc.o errorMessage.o
@@ -23,6 +25,7 @@ computeCorrectionSyntheticData.o: parameterCorrelation.o iterationStepBasics.o s
 nexdKernelGreenTensor.o: componentTransformation.o errorMessage.o fileUnitHandler.o
 nexdWavefieldPoints.o: errorMessage.o
 nexdKernelDisplacement.o: errorMessage.o fileUnitHandler.o
+create_shore_lines_f2pyVar.o: inversionGrid.o errorMessage.o
 specfem3dKernelGreenTensor.o: specfem3dForASKIFiles.o errorMessage.o fileUnitHandler.o componentTransformation.o
 spectralWaveformKernel.o: kernelReferenceModel.o errorMessage.o kernelDisplacement.o flexibleType.o kernelGreenTensor.o componentTransformation.o mathConstants.o streamAccess.o integrationWeights.o realloc.o modelParametrization.o
 kdispl2vtk.o: errorMessage.o iterationStepBasics.o seismicEventList.o inversionBasics.o argumentParser.o kernelDisplacement.o wpVtkFile.o fileUnitHandler.o string.o
@@ -36,7 +39,6 @@ invgrid2vtk.o: inversionGrid.o errorMessage.o invgridVtkFile.o argumentParser.o 
 timeWaveformKernel.o: spectralWaveformKernel.o realloc.o errorMessage.o kernelDisplacement.o discreteFourierTransform.o flexibleType.o kernelGreenTensor.o streamAccess.o modelParametrization.o
 nexdKernelReferenceModel.o: errorMessage.o modelParametrization.o
 serialLinearSystem.o: errorMessage.o
-createMeasuredData.o: errorMessage.o dataSu.o seismicNetwork.o string.o fileUnitHandler.o seismicStation.o asciiDataIO.o seismicEventList.o inversionBasics.o argumentParser.o discreteFourierTransform.o dataModelSpaceInfo.o inputParameter.o complexKernelFrequency.o seismicEvent.o
 readEventStationFile.o: seismicNetwork.o seismicStation.o errorMessage.o dateTime.o seismicEvent.o seismicEventList.o
 initBasics.o: string.o errorMessage.o inversionBasics.o argumentParser.o fileUnitHandler.o iterationStepBasics.o
 ecartInversionGrid.o: vectorPointer.o errorMessage.o realloc.o inputParameter.o
@@ -71,7 +73,9 @@ spec2timeKernels.o: errorMessage.o seismicNetwork.o iterationStepBasics.o fileUn
 linearModelRegularization.o: vectorPointer.o errorMessage.o inversionGrid.o dataModelSpaceInfo.o kernelLinearSystem.o modelParametrization.o
 createStartmodelKim.o: string.o errorMessage.o argumentParser.o inversionGrid.o kernelInvertedModel.o modelParametrization.o
 schunkInversionGrid.o: mathConstants.o vectorPointer.o errorMessage.o scartInversionGrid.o inputParameter.o
+createShoreLines.o: errorMessage.o vectorPointer.o inputParameter.o argumentParser.o inversionGrid.o realloc.o fileUnitHandler.o
 createSpectralFilters.o: errorMessage.o fileUnitHandler.o string.o asciiDataIO.o seismicEventList.o inversionBasics.o argumentParser.o discreteFourierTransform.o inputParameter.o mathConstants.o complexKernelFrequency.o seismicEvent.o
+create_shore_lines_f2py.o: create_shore_lines_f2pyVar.o
 exportKim.o: string.o vectorPointer.o errorMessage.o argumentParser.o inversionGrid.o kernelInvertedModel.o inputParameter.o fileUnitHandler.o modelParametrization.o
 kernelGreenTensor.o: nexdKernelGreenTensor.o componentTransformation.o errorMessage.o geminiKernelGreenTensor.o complexKernelFrequency.o fileUnitHandler.o specfem3dKernelGreenTensor.o
 string.o: errorMessage.o

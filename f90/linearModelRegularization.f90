@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.1.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.1 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.1 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.1.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !> \brief define and handle linear equations, which as smoothing or damping or similar conditions 
 !!  are added to a kernel_linear_system object
@@ -407,10 +407,11 @@ contains
           ! It is assumed, that artificial neighbours beyond bounadries are indicated by neighbour index -1 and that
           ! in no other situation neighbour indices are negative.
           ! For zero smoothing boundary conditions, simply all neighbour indices == -1 returned by the inversion grid 
-          ! module (passing boundary flag invgrid_boundary_conditions are accounted for as artificial neighbours and their 
+          ! module (passing boundary flag invgrid_boundary_conditions) are accounted for as artificial neighbours and their 
           ! number is added to the number of actual valid neighbours to define the smoothing weights. 
           ! Continuity boundary conditions are automatically accounted for on outer boundaries (and in the future possibly
-          ! on innder boundaries), since in this case simply some neighbours are left out and are missing here. 
+          ! on innder boundaries), since in this case simply some neighbours are left out and are missing here 
+          ! so that n_artif should be 0 in this case (having no effect when defining the coefficients below).
           n_artif = count(nb_idx_p == -1)
 !
           ! only use inversion grid cell neighbours which are also in model space for current parameter name
@@ -439,13 +440,6 @@ contains
           ! set equation coefficients
           allocate(eq_coef(n+1))
           eq_coef(1:n) = (1./real(n+n_artif))*scaling_value ! coefficient of neighbour cells, account for zero smoothing boundary conditions by '+n_artif'
-          ! if(pcell(imval) <= 3366) then !! FS FS  hardcoded experimental feature for cont-surface boundary condition for inversion grid with 51*66 lateral cells, samir inversion grid
-          !    ! invgrid cell is at surface, so apply continuity-boundary-conditions
-          !    eq_coef(1:n) = (1./real(n))*scaling_value
-          ! else
-          !    ! invgrid cell is not at surface, so assume homogeneously 6 neighbours, which means zero-boundary-contidionts for other invgrid boundaries
-          !    eq_coef(1:n) = (1./6.)*scaling_value
-          ! end if
           eq_coef(n+1) = -1.*scaling_value ! smoothing coefficient of center cell
           call associateVectorPointer(coef_smooth(ieq,iparam),eq_coef); nullify(eq_coef)
 !
