@@ -1,9 +1,73 @@
 # ASKI main package version 1.2
 
-Authors: Florian Schumacher and Wolfgang Friederich, Ruhr-University Bochum, Germany, 2016.
+ASKI and some of its components, as well as documentation and some examples
+are available under terms of the [GNU General Public License](LICENSE) (version 2 or higher)
+on [github](https://github.com/seismology-RUB/ASKI).
+Please find contact addresses [there](https://github.com/seismology-RUB), or visit 
+http://www.rub.de/aski in case you want to get in touch with the authors. If you 
+encounter any problems installing or using the software, it will be helpful to 
+open (or add to) an "issues" topic at the [github repository](https://github.com/seismology-RUB/ASKI).
 
-The files in this repository represent the status of the code when moving the development repository permanently
-to git and providing the latest stable version as master branch on 
-[gitHub](https://github.com/seismology-RUB/ASKI/).
+The main authors are Florian Schumacher (Ruhr-University Bochum, Germany)
+and Wolfgang Friederich (Ruhr-University Bochum, Germany), 2016.
 
-This status is denoted as `version 1.2`. 
+
+## Documentation
+
+Please refer to documents in [doc/](doc/) :
+
+* the [ASKI user manual](doc/ASKI_manual.pdf)
+* [Florian Schumacher's doctoral dissteration](doc/dissertation_florian_schumacher.pdf) 
+  about waveform sensitivity kernels and the modularized iterative full waveform inversion 
+  concept on which ASKI is based
+* the accepted version of our [GJI 2016 paper](doc/ASKI_paper_gji_2016.pdf), re-typeset in 
+  a standard layout
+
+
+## Requirements
+
+* GNU Make
+* Fortran compiler (sufficient standard, so far tested: GNU Fortran 
+  (Ubuntu 5.4.0-6ubuntu1~16.04.2) 5.4.0 20160609)
+* BLAS and LAPACK  libraries for all applications
+* BLACKS, SCALAPACK and MPI libraries optionally for few parallel applications 
+  (e.g. available via [netlib.org/](http://www.netlib.org/))
+
+
+## Installation
+
+0. If not yet done, you should downloade the source code of the ASKI main package by either
+   * cloning the master branch of the ASKI repository on gitHub.com:
+     ```
+     git clone --depth 1 --branch master https://github.com/seismology-RUB/ASKI
+     ```
+   * or downloading a zipped version of the source code from [there](https://github.com/seismology-RUB/ASKI/archive/master.zip):
+     ```
+     wget https://github.com/seismology-RUB/ASKI/archive/master.zip
+     ```
+     
+     The directory to where you have cloned/extracted the master branch, will in the following be referred to as `ASKI/`
+1. Adjust the software to your system and personal requirements by:
+   * setting the variables `COMPILER`, `MPICOMPILER` in file [ASKI/Makefile](Makefile) appropriately
+   * setting the variables `BLAS`, `LAPACK`, (`BLACS`, `SCALAPACK`, `MPILIB`) in file [ASKI/Makefile](Makefile) in 
+     order to correctly bind required libraries
+   * adjusting the variable `FFLAGS` in file [ASKI/Makefile](Makefile), if required
+
+2. Run command
+   ```
+   make all
+   ```
+   from installation path `ASKI/` to compile all serial programs (nearly all functionality)
+
+3. Run command
+   ```
+   make parallel
+   ```
+   from installation path `ASKI/` to compile all parallel programs (two optional linear system solvers which run in parallel)
+
+Now [ASKI/bin](bin/) should contain all binaries and no error should have occurred (at best...).
+
+
+## Usage
+
+Refer to the [user manual](doc/ASKI_manual.pdf) for any details on using ASKI.
