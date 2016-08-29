@@ -8,8 +8,7 @@ http://www.rub.de/aski in case you want to get in touch with the authors. If you
 encounter any problems installing or using the software, it will be helpful to 
 open (or add to) an "issues" topic at the [github repository](https://github.com/seismology-RUB/ASKI).
 
-The main authors are Florian Schumacher (Ruhr-University Bochum, Germany)
-and Wolfgang Friederich (Ruhr-University Bochum, Germany), 2016.
+The main authors are Florian Schumacher and Wolfgang Friederich (Ruhr-University Bochum, Germany).
 
 
 ## Documentation
