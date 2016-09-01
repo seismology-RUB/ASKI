@@ -1,0 +1,14 @@
+# documentation
+doc/ASKI_manual/manual.aux
+doc/ASKI_manual/manual.bbl
+doc/ASKI_manual/manual.blg
+doc/ASKI_manual/manual.log
+doc/ASKI_manual/manual.out
+doc/ASKI_manual/manual.pdf
+doc/ASKI_manual/manual.toc
+
+# Compiled Python files
+*.pyc
+
+# Trash files
+*~
