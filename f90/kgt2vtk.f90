@@ -21,6 +21,7 @@ program kgt2vtk
   use iterationStepBasics
   use kernelGreenTensor
   use seismicNetwork
+  use seismicEventList
   use wpVtkFile
   use argumentParser
   use componentTransformation, only: all_valid_components
@@ -38,10 +39,10 @@ program kgt2vtk
 
   character(len=max_length_string) :: main_parfile
 
-  character(len=max_length_string) :: staname
+  character(len=max_length_string) :: staname,evid
   integer, dimension(:), pointer :: ifreq,ifreq_iterbasics
   character(len=max_length_string), dimension(:), pointer :: scomp,ucomp
-  logical :: use_all_ucomp,use_selected_ucomp,use_all_ifreq,use_selected_ifreq
+  logical :: use_all_ucomp,use_selected_ucomp,use_all_ifreq,use_selected_ifreq,path_specific
   integer :: nscomp,nucomp,iscomp,iucomp,nfreq,jfreq
   real :: df
 
@@ -77,6 +78,8 @@ program kgt2vtk
        "Exactly one of options -ucomp , -all_ucomp must be set'",'svec','')
   call addOption(ap,'-all_ucomp',.false.,"if set, all wavefield components are (3 underived and 6 strain components). "//&
        "Exactly one of options -ucomp , -all_ucomp must be set")
+  call addOption(ap,'-evid',.true.,"ONLY REQUIRED FOR PATH-SPECIFIC MODE, defines the event id of the path.",&
+       'sval','')
 !
   call parse(ap)
   if (.level.(.errmsg.ap) == 2) then
@@ -157,6 +160,15 @@ program kgt2vtk
 !
   ifreq_iterbasics => .ifreq.iterbasics
   df = .df.invbasics
+  path_specific = lval(.inpar.iterbasics,'USE_PATH_SPECIFIC_MODELS')
+  if(path_specific) then
+     if(.not.(ap.optset.'-evid')) then
+        write(*,*) "ERROR: path-specific mode enabled in iteration-step parameter file; in this case, option -evid must be set!"
+        call usage(ap)
+        goto 1
+     end if
+     evid = ap.sval.'-evid'
+  end if
 !------------------------------------------------------------------------
 !  detailed processing of command line arguments
 !
@@ -214,14 +226,29 @@ program kgt2vtk
   end if
   call dealloc(errmsg)
 !
+  if(path_specific) then
+     errmsg = searchEventidSeismicEventList(.evlist.invbasics,evid)
+     if(.level. errmsg/=0) then
+        write(*,*) "ERROR: event ID '"//trim(evid)//"' (input string of option -evid) is not contained in event list"
+        goto 1
+     end if
+     call dealloc(errmsg)
+  end if
+!
   call document(ap)
   write(*,*) ""
 !------------------------------------------------------------------------
 !  prepare for the loop below
 !
-  kgt_file = trim(.iterpath.invbasics)//trim((.inpar.iterbasics).sval.'PATH_KERNEL_GREEN_TENSORS')//&
-       'kernel_gt_'//trim(staname)
-  write(*,*) "OPEN KERNEL GREEN TENSOR FILE '",trim(kgt_file),"' TO READ"
+  if(path_specific) then
+     kgt_file = trim(.iterpath.invbasics)//trim((.inpar.iterbasics).sval.'PATH_KERNEL_GREEN_TENSORS')//&
+          'kernel_gt_'//trim(evid)//'_'//trim(staname)
+     write(*,*) "OPEN KERNEL GREEN TENSOR FILE '",trim(kgt_file),"' TO READ (detected path-specific mode)"
+  else
+     kgt_file = trim(.iterpath.invbasics)//trim((.inpar.iterbasics).sval.'PATH_KERNEL_GREEN_TENSORS')//&
+          'kernel_gt_'//trim(staname)
+     write(*,*) "OPEN KERNEL GREEN TENSOR FILE '",trim(kgt_file),"' TO READ"
+  end if
   call new(errmsg,myname)
   call initiateKernelGreenTensor(kgt,(.inpar.invbasics).sval.'FORWARD_METHOD',fuh,kgt_file,&
        scomp,.comptrans.invbasics,staname,errmsg)

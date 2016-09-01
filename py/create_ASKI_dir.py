@@ -196,16 +196,16 @@ def create_iter_dir(iter_path,indx):
 #  the synthetic wavefields/data and sensitivity kernels
 #
 #  NAMING CONVENTION OF FILES IN THESE DIRECTORIES, AS EXPECTED BY PROGRAMS:
-#  FILE_KERNEL_DISPLACEMENT: will by convention be: kernel_displ_EVENTID
-#  FILE_KERNEL_GREEN_TENSOR: will by convention be: kernel_gt_STATIONNAME
-#    file_kernel_green_tensor and file_kernel_displacement will be basenames only.
-#    every method then deals with the naming by its own (could be multiple files or having some extension etc.)
+#  FILE_KERNEL_DISPLACEMENT: will by convention be: kernel_displ_EVENTID (if USE_PATH_SPECIFIC_MODELS = .false.)
+#                                                   kernel_displ_EVENTID_STATIONNAME (if USE_PATH_SPECIFIC_MODELS = .true.)
+#  FILE_KERNEL_GREEN_TENSOR: will by convention be: kernel_gt_STATIONNAME (if USE_PATH_SPECIFIC_MODELS = .false.)
+#                                                   kernel_gt_EVENTID_STATIONNAME (if USE_PATH_SPECIFIC_MODELS = .true.)
+#    FILE_KERNEL_GREEN_TENSOR and FILE_KERNEL_DISPLACEMENT will be basenames only.
+#    Every method then deals with the naming by its own (could be multiple files or having some extension etc.)
 #  FILE_SPECTRAL_KERNEL: will in case of pre-integrated kernels on inversion grid by convention be: spectral_kernel_PARAMETRIZATION_EVENTID_STATIONNAME
 #  FILE_SPECTRAL_KERNEL: will in case of plain kernel values on wavefield points by convention be: spectral_kernel_ON-WP_PARAMETRIZATION_EVENTID_STATIONNAME
 #  FILE_SYNTHETIC_DATA: must by convention be: synthetics_EVENTID_STATIONNAME_COMP
 #  FILE_KERNEL_REFERENCE_MODEL: Only used in case USE_PATH_SPECIFIC_MODELS = .true. ; must by convention be: krm_EVENTID_STATIONNAME
-
-#  FILE_SYNTHETIC_DATA: will by convention be: synthetics_EVENTID_STATIONNAME
 #
   PATH_KERNEL_DISPLACEMENTS = {5}
   PATH_KERNEL_GREEN_TENSORS = {6}

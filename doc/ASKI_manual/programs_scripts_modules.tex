@@ -830,6 +830,11 @@ If set, for all underived wavefield components \lcode{ux}, \lcode{uy}, \lcode{uz
 strains \lcode{exx}, \lcode{eyy}, \lcode{ezz}, \lcode{eyz}, \lcode{exz}, \lcode{exy} wavefield output is extracted and 
 vtk files are generated. 
 Exactly one of options \lcode{-ucomp}, \lcode{-all_ucomp} must be set.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-staname}}
+\emph{Only required if} \lcode{USE_PATH_SPECIFIC_MODELS = .true.} \emph{in} \lcode{iter_parfile} \emph{!}
+Defines the station name of the path (required to read in the kernel displacement file, which is assumed
+to have file basename of form \lcode{kernel_displ_EVENTID_STATIONNAME}).
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
@@ -912,6 +917,11 @@ If set, for all underived wavefield components \lcode{ux}, \lcode{uy}, \lcode{uz
 strains \lcode{exx}, \lcode{eyy}, \lcode{ezz}, \lcode{eyz}, \lcode{exz}, \lcode{exy} wavefield output is extracted and 
 vtk files are generated. 
 Exactly one of options \lcode{-ucomp}, \lcode{-all_ucomp} must be set.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-evid}}
+\emph{Only required if} \lcode{USE_PATH_SPECIFIC_MODELS = .true.} \emph{in} \lcode{iter_parfile} \emph{!}
+Defines the event ID of the path (required to read in the kernel Green tensor file, which is assumed
+to have file basename of form \lcode{kernel_gt_EVENTID_STATIONNAME}).
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %

@@ -222,21 +222,39 @@ like models, coefficients etc., NO wavefields/kernels etc.!), relative to
 Subdirectory of current iteration step path
 \lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH} which contains the 
 kernel displacement files. Make sure the path ends on ``/".
+By convention, \ASKI{} executables expect kernel-displacement files in this directory to have a base name 
+of following format (dependent on the forward method possibly extended by some file extension):\\
+\lcode{kernel_displ_EVENTID} (if \lcode{USE_PATH_SPECIFIC_MODELS = .false.})\\
+\lcode{kernel_displ_EVENTID_STATIONNAME} (if \lcode{USE_PATH_SPECIFIC_MODELS = .true.})
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{\lcode{PATH_KERNEL_GREEN_TENSORS}} 
 Subdirectory of current iteration step path
 \lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH} which contains the 
 kernel green tensor files. Make sure the path ends on ``/".
+By convention, \ASKI{} executables expect Green tensor files in this directory to have a base name 
+of following format (dependent on the forward method possibly extended by some file extension):\\
+\lcode{kernel_gt_STATIONNAME} (if \lcode{USE_PATH_SPECIFIC_MODELS = .false.})\\
+\lcode{kernel_gt_EVENTID_STATIONNAME} (if \lcode{USE_PATH_SPECIFIC_MODELS = .true.})
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{\lcode{PATH_SENSITIVITY_KERNELS}} 
 Subdirectory of current iteration step path
 \lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH} which contains the 
 velocity kernel files. Make sure the path ends on ``/".
+By convention, \ASKI{} executables expect spectral waveform kernel files in this directory to 
+be named in the following way:\\
+\lcode{spectral_kernel_PARAMETRIZATION_EVENTID_STATIONNAME} (in case of pre-integrated kernels on inversion grid)\\
+\lcode{spectral_kernel_ON-WP_PARAMETRIZATION_EVENTID_STATIONNAME} (in case of plain kernel values on wavefield points)\\
+For time kernels a similar format is used, just with \lcode{time_kernel_} instead of \lcode{spectral_kernel_}.
+For generating vtk files, the above naming conventions are used as base names, extended by station component, 
+model parameter, frequency (if applicable) as well as file extension \lcode{.vtk}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{\lcode{PATH_SYNTHETIC_DATA}} 
 Subdirectory of current iteration step path
 \lcode{MAIN_PATH_INVERSION/ITERATION_STEP_PATH} which contains the 
 files with synthetic data. Make sure the path ends on ``/".
+By convention, \ASKI{} executables expect synthetic data files in this directory to 
+be named in the following way:\\
+\lcode{synthetics_EVENTID_STATIONNAME_COMP}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{\lcode{PATH_KERNEL_REFERENCE_MODELS}} 
 This path and any contained files are only relevant for \lcode{USE_PATH_SPECIFIC_MODELS = .true.}!

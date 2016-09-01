@@ -21,6 +21,7 @@ program kdispl2vtk
   use iterationStepBasics
   use kernelDisplacement
   use seismicEventList
+  use seismicNetwork
   use wpVtkFile
   use argumentParser
   use string
@@ -37,10 +38,10 @@ program kdispl2vtk
 
   character(len=max_length_string) :: main_parfile
 
-  character(len=max_length_string) :: evid
+  character(len=max_length_string) :: evid,staname
   integer, dimension(:), pointer :: ifreq,ifreq_iterbasics
   character(len=max_length_string), dimension(:), pointer :: ucomp
-  logical :: use_all_ucomp,use_selected_ucomp,use_all_ifreq,use_selected_ifreq
+  logical :: use_all_ucomp,use_selected_ucomp,use_all_ifreq,use_selected_ifreq,path_specific
   integer :: nucomp,iucomp,nfreq,jfreq
   real :: df
 
@@ -74,6 +75,8 @@ program kdispl2vtk
        "Exactly one of options -ucomp , -all_ucomp must be set'",'svec','')
   call addOption(ap,'-all_ucomp',.false.,"if set, all wavefield components are (3 underived and 6 strain components). "//&
        "Exactly one of options -ucomp , -all_ucomp must be set")
+  call addOption(ap,'-staname',.true.,"ONLY REQUIRED FOR PATH-SPECIFIC MODE, defines the station name of the path.",&
+       'sval','')
 !
   call parse(ap)
   if (.level.(.errmsg.ap) == 2) then
@@ -133,6 +136,15 @@ program kdispl2vtk
 !
   ifreq_iterbasics => .ifreq.iterbasics
   df = .df.invbasics
+  path_specific = lval(.inpar.iterbasics,'USE_PATH_SPECIFIC_MODELS')
+  if(path_specific) then
+     if(.not.(ap.optset.'-staname')) then
+        write(*,*) "ERROR: path-specific mode enabled in iteration-step parameter file; in this case, option -staname must be set!"
+        call usage(ap)
+        goto 1
+     end if
+     staname = ap.sval.'-staname'
+  end if
 !------------------------------------------------------------------------
 !  detailed processing of command line arguments
 !
@@ -190,14 +202,29 @@ program kdispl2vtk
   end if
   call dealloc(errmsg)
 !
+  if(path_specific) then
+     errmsg = searchStationNameSeismicNetwork(.statlist.invbasics,staname)
+     if(.level. errmsg/=0) then
+        write(*,*) "ERROR: station name '"//trim(staname)//"' (input string of option -staname) is not contained in station list"
+        goto 1
+     end if
+     call dealloc(errmsg)
+  end if
+!
   call document(ap)
   write(*,*) ""
 !------------------------------------------------------------------------
 !  prepare for the loop below
 !
-  kd_file = trim(.iterpath.invbasics)//trim((.inpar.iterbasics).sval.'PATH_KERNEL_DISPLACEMENTS')//&
-       'kernel_displ_'//trim(evid)
-  write(*,*) "OPEN KERNEL DISPLACEMENT FILE '",trim(kd_file),"' TO READ"
+  if(path_specific) then
+     kd_file = trim(.iterpath.invbasics)//trim((.inpar.iterbasics).sval.'PATH_KERNEL_DISPLACEMENTS')//&
+          'kernel_displ_'//trim(evid)//'_'//trim(staname)
+     write(*,*) "OPEN KERNEL DISPLACEMENT FILE '",trim(kd_file),"' TO READ (detected path-specific mode)"
+  else
+     kd_file = trim(.iterpath.invbasics)//trim((.inpar.iterbasics).sval.'PATH_KERNEL_DISPLACEMENTS')//&
+          'kernel_displ_'//trim(evid)
+     write(*,*) "OPEN KERNEL DISPLACEMENT FILE '",trim(kd_file),"' TO READ"
+  end if
   call new(errmsg,myname)
   call initiateKernelDisplacement(kd,(.inpar.invbasics).sval.'FORWARD_METHOD',fuh,kd_file,errmsg)
   if (.level.errmsg /= 0) call print(errmsg)
