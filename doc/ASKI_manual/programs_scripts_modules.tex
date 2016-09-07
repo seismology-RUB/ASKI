@@ -835,6 +835,25 @@ Exactly one of options \lcode{-ucomp}, \lcode{-all_ucomp} must be set.
 \emph{Only required if} \lcode{USE_PATH_SPECIFIC_MODELS = .true.} \emph{in} \lcode{iter_parfile} \emph{!}
 Defines the station name of the path (required to read in the kernel displacement file, which is assumed
 to have file basename of form \lcode{kernel_displ_EVENTID_STATIONNAME}).
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Optional options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-on_invgrd}}
+If set, the output spectra will not be written as wavefield point vtk files (as by default), but will be 
+interpolated onto the inversion grid and written as inversion grid vtk files (output vtk file names will 
+conntain an additional \lcode{ON-INVGRID} signature). This may be in particular
+useful for benchmarking/comparing the kernel displacement output among different forward methods.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-average}}
+Option \lcode{-average} is only allowed if \lcode{-on_invgrd} is set! In case of \lcode{-average},
+the program builds average values on the inversion grid cells (among all wavefield points contained in that cell),
+regardless of the current type of integration weights. If \lcode{-average} is not set, \lcode{-on_invgrd} 
+interpolates by integration onto the cells (using integration weights) and afterwards dividing by the sum of 
+weights (which is the approx.\ cell volume). Note, that this procedure also works with integration weight type
+0 (``average'', i.e.\ no actual integration), since in that case the sum of weights is always 1 (and dividing
+by it has no effect, yielding the average as desired). This would not work, if the program was to divide through
+by the actual cell volume instead, which is why division by the sum of weights is preferred here.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
@@ -922,6 +941,25 @@ Exactly one of options \lcode{-ucomp}, \lcode{-all_ucomp} must be set.
 \emph{Only required if} \lcode{USE_PATH_SPECIFIC_MODELS = .true.} \emph{in} \lcode{iter_parfile} \emph{!}
 Defines the event ID of the path (required to read in the kernel Green tensor file, which is assumed
 to have file basename of form \lcode{kernel_gt_EVENTID_STATIONNAME}).
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Optional options}
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-on_invgrd}}
+If set, the output spectra will not be written as wavefield point vtk files (as by default), but will be 
+interpolated onto the inversion grid and written as inversion grid vtk files (output vtk file names will 
+conntain an additional \lcode{ON-INVGRID} signature). This may be in particular
+useful for benchmarking/comparing the kernel green tensor output among different forward methods.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-average}}
+Option \lcode{-average} is only allowed if \lcode{-on_invgrd} is set! In case of \lcode{-average},
+the program builds average values on the inversion grid cells (among all wavefield points contained in that cell),
+regardless of the current type of integration weights. If \lcode{-average} is not set, \lcode{-on_invgrd} 
+interpolates by integration onto the cells (using integration weights) and afterwards dividing by the sum of 
+weights (which is the approx.\ cell volume). Note, that this procedure also works with integration weight type
+0 (``average'', i.e.\ no actual integration), since in that case the sum of weights is always 1 (and dividing
+by it has no effect, yielding the average as desired). This would not work, if the program was to divide through
+by the actual cell volume instead, which is why division by the sum of weights is preferred here.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %

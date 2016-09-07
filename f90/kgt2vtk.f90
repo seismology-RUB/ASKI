@@ -23,6 +23,7 @@ program kgt2vtk
   use seismicNetwork
   use seismicEventList
   use wpVtkFile
+  use invgridVtkFile
   use argumentParser
   use componentTransformation, only: all_valid_components
   use string
@@ -42,22 +43,26 @@ program kgt2vtk
   character(len=max_length_string) :: staname,evid
   integer, dimension(:), pointer :: ifreq,ifreq_iterbasics
   character(len=max_length_string), dimension(:), pointer :: scomp,ucomp
-  logical :: use_all_ucomp,use_selected_ucomp,use_all_ifreq,use_selected_ifreq,path_specific
+  logical :: use_all_ucomp,use_selected_ucomp,use_all_ifreq,use_selected_ifreq,path_specific,&
+       output_on_invgrid,force_average
   integer :: nscomp,nucomp,iscomp,iucomp,nfreq,jfreq
   real :: df
 
   type (kernel_green_tensor) :: kgt
   complex, dimension(:,:,:), pointer :: kgt_ustr,kgt_u
   character(len=max_length_string) :: kgt_file
-  integer :: nwp,un,en
+  integer :: nwp,ncell,icell,un,en
 
   type (wp_vtk_file), dimension(:,:), allocatable :: wp_vtk
+  type (invgrid_vtk_file), dimension(:,:), allocatable :: ig_vtk
   complex, dimension(:), allocatable :: data
   character(len=max_length_string) :: vtk_file_base,vtk_file_title,vtk_file_data_name
+  integer, dimension(:), pointer :: filled_cells,idx
+  real, dimension(:), pointer :: w
 
   character (len=7) :: myname = 'kgt2vtk'
 
-  nullify(ifreq,ifreq_iterbasics,scomp,ucomp,kgt_ustr,kgt_u)
+  nullify(ifreq,ifreq_iterbasics,scomp,ucomp,kgt_ustr,kgt_u,filled_cells,idx,w)
 
 !------------------------------------------------------------------------
 !  definition and basic processing of command line
@@ -80,6 +85,11 @@ program kgt2vtk
        "Exactly one of options -ucomp , -all_ucomp must be set")
   call addOption(ap,'-evid',.true.,"ONLY REQUIRED FOR PATH-SPECIFIC MODE, defines the event id of the path.",&
        'sval','')
+  call addOption(ap,'-on_invgrd',.false.,"if set, the output spectra will be interpolated onto the inversion grid (useful "//&
+       "for benchmarking with another forward method)")
+  call addOption(ap,'-average',.false.,"only in case of -on_invgrd: build the average on inversion grid cells. If -average is "//&
+       "not set, -on_invgrd interpolates by integration on cells (using integration weights) and dividing by the sum of weights "//&
+       "(approx. cell volume).")
 !
   call parse(ap)
   if (.level.(.errmsg.ap) == 2) then
@@ -138,6 +148,15 @@ program kgt2vtk
         goto 1
      end if
   end do ! iscomp
+!
+  output_on_invgrid = ap.optset.'-on_invgrd'
+  force_average = ap.optset.'-average'
+  if(force_average .and. (.not.output_on_invgrid)) then
+     write(*,*) "ERROR: -average can only be set when -on_invgrd was set"
+     call usage(ap)
+     goto 1
+  end if
+
 !------------------------------------------------------------------------
 !  setup basics
 !
@@ -169,6 +188,7 @@ program kgt2vtk
      end if
      evid = ap.sval.'-evid'
   end if
+
 !------------------------------------------------------------------------
 !  detailed processing of command line arguments
 !
@@ -237,8 +257,21 @@ program kgt2vtk
 !
   call document(ap)
   write(*,*) ""
+
 !------------------------------------------------------------------------
 !  prepare for the loop below
+!
+  if(output_on_invgrid) then
+     if(force_average) then
+        write(*,*) "WILL INTERPOLATE KERNEL GREEN TENSOR TO INVERSION GRID (forcing average over cells)"
+     else
+        write(*,*) "WILL INTERPOLATE KERNEL GREEN TENSOR TO INVERSION GRID (integration followed by division ",&
+             "by sum of ingteration weights)"
+     end if
+  else
+     write(*,*) "WILL WRITE KERNEL GREEN TENSOR ON WAVEFIELD POINTS"
+  end if
+  write(*,*) ""
 !
   if(path_specific) then
      kgt_file = trim(.iterpath.invbasics)//trim((.inpar.iterbasics).sval.'PATH_KERNEL_GREEN_TENSORS')//&
@@ -257,9 +290,45 @@ program kgt2vtk
   call dealloc(errmsg)
   write(*,*) ""
 !
-  allocate(wp_vtk(nucomp,nscomp))
   nwp = .ntot.(.wp.iterbasics)
-  allocate(data(nwp))
+  if(output_on_invgrid) then
+     filled_cells => getFilledCells(.intw.iterbasics)
+     if(.not.associated(filled_cells)) then
+        write(*,*) "ERROR: the inversion grid was not set-up properly or all cells do not contain any wavefield points"
+        goto 1
+     end if
+     ncell = size(filled_cells)
+     do icell = 1,ncell
+        ! check for consistency (then no need to do it below in loop)
+        idx => (.intw.iterbasics).wpidx.(filled_cells(icell))
+        if(.not.associated(idx)) then
+           write(*,*) "ERROR: even though inversion grid cell index ",filled_cells(icell)," is said to contain ",&
+                "wavefield points, the integration weights object does not return any wavefield point indices for ",&
+                "it -> integration weights object is inconsistent!"
+           goto 1
+        end if
+        if(any(idx<1 .or. idx>nwp)) then
+           write(*,*) "ERROR: there are ",count(idx<1 .or. idx>nwp)," invalid wavefield point indices returned for ",&
+                "invgrid cell index ",filled_cells(icell)," -> integration weights object is inconsistent!"
+           goto 1
+        end if
+        if(force_average) then
+           ! check for consistency (then no need to do it below in loop)
+           w => (.intw.iterbasics).weight.(filled_cells(icell))
+           if(.not.associated(w)) then
+              write(*,*) "ERROR: even though inversion grid cell index ",filled_cells(icell)," is said to ",&
+                   "contain wavefield points, the integration weights object does not return any weights for ",&
+                   "it -> integration weights object is inconsistent!"
+              goto 1
+           end if
+        end if
+     end do ! icell
+     allocate(ig_vtk(nucomp,nscomp))
+     allocate(data(ncell))
+  else ! output_on_invgrid
+     allocate(wp_vtk(nucomp,nscomp))
+     allocate(data(nwp))
+  end if ! output_on_invgrid
   
 !------------------------------------------------------------------------
 !  now loop on all frequencies and components, read kernel displ and write
@@ -321,21 +390,35 @@ program kgt2vtk
            case ('exy'); en = 6
            end select
 
-           ! in case that this is an underived wavefield component, get kernel displacement at correct component
-           if(un > 0) data = kgt_u(:,un,iscomp)
-           ! in case that this is a strain component, get strain at correct component
-           if(en > 0) data = kgt_ustr(:,en,iscomp)
+           if(output_on_invgrid) then
+              ! in case that this is an underived wavefield component, get kernel green tensor at correct components
+              if(un > 0) call interpolate_wp_onto_invgrid(kgt_u(:,un,iscomp))
+              ! in case that this is a strain component, get strain at correct components
+              if(en > 0) call interpolate_wp_onto_invgrid(kgt_ustr(:,en,iscomp))
+           else ! output_on_invgrid
+              ! in case that this is an underived wavefield component, get kernel green tensor at correct components
+              if(un > 0) data = kgt_u(:,un,iscomp)
+              ! in case that this is a strain component, get strain at correct components
+              if(en > 0) data = kgt_ustr(:,en,iscomp)
+           end if ! output_on_invgrid
 
            ! finally write vtk file
 
            if(jfreq==1) then
-              write(vtk_file_base,"(a,'_',a,'_',a)") trim(kgt_file),trim(scomp(iscomp)),trim(ucomp(iucomp))
               ! initiate vtk file
               write(vtk_file_title,*) trim(ucomp(iucomp)),"-component of spectral kernel green tensor, receiver component ",&
                    trim(scomp(iscomp))," at frequency ",ifreq(jfreq)*df,' Hz on wavefield points'
               call new(errmsg,myname)
-              call init(wp_vtk(iucomp,iscomp),.wp.iterbasics,.invgrid.iterbasics,trim(vtk_file_base),&
-                   trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,vtk_title=trim(vtk_file_title))
+              if(output_on_invgrid) then
+                 write(vtk_file_base,"(a,'_ON-INVGRID_',a,'_',a)") trim(kgt_file),trim(scomp(iscomp)),trim(ucomp(iucomp))
+                 call init(ig_vtk(iucomp,iscomp),.invgrid.iterbasics,trim(vtk_file_base),&
+                      trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,vtk_title=trim(vtk_file_title),&
+                      cell_indx_req=filled_cells)
+              else
+                 write(vtk_file_base,"(a,'_',a,'_',a)") trim(kgt_file),trim(scomp(iscomp)),trim(ucomp(iucomp))
+                 call init(wp_vtk(iucomp,iscomp),.wp.iterbasics,.invgrid.iterbasics,trim(vtk_file_base),&
+                      trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,vtk_title=trim(vtk_file_title))
+              end if
               if (.level.errmsg /= 0) call print(errmsg)
               if (.level.errmsg == 2) goto 1
               call dealloc(errmsg)
@@ -345,7 +428,11 @@ program kgt2vtk
            ! write kgt values to vtk file
            write(vtk_file_data_name,*) trim(ucomp(iucomp)),'-kgt(',trim(scomp(iscomp)),')'
            call new(errmsg,myname)
-           call writeData(wp_vtk(iucomp,iscomp),get(fuh),data,errmsg,data_name=trim(vtk_file_data_name),file_index=ifreq(jfreq))
+           if(output_on_invgrid) then
+              call writeData(ig_vtk(iucomp,iscomp),get(fuh),data,errmsg,data_name=trim(vtk_file_data_name),file_index=ifreq(jfreq))
+           else
+              call writeData(wp_vtk(iucomp,iscomp),get(fuh),data,errmsg,data_name=trim(vtk_file_data_name),file_index=ifreq(jfreq))
+           end if
            call undo(fuh)
            if (.level.errmsg /= 0) call print(errmsg)
            if (.level.errmsg == 2) goto 1
@@ -378,6 +465,31 @@ program kgt2vtk
        end do ! iscomp
        deallocate(wp_vtk)
     end if
+    if(allocated(ig_vtk)) then
+       do iscomp = 1,nscomp
+          do iucomp = 1,nucomp
+             call dealloc(ig_vtk(iucomp,iscomp))
+          end do ! iucomp
+       end do ! iscomp
+       deallocate(ig_vtk)
+    end if
     if(allocated(data)) deallocate(data)
+    if(associated(filled_cells)) deallocate(filled_cells)
+
+contains
+
+  subroutine interpolate_wp_onto_invgrid(data_on_wp)
+    complex, dimension(:) :: data_on_wp ! assume incoming array to have size nwp !
+
+    do icell = 1,ncell
+       idx => (.intw.iterbasics).wpidx.(filled_cells(icell))
+       if(force_average) then
+          data(icell) = cmplx( sum(dcmplx(data_on_wp(idx)))/dble(size(idx)) )
+       else
+          w => (.intw.iterbasics).weight.(filled_cells(icell))
+          data(icell) = cmplx( sum(dble(w)*dcmplx(data_on_wp(idx)))/sum(dble(w)) )
+       end if
+    end do ! icell
+  end subroutine interpolate_wp_onto_invgrid
 
 end program kgt2vtk

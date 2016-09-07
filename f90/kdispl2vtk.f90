@@ -23,6 +23,7 @@ program kdispl2vtk
   use seismicEventList
   use seismicNetwork
   use wpVtkFile
+  use invgridVtkFile
   use argumentParser
   use string
   use fileUnitHandler
@@ -41,22 +42,26 @@ program kdispl2vtk
   character(len=max_length_string) :: evid,staname
   integer, dimension(:), pointer :: ifreq,ifreq_iterbasics
   character(len=max_length_string), dimension(:), pointer :: ucomp
-  logical :: use_all_ucomp,use_selected_ucomp,use_all_ifreq,use_selected_ifreq,path_specific
+  logical :: use_all_ucomp,use_selected_ucomp,use_all_ifreq,use_selected_ifreq,path_specific,&
+       output_on_invgrid,force_average
   integer :: nucomp,iucomp,nfreq,jfreq
   real :: df
 
   type (kernel_displacement) :: kd
   complex, dimension(:,:), pointer :: kd_ustr,kd_u
   character(len=max_length_string) :: kd_file
-  integer :: nwp,un,en
+  integer :: nwp,ncell,icell,un,en
 
   type (wp_vtk_file), dimension(:), allocatable :: wp_vtk
+  type (invgrid_vtk_file), dimension(:), allocatable :: ig_vtk
   complex, dimension(:), allocatable :: data
   character(len=max_length_string) :: vtk_file_base,vtk_file_title,vtk_file_data_name
+  integer, dimension(:), pointer :: filled_cells,idx
+  real, dimension(:), pointer :: w
 
   character (len=10) :: myname = 'kdispl2vtk'
 
-  nullify(ifreq,ifreq_iterbasics,ucomp,kd_ustr,kd_u)
+  nullify(ifreq,ifreq_iterbasics,ucomp,kd_ustr,kd_u,filled_cells,idx,w)
 
 !------------------------------------------------------------------------
 !  definition and basic processing of command line
@@ -77,6 +82,11 @@ program kdispl2vtk
        "Exactly one of options -ucomp , -all_ucomp must be set")
   call addOption(ap,'-staname',.true.,"ONLY REQUIRED FOR PATH-SPECIFIC MODE, defines the station name of the path.",&
        'sval','')
+  call addOption(ap,'-on_invgrd',.false.,"if set, the output spectra will be interpolated onto the inversion grid (useful "//&
+       "for benchmarking with another forward method)")
+  call addOption(ap,'-average',.false.,"only in case of -on_invgrd: build the average on inversion grid cells. If -average is "//&
+       "not set, -on_invgrd interpolates by integration on cells (using integration weights) and dividing by the sum of weights "//&
+       "(approx. cell volume).")
 !
   call parse(ap)
   if (.level.(.errmsg.ap) == 2) then
@@ -114,6 +124,15 @@ program kdispl2vtk
      goto 1
   end if
   evid = ap.sval.'-evid'
+!
+  output_on_invgrid = ap.optset.'-on_invgrd'
+  force_average = ap.optset.'-average'
+  if(force_average .and. (.not.output_on_invgrid)) then
+     write(*,*) "ERROR: -average can only be set when -on_invgrd was set"
+     call usage(ap)
+     goto 1
+  end if
+
 !------------------------------------------------------------------------
 !  setup basics
 !
@@ -145,6 +164,7 @@ program kdispl2vtk
      end if
      staname = ap.sval.'-staname'
   end if
+
 !------------------------------------------------------------------------
 !  detailed processing of command line arguments
 !
@@ -213,8 +233,21 @@ program kdispl2vtk
 !
   call document(ap)
   write(*,*) ""
+
 !------------------------------------------------------------------------
 !  prepare for the loop below
+!
+  if(output_on_invgrid) then
+     if(force_average) then
+        write(*,*) "WILL INTERPOLATE KERNEL DISPLACEMENT TO INVERSION GRID (forcing average over cells)"
+     else
+        write(*,*) "WILL INTERPOLATE KERNEL DISPLACEMENT TO INVERSION GRID (integration followed by division ",&
+             "by sum of ingteration weights)"
+     end if
+  else
+     write(*,*) "WILL WRITE KERNEL DISPLACEMENT ON WAVEFIELD POINTS"
+  end if
+  write(*,*) ""
 !
   if(path_specific) then
      kd_file = trim(.iterpath.invbasics)//trim((.inpar.iterbasics).sval.'PATH_KERNEL_DISPLACEMENTS')//&
@@ -232,9 +265,45 @@ program kdispl2vtk
   call dealloc(errmsg)
   write(*,*) ""
 !
-  allocate(wp_vtk(nucomp))
   nwp = .ntot.(.wp.iterbasics)
-  allocate(data(nwp))
+  if(output_on_invgrid) then
+     filled_cells => getFilledCells(.intw.iterbasics)
+     if(.not.associated(filled_cells)) then
+        write(*,*) "ERROR: the inversion grid was not set-up properly or all cells do not contain any wavefield points"
+        goto 1
+     end if
+     ncell = size(filled_cells)
+     do icell = 1,ncell
+        ! check for consistency (then no need to do it below in loop)
+        idx => (.intw.iterbasics).wpidx.(filled_cells(icell))
+        if(.not.associated(idx)) then
+           write(*,*) "ERROR: even though inversion grid cell index ",filled_cells(icell)," is said to contain ",&
+                "wavefield points, the integration weights object does not return any wavefield point indices for ",&
+                "it -> integration weights object is inconsistent!"
+           goto 1
+        end if
+        if(any(idx<1 .or. idx>nwp)) then
+           write(*,*) "ERROR: there are ",count(idx<1 .or. idx>nwp)," invalid wavefield point indices returned for ",&
+                "invgrid cell index ",filled_cells(icell)," -> integration weights object is inconsistent!"
+           goto 1
+        end if
+        if(force_average) then
+           ! check for consistency (then no need to do it below in loop)
+           w => (.intw.iterbasics).weight.(filled_cells(icell))
+           if(.not.associated(w)) then
+              write(*,*) "ERROR: even though inversion grid cell index ",filled_cells(icell)," is said to ",&
+                   "contain wavefield points, the integration weights object does not return any weights for ",&
+                   "it -> integration weights object is inconsistent!"
+              goto 1
+           end if
+        end if
+     end do ! icell
+     allocate(ig_vtk(nucomp))
+     allocate(data(ncell))
+  else ! output_on_invgrid
+     allocate(wp_vtk(nucomp))
+     allocate(data(nwp))
+  end if ! output_on_invgrid
   
 !------------------------------------------------------------------------
 !  now loop on all frequencies and components, read kernel displ and write
@@ -291,21 +360,35 @@ program kdispl2vtk
         case ('exy'); en = 6
         end select
 
-        ! in case that this is an underived wavefield component, get kernel displacement at correct component
-        if(un > 0) data = kd_u(:,un)
-        ! in case that this is a strain component, get strain at correct component
-        if(en > 0) data = kd_ustr(:,en)
+        if(output_on_invgrid) then
+           ! in case that this is an underived wavefield component, get kernel displacement at correct component
+           if(un > 0) call interpolate_wp_onto_invgrid(kd_u(:,un))
+           ! in case that this is a strain component, get strain at correct component
+           if(en > 0) call interpolate_wp_onto_invgrid(kd_ustr(:,en))
+        else ! output_on_invgrid
+           ! in case that this is an underived wavefield component, get kernel displacement at correct component
+           if(un > 0) data = kd_u(:,un)
+           ! in case that this is a strain component, get strain at correct component
+           if(en > 0) data = kd_ustr(:,en)
+        end if ! output_on_invgrid
 
         ! finally write vtk file
 
         if(jfreq==1) then
-           write(vtk_file_base,"(a,'_',a)") trim(kd_file),trim(ucomp(iucomp))
            ! initiate vtk file
            write(vtk_file_title,*) trim(ucomp(iucomp)),"-component of spectral kernel displacement at frequency ",&
                 ifreq(jfreq)*df,' Hz on wavefield points'
            call new(errmsg,myname)
-           call init(wp_vtk(iucomp),.wp.iterbasics,.invgrid.iterbasics,trim(vtk_file_base),&
-                trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,vtk_title=trim(vtk_file_title))
+           if(output_on_invgrid) then
+              write(vtk_file_base,"(a,'_ON-INVGRID_',a)") trim(kd_file),trim(ucomp(iucomp))
+              call init(ig_vtk(iucomp),.invgrid.iterbasics,trim(vtk_file_base),&
+                   trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,vtk_title=trim(vtk_file_title),&
+                   cell_indx_req=filled_cells)
+           else
+              write(vtk_file_base,"(a,'_',a)") trim(kd_file),trim(ucomp(iucomp))
+              call init(wp_vtk(iucomp),.wp.iterbasics,.invgrid.iterbasics,trim(vtk_file_base),&
+                   trim((.inpar.invbasics).sval.'DEFAULT_VTK_FILE_FORMAT'),errmsg,vtk_title=trim(vtk_file_title))
+           end if
            if (.level.errmsg /= 0) call print(errmsg)
            if (.level.errmsg == 2) goto 1
            call dealloc(errmsg)
@@ -315,7 +398,11 @@ program kdispl2vtk
         ! write kdispl values to vtk file
         write(vtk_file_data_name,*) trim(ucomp(iucomp)),'-kdispl'
         call new(errmsg,myname)
-        call writeData(wp_vtk(iucomp),get(fuh),data,errmsg,data_name=trim(vtk_file_data_name),file_index=ifreq(jfreq))
+        if(output_on_invgrid) then
+           call writeData(ig_vtk(iucomp),get(fuh),data,errmsg,data_name=trim(vtk_file_data_name),file_index=ifreq(jfreq))
+        else
+           call writeData(wp_vtk(iucomp),get(fuh),data,errmsg,data_name=trim(vtk_file_data_name),file_index=ifreq(jfreq))
+        end if
         call undo(fuh)
         if (.level.errmsg /= 0) call print(errmsg)
         if (.level.errmsg == 2) goto 1
@@ -345,6 +432,29 @@ program kdispl2vtk
        end do ! iucomp
        deallocate(wp_vtk)
     end if
+    if(allocated(ig_vtk)) then
+       do iucomp = 1,nucomp
+          call dealloc(ig_vtk(iucomp))
+       end do ! iucomp
+       deallocate(ig_vtk)
+    end if
     if(allocated(data)) deallocate(data)
+    if(associated(filled_cells)) deallocate(filled_cells)
+
+contains
+
+  subroutine interpolate_wp_onto_invgrid(data_on_wp)
+    complex, dimension(:) :: data_on_wp ! assume incoming array to have size nwp !
+
+    do icell = 1,ncell
+       idx => (.intw.iterbasics).wpidx.(filled_cells(icell))
+       if(force_average) then
+          data(icell) = cmplx( sum(dcmplx(data_on_wp(idx)))/dble(size(idx)) )
+       else
+          w => (.intw.iterbasics).weight.(filled_cells(icell))
+          data(icell) = cmplx( sum(dble(w)*dcmplx(data_on_wp(idx)))/sum(dble(w)) )
+       end if
+    end do ! icell
+  end subroutine interpolate_wp_onto_invgrid
 
 end program kdispl2vtk

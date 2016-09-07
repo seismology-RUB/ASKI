@@ -28,7 +28,7 @@ nexdKernelDisplacement.o: errorMessage.o fileUnitHandler.o
 create_shore_lines_f2pyVar.o: inversionGrid.o errorMessage.o
 specfem3dKernelGreenTensor.o: specfem3dForASKIFiles.o errorMessage.o fileUnitHandler.o componentTransformation.o
 spectralWaveformKernel.o: kernelReferenceModel.o errorMessage.o kernelDisplacement.o flexibleType.o kernelGreenTensor.o componentTransformation.o mathConstants.o streamAccess.o integrationWeights.o realloc.o modelParametrization.o
-kdispl2vtk.o: errorMessage.o iterationStepBasics.o seismicEventList.o seismicNetwork.o inversionBasics.o argumentParser.o kernelDisplacement.o wpVtkFile.o fileUnitHandler.o string.o
+kdispl2vtk.o: errorMessage.o iterationStepBasics.o seismicEventList.o seismicNetwork.o inversionBasics.o argumentParser.o kernelDisplacement.o wpVtkFile.o invgridVtkFile.o fileUnitHandler.o string.o
 combineInvertedModels.o: string.o errorMessage.o inversionBasics.o argumentParser.o kernelInvertedModel.o fileUnitHandler.o iterationStepBasics.o
 addSpikeCheckerToKim.o: inversionGrid.o errorMessage.o kernelInvertedModel.o
 argumentParser.o: realloc.o string.o
@@ -67,7 +67,7 @@ seismicEvent.o: mathConstants.o errorMessage.o flexibleType.o dateTime.o
 errorMessage.o: realloc.o
 geminiKernelDisplacement.o: vectorPointer.o streamAccess.o errorMessage.o fileUnitHandler.o
 seismicEventList.o: errorMessage.o seismicEvent.o
-kgt2vtk.o: fileUnitHandler.o iterationStepBasics.o componentTransformation.o errorMessage.o inversionBasics.o argumentParser.o wpVtkFile.o kernelGreenTensor.o seismicNetwork.o seismicEventList.o string.o
+kgt2vtk.o: fileUnitHandler.o iterationStepBasics.o componentTransformation.o errorMessage.o inversionBasics.o argumentParser.o wpVtkFile.o invgridVtkFile.o kernelGreenTensor.o seismicNetwork.o seismicEventList.o string.o
 geminiEarthModel.o: errorMessage.o flexibleType.o locatePoint.o streamAccess.o fileUnitHandler.o modelParametrization.o
 spec2timeKernels.o: errorMessage.o seismicNetwork.o iterationStepBasics.o fileUnitHandler.o timeWaveformKernel.o spectralWaveformKernel.o seismicStation.o asciiDataIO.o seismicEventList.o inversionBasics.o argumentParser.o dataModelSpaceInfo.o componentTransformation.o seismicEvent.o string.o
 linearModelRegularization.o: vectorPointer.o errorMessage.o inversionGrid.o dataModelSpaceInfo.o kernelLinearSystem.o modelParametrization.o
