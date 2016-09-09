@@ -1,5 +1,19 @@
 # ASKI main package
 
+ASKI is a highly modularized program suite offering sensitivity and regularization analysis tools 
+for seismic datasets as well as a scattering-integral-type full waveform inversion concept based 
+on waveform sensitivity (Fréchet) kernels derived from Born scattering theory (Gauss-Newton 
+convergence). ASKI does not implement an intrinsic code for simulation of seismic wave propagation 
+but instead comes with support for several external forward codes for 1D and 3D background media 
+in spherical and Cartesian framework, at the moment 
+[SPECFEM3D_Cartesian](https://github.com/seismology-RUB/SPECFEM3D_Cartesian_for_ASKI), 
+[SPECFEM3D_GLOBE](https://github.com/seismology-RUB/SPECFEM3D_GLOBE_for_ASKI), 
+[Gemini II](https://www.geophysik.rub.de/trac/gemini) and 
+[NEXD](http://www.rub.de/nexd). 
+
+
+## Authors and License
+
 ASKI and some of its components, as well as documentation and some examples
 are available under terms of the [GNU General Public License](LICENSE) (version 2 or higher)
 on [github](https://github.com/seismology-RUB/ASKI).

@@ -6,6 +6,14 @@ doc/ASKI_manual/manual.log
 doc/ASKI_manual/manual.out
 doc/ASKI_manual/manual.pdf
 doc/ASKI_manual/manual.toc
+devel/doc/ASKI_developers_manual/ASKI_developers_manual.aux
+devel/doc/ASKI_developers_manual/ASKI_developers_manual.bbl
+devel/doc/ASKI_developers_manual/ASKI_developers_manual.blg
+devel/doc/ASKI_developers_manual/ASKI_developers_manual.log
+devel/doc/ASKI_developers_manual/ASKI_developers_manual.out
+devel/doc/ASKI_developers_manual/ASKI_developers_manual.pdf
+devel/doc/ASKI_developers_manual/ASKI_developers_manual.toc
+devel/doc/doxygen_output
 
 # Compiled Python files
 *.pyc
