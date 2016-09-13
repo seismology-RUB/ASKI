@@ -445,7 +445,7 @@ in directions of global Cartesian coordinates (even for spherical media). Otherw
 do not work. For time-domain forward methods, the forward code must be extended by an
 on-the-fly Fourier transform in order to provide this quantity (transformation of the wavefields to 
 frequency domain \emph{after} the complete simulation i.e.\ not on-the-fly is of course also possible, but in 
-case of SPECFEM was considered unsuitable due to huge memory requirements).
+case of SPECFEM was considered unsuitable due to huge memory requirements, also refer to \myref{ssec-extend:Goertzel}).
 
 In the same way, \ASKI{} requires strains on the wavefield points, i.e.\ quantities
 \[
@@ -455,8 +455,8 @@ for all global Cartesian directions $k$ and $\ell$, where $u$ denotes particle d
 
 In \ASKI{}, these spectral displacment and strain values are referred to as \emph{kernel displacement}.
 
-\subsubsection{spectral synthetic data in format required by \ASKI{}}
-Essentially the same values as for kernel displacement valuesspectral, but evaluated at the receiver positions 
+\subsubsection{spectral synthetic data in format required by \ASKI{}} \label{subsub:synthetic_data}
+Essentially the same values as for kernel displacement, but evaluated at the receiver positions 
 in directions of the used station components (by which the measured data is provided, see user manual chapter
 ``Basic steps'', section on data in \ASKI{}). Also these values must be provided in the file format of synthetic
 data (see user manual, chapter ``Files'', section on synthetic data files).
@@ -472,7 +472,9 @@ there is such a Green's function for each station component) using an impulsive 
 impulse). For time-domain forward methods that need to use an approximation to the Dirac-delta impulse (e.g.\ a
 very thin Gaussian source-time-function), it is highly recommended to deconvolve it from the resulting wavefield:
 In case of SPECFEM this was found out to be necessary, because the inversion process fitted phase-shifted 
-seismograms when just using a thin Gaussian.
+seismograms when just using a thin Gaussian. Moreover (just as for kernel displacements), in time-domain
+forward methods an on-the-fly Fourier transform must be applied to produce spectral output 
+\myaref{ssec-extend:Goertzel}
 
 In the same way, \ASKI{} requires the strains of Green's functions on the wavefield points, i.e.\ quantities
 \[
@@ -596,7 +598,7 @@ Shepard's agorithm.
 Using integration weights of type 6 (``external integration weights'') is only supported along with a suitable 
 type of inversion grid, at the moment only \lcode{specfem3dInversionGrid}. This type of integration weights
 is potentially useful for element-based (weak-form) forward methods: Their own quadrature rules for integration onto 
-their elements may be re-used by ASKI for kernel pre-integration. Also this may be beneficial for special kinds of 
+their elements may be re-used by \ASKI{} for kernel pre-integration. Also this may be beneficial for special kinds of 
 forward grids in combination with specific inversion grids, where you have certain pre-knowledge of how to 
 integrate over the cells with high precision. 
 
@@ -609,6 +611,135 @@ only \lcode{specfem3dInversionGrid}). So you might need to add another inversion
 with your forward code (see sec.~\ref{ssec-invgrid:external}{}) or modify an existing inversion grid submodule 
 accordingly. In particular, routine \lcode{validTypeInversionGrid} must accept the use of type 6 integration 
 weights along with your inversion grid type.
+
+%-------------------------------------
+\subsection{Time-domain forward methods: Choosing a method of on-the-fly Fourier transform} \label{ssec-extend:Goertzel}
+%-------------------------------------
+For time-domain forward methods, the spectral wavefields need to be produced by Fourier transform from the 
+time-domain wavefield \emph{at every wavefield point}. Doing this by the fast Fourier algorithm (FFT) has several
+issues/drawbacks:
+\begin{itemize}
+\item since the time-series will be heavily oversampled (due to Courant stability criteria), the frequency-domain 
+  spectra will be oversampled, too (you compute more than you actually need, usually you require output at very 
+  few frequencies only)
+\item the frequency discretization of the output spectra is pre-defined by the time sampling of the time series
+  and cannot be chosen independently (as requested by the \ASKI{} user and defined in the \ASKI{} main/iter parameter 
+  files)
+\item for realistic applications, you usually cannot hold the complete wavefield (at all wavefield points) in 
+  memory until you can apply the FFT at the very end of the simulation (for FFT you need to have the complete 
+  time series available)
+\end{itemize}
+In order to evaluate the Fourier transform of the waveifields at the particular set of requested frequencies 
+$f_k = \omega_k/2\pi$, $k = 1,N_F$, the sums
+\begin{align}
+S(\omega_k) = S_k = \Delta t \sum_{j=1}^{N_T} s(t_j) \, e^{-i\omega_k t_j} = \Delta t \Big[ \sum_{j=1}^{N_T} s(t_j)\cos(-\omega_k t_j)\;+\; i\, \sum_{j=1}^{N_T} s(t_j)\sin(-\omega_k t_j) \Big] \quad, \label{eq:inversion_implement_DFT}
+\end{align}
+have to be computed for each $k$, where the $s(t_j)$ represent samples of displacement (or strain) components at 
+one location of a wavefield point (or the receiver position in case of producing spectral synthetic data as
+described in \myref{subsub:synthetic_data}). Note that eq.~\eqref{eq:inversion_implement_DFT} is a time-discretized
+simple approximation of the Fourier transform of the continuous signal $s(t)$:
+\begin{align}
+  S(\omega) = \mathcal{F}[s(t)](\omega) = \int_{-\infty}^{\infty} s(t) \, e^{-i\omega t}\, \mathrm{d}t \;.
+\end{align}
+In discretized setting, time $t_j$ is represeted as $(j-1)\Delta t$ (time starts at $t_1=0$) and angular frequency 
+$\omega_k$ as $2\pi f_k = 2\pi \ell_k \Delta f$, where $\ell_k$ is the $k$\textsuperscript{th} \ASKI{} 
+frequency index (normally denoted as \lcode{jf} or so, here $j$ is already used so please excuse this different
+notation $\ell$ here).
+
+A straight-forward way of evaluating the left-hand-side representation of \eqref{eq:inversion_implement_DFT} 
+on the fly (i.e.\ \emph{without} 
+having all samples $s(t_j)$ simultaneously available but only the latest sample at a time) would be to add summand
+$s(t_j) \, e^{-i\omega_k t_j}$ to a complex-valued variable $S_k$ (initialized by $0$) in iteration $j$ of the
+forward simulation. This requires (in each iteration of the time loop, for each wavefield/strain component, 
+for each wavefield point and for each frequency) $2$ real-valued multiplications (multiplying the complex number 
+$e^{-i\omega_k t_j}$ by the real number $s(t_j)$ and two real-valued additions (adding the complex number 
+$s(t_j) \, e^{-i\omega_k t_j}$ to the current complex value in $S_k$). Note that the right-hand-side form of
+\eqref{eq:inversion_implement_DFT} has the very same requirements.
+Multiplying the resulting $S_k$ by $\Delta t$
+at the very end (or incorporating $\Delta t$ in pre-computed constants $e^{-i\omega_k t_j}\,\Delta t$, 
+$\cos(-\omega_k t_j)\,\Delta t$ or $\sin(-\omega_k t_j)\,\Delta t$ that are computed
+once before the time loop) is neglected in this argumentation of performance.
+
+A computationally more efficient way of computing sum~\eqref{eq:inversion_implement_DFT} on the fly
+is to apply an algorithm first described by Gerald Goertzel in 1958 \cite{Goertzel58} which for given $x$ computes
+sums of the form
+\[
+\sum_{j=0}^{N} a_j\cos(j\,x)\quad\text{and}\quad \sum_{j=1}^{N} a_j\sin(j\,x)
+\]
+and can be adapted here to compute $S_k$ by the righ-hand side of~\eqref{eq:inversion_implement_DFT} choosing 
+$x = -\omega_k\,\Delta t$ and $a_j = s(t_j)$:
+\begin{align}
+  W_r &= 2\cos(x) \label{alg:goertzel_1}\\
+  W_i &= \sin(x) \label{alg:goertzel_2}\\
+  U_1 &= 0 \\
+  U_2 &= 0 \\[1.5ex]
+  &\text{for $j=N_T,\dots 2$ do:}\label{alg_goertzel_5}\\
+  U_0 &= s(t_j) + W_r \, U_1 - U_2\label{alg_goertzel_6}\\
+  U_2 &= U_1\\
+  U_1 &= U_0 \label{alg_goertzel_8}\\[1.5ex]
+  &\text{after iterating (backwards in time) down to $t_2$, the  spectral value $S_k$ computes as:}\notag\\
+  \mathfrak{Re}(S_k) &= \Delta t\,\left(s(t_1) + 0.5\,W_r \, U_1 - U_2\right)\label{alg_goertzel_10}\\
+  \mathfrak{Im}(S_k) &= \Delta t\,W_i \, U_1
+\end{align}
+In each iteration of the time loop (i.e.\ lines~\eqref{alg_goertzel_6} to \eqref{alg_goertzel_8}), 
+for each wavefield/strain component, 
+for each wavefield point and for each frequency here only $1$ real-valued multiplication is required
+(in line~\eqref{alg_goertzel_6}) and also two real-valued additions (in the same line). Compared with the 
+explicit summation described above, we save one multiplication here. This sounds not so much, but
+since a real-valued multiplication is usually much more expensive than a real-valued summation, this algorithm
+may be close to twice as fast as the explicit summation above. 
+
+The problem of the algorithm in this form, however, is that it requires \emph{reverse} knowledge of the imput
+time series $s(t_j)$, first requiring the value at last time and iterating backwards in time. This, of course,
+does not allow to do an on-the-fly Fourier transform in simulations of seismic waves (propagating \emph{forward}
+in time).
+
+Looking at the proof of the algorithm as given in \cite{Goertzel58}, I (Florian Schumacher, Sep 2016) tried to 
+find an analogous recursion relation that allows to step through the time series in \emph{forward} direction
+from $s(t_1)$ up to last sample $s(t_{N_T})$) but was not successful. However, there is a trivial way to adapt the
+above algorithm for our purposes, making use of properties of the Fourier transform: Inserting the time
+series $s(t_j)$ into the algorithm in \emph{forward} order (starting with $s(t_1)$, $s(t_2)$ \dots) means 
+mathematically to compute the Fourier transform of $s(-t)$. This can be compensated by negating the frequency,
+i.e.\ choosing $-\omega_k$ instead of $\omega_k$ everywhere, due to the time-reversal property of the Fourier transform:
+\[
+\mathcal{F}[s(-t)] = S(-\omega)
+\]
+However, this only fixes the time-reversal of the time series. Since Goertzel's algorithm assumes the last sample 
+of the time to come first, technically the time series is assumed to start at time $-T = -(N_T-1)\Delta t$ and
+to end at time $0$. Therefore, additionally to negating the frequency, we need to compensate for a time shift
+(resulting in a constant phase shift of the output spectrum) applying the time-shift property of the Fourier transform:
+\[
+\mathcal{F}[s(t-T)] = S(\omega)e^{i\omega\,(-T)}
+\]
+
+Taking all considerations into account, we need to adapt the above original algorithm by Goertzel for our 
+purposes in the following way:
+\begin{itemize}
+\item Choose $x = +\omega_k\,\Delta t$
+\item Step forward through the time series, i.e.\ modify line~\eqref{alg_goertzel_5} as
+  \hypersetup{draft=true}
+  \begin{equation}
+    \text{for $j=1,\dots (N_T-1)$ do:} \tag{\ref*{alg_goertzel_5}-b} %\label{alg_goertzel_5b}
+  \end{equation}
+  \hypersetup{draft=false}
+\item Correct the computation of the real part of the spectral value by modifying line~\eqref{alg_goertzel_10} as
+  \hypersetup{draft=true}
+  \begin{equation}
+    \mathfrak{Re}(S_k) = \Delta t\,\left(s(t_{N_T}) + 0.5\,W_r \, U_1 - U_2\right) \tag{\ref*{alg_goertzel_10}-b} %\label{alg_goertzel_10b}
+  \end{equation}
+  \hypersetup{draft=false}
+\item After the algorithm is completed, additionally correct for the time shift by
+  \begin{equation}
+    S_k = S_k \,e^{-\omega_k(N_T-1)\Delta t}
+  \end{equation}
+\end{itemize}
+
+Demonstrating the significant performance improvement when using Goertzel's algorithm, compared with the
+explicit summation, these two algorithms were implemented in the example
+program \lcode{goertzel.f90}, provided in directory \lcode{devel/Goertzel/} of the \ASKI{} repository. Please 
+refer to \lcode{devel/Goertzel/README.md} on any information regarding this example program, in particular 
+on how to compile and run it.
+
 
 %-------------------------------
 % SECTION new executable
