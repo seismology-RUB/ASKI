@@ -739,6 +739,10 @@ explicit summation, these two algorithms were implemented in the example
 program \lcode{goertzel.f90}, provided in directory \lcode{devel/Goertzel/} of the \ASKI{} repository. Please 
 refer to \lcode{devel/Goertzel/README.md} on any information regarding this example program, in particular 
 on how to compile and run it.
+\emph{Please note}, however, that e.g.\ in case of forward code \lcode{SPECFEM3D_Cartesian}, the overall
+performance improvement of using Goertzel's algorithm (compared with explicit summation) is \emph{not}
+noticeable, since these operations comprise only a part of the additional costs for producing output for \ASKI{}
+and other things like array/memory access etc.\ also play an important role w.r.t.\ overall performance.
 
 
 %-------------------------------
