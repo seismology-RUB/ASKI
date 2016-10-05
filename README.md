@@ -30,7 +30,7 @@ The main authors are Florian Schumacher and Wolfgang Friederich (Ruhr-University
 Please refer to documents in [doc/](doc/) :
 
 * the [ASKI user manual](doc/ASKI_manual.pdf)
-* [Florian Schumacher's doctoral dissteration](doc/dissertation_florian_schumacher.pdf) 
+* [Florian Schumacher's doctoral dissertation](doc/dissertation_florian_schumacher.pdf) 
   about waveform sensitivity kernels and the modularized iterative full waveform inversion 
   concept on which ASKI is based
 * the accepted version of our [GJI 2016 paper](doc/ASKI_paper_gji_2016.pdf), re-typeset in 
