@@ -136,6 +136,15 @@ contains
 !
 !  read input parameters
 !
+    ! Check whether the iter parfile name given in the main parameter file is an empty string (i.e. not yet set by the user).
+    ! It is sensible to check that here, because this name is concatenated with the iteration step path
+    ! and "open" statements do not always return an error state if you open a directory (noticed by F. Schumacher in Oct 2016)
+    if(trim((.inpar.invbasics).sval.'PARFILE_ITERATION_STEP') == '') then
+       write(errstr,*) "There is not yet any value for parameter 'PARFILE_ITERATION_STEP' in the ",&
+            "main parfile. Please enter the respective filename there."
+       call add(errmsg,2,trim(errstr),myname)
+       return
+    end if
     call createKeywordsInputParameter(this%inpar,iter_inpar_keys)
     call new(errmsg2,myname)
     call readSubroutineInputParameter(this%inpar,get(fuh),trim(this%iter_path)//&
@@ -235,6 +244,34 @@ contains
        return
     end if
     call dealloc(errmsg2)
+!
+    ! Check whether any filename given in the parameter file is an empty string (i.e. not yet set by the user).
+    ! It is sensible to check that here, because these names are concatenated with the iteration step path
+    ! and "open" statements do not always return an error state if you open a directory (noticed by F. Schumacher in Oct 2016)
+    if(trim(this%inpar.sval.'FILE_WAVEFIELD_POINTS') == '') then
+       write(errstr,*) "There is not yet any value for parameter 'FILE_WAVEFIELD_POINTS' in the ",&
+            "iteration step parfile. Please enter the respective filename there."
+       call add(errmsg,2,trim(errstr),myname)
+       return
+    end if
+    if(trim(this%inpar.sval.'FILE_INTEGRATION_WEIGHTS') == '') then
+       write(errstr,*) "There is not yet any value for parameter 'FILE_INTEGRATION_WEIGHTS' in the ",&
+            "iteration step parfile. Please enter the respective filename there."
+       call add(errmsg,2,trim(errstr),myname)
+       return
+    end if
+    if(trim(this%inpar.sval.'PARFILE_INVERSION_GRID') == '') then
+       write(errstr,*) "There is not yet any value for parameter 'PARFILE_INVERSION_GRID' in the ",&
+            "iteration step parfile. Please enter the respective filename there."
+       call add(errmsg,2,trim(errstr),myname)
+       return
+    end if
+    if(trim(this%inpar.sval.'FILE_KERNEL_REFERENCE_MODEL') == '') then
+       write(errstr,*) "There is not yet any value for parameter 'FILE_KERNEL_REFERENCE_MODEL' in the ",&
+            "iteration step parfile. Please enter the respective filename there."
+       call add(errmsg,2,trim(errstr),myname)
+       return
+    end if
 !
 ! create wavefield points
 !
