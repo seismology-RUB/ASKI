@@ -347,7 +347,7 @@ program spec2timeKernels
 !
    ! t0
    if(.not.(ap.optset.'-t0')) then
-      t0 = 0.0         
+      t0 = 0.0
    else
       t0 = ap.rval.'-t0'
       if (.level.(.errmsg.ap) == 2) then
