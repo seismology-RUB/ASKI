@@ -858,7 +858,7 @@ contains
        do iy = 2,nlon(ibl)
           c_add(iy) = tan( alpha_min + ((iy-1)*walpha)/nlon(ibl) )
        end do ! iy
-       c_add(nlon(ibl)+1) = this%x(2) ! xmax of chunk -> coordinate should be located as existing at index 2
+       c_add(nlon(ibl)+1) = this%y(2) ! xmax of chunk -> coordinate should be located as existing at index 2
        if(allocated(index_in_y)) deallocate(index_in_y)
        allocate(index_in_y(nlon(ibl)+1))
        call addCoordinatesChunksInversionGrid(this%y,this%ny,c_add,nlon(ibl)+1,index_in_y)
