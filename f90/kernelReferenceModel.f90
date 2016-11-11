@@ -55,7 +55,7 @@ contains
     select case (method)
     case('GEMINI')
        allocate(this%gemini_krm)
-       call readGeminiKernelReferenceModel(this%gemini_krm,fuh,filename,errmsg)
+       call readGeminiKernelReferenceModel(this%gemini_krm,get(fuh),filename,errmsg)
        if (.level.errmsg == 2) return
     case('SPECFEM3D')
        allocate(this%specfem3d_krm)

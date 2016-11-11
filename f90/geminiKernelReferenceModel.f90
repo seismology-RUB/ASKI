@@ -32,8 +32,8 @@ module geminiKernelReferenceModel
     use locatePoint
     use string
     implicit none
-    interface dealloc; module procedure deallocGeminiReferenceEarthModel; end interface
-    type gemini_reference_earth_model
+    interface dealloc; module procedure deallocGeminikernelReferenceModel; end interface
+    type gemini_kernel_reference_model
        character (len = max_length_string) :: name              !< name of earth model
        character (len = max_length_string) :: attmode           !< attenuation mode string
        integer :: aniflag                                       !< isotropic (0), transversely isotropic (1)
@@ -46,22 +46,22 @@ module geminiKernelReferenceModel
        real, dimension(:), allocatable :: rho                   !< density
        real, dimension(:), allocatable :: qkinv                 !< inverse Qkappa, qk = 1/Qk
        real, dimension(:), allocatable :: qminv                 !< inverse Qmu, qm = 1/Qm
-    end type gemini_reference_earth_model
+    end type gemini_kernel_reference_model
 !
  contains
 !----------------------------------------------------------------------------
 !  Read gemini earth model from ASCII file (used by kernelReferenceModel)
 !
-    subroutine readGeminiReferenceEarthModel(this,lu,filename,errmsg)
-    type (gemini_reference_earth_model) :: this
+    subroutine readGeminiKernelReferenceModel(this,lu,filename,errmsg)
+    type (gemini_kernel_reference_model) :: this
     integer :: lu
     character (len=*) :: filename
     type (error_message) :: errmsg
-    character (len=20) :: myname = 'readGeminiReferenceEarthModel'
+    character (len=20) :: myname = 'readGeminiKernelReferenceModel'
     integer :: ierr
 !
     call addTrace(errmsg,myname)
-    call readWithoutNgGeminiReferenceEarthModel(this,lu,filename,errmsg,.false.)  ! do not close file
+    call readWithoutNgGeminiKernelReferenceModel(this,lu,filename,errmsg,.false.)  ! do not close file
 !
 !  read number of lateral grid nodes
 !    
@@ -71,18 +71,18 @@ module geminiKernelReferenceModel
         return
     endif
     close(lu)
-    end subroutine readGeminiReferenceEarthModel
+    end subroutine readGeminiKernelReferenceModel
 !----------------------------------------------------------------------------
 !  Read gemini earth model from ASCII file without ng
 !  Used by computeKernelWavefield and computeKernelGreenTensor
 !
-    subroutine readWithoutNgGeminiReferenceEarthModel(this,lu,filename,errmsg,closeflag)
-    type (gemini_reference_earth_model) :: this
+    subroutine readWithoutNgGeminiKernelReferenceModel(this,lu,filename,errmsg,closeflag)
+    type (gemini_kernel_reference_model) :: this
     integer :: lu
     character (len=*) :: filename
     type (error_message) :: errmsg
     logical :: closeflag
-    character (len=20) :: myname = 'readGeminiReferenceEarthModel'
+    character (len=20) :: myname = 'readGeminiKernelReferenceModel'
     integer :: i,j,ierr,nnod
 !
     call addTrace(errmsg,myname)
@@ -107,19 +107,19 @@ module geminiKernelReferenceModel
        read(lu,*) (this%zelcon(i,j),j = 1,7)
     enddo
     if (closeflag) close(lu)
-    end subroutine readWithoutNgGeminiReferenceEarthModel
+    end subroutine readWithoutNgGeminiKernelReferenceModel
 !--------------------------------------------------------------------------------------
 !  Write Gemini earth model adding final line with number of lateral grid nodes
 !  Used by computeKernelWavefield and computeKernelGreenTensor
 !
-    subroutine writeGeminiReferenceEarthModel(this,lu,filename,ng,errmsg)
-    type (gemini_reference_earth_model) :: this
+    subroutine writeGeminiKernelReferenceModel(this,lu,filename,ng,errmsg)
+    type (gemini_kernel_reference_model) :: this
     integer :: lu
     character (len=*) :: filename
     integer :: ng
     type (error_message) :: errmsg
     integer :: i,j,ierr
-    character (len=21) :: myname = 'writeGeminiReferenceEarthModel'
+    character (len=21) :: myname = 'writeGeminiKernelReferenceModel'
 !
     call addTrace(errmsg,myname)
     open(lu,file = filename,iostat = ierr)
@@ -137,23 +137,23 @@ module geminiKernelReferenceModel
     enddo
     write(lu,'(i7)') ng
     close(lu)
-    end subroutine writeGeminiReferenceEarthModel
+    end subroutine writeGeminiKernelReferenceModel
 !--------------------------------------------------------------------------------------------
-! Deallocate gemini_reference_earth_model
+! Deallocate gemini_kernel_reference_model
 !
-    subroutine deallocGeminiReferenceEarthModel(this)
-    type (gemini_reference_earth_model) :: this
+    subroutine deallocGeminiKernelReferenceModel(this)
+    type (gemini_kernel_reference_model) :: this
     if (allocated(this%rnod)) deallocate(this%rnod)
     if (allocated(this%rho)) deallocate(this%rho)
     if (allocated(this%qkinv)) deallocate(this%qkinv)
     if (allocated(this%qminv)) deallocate(this%qminv)
     if (allocated(this%zelcon)) deallocate(this%zelcon)
-    end subroutine deallocGeminiReferenceEarthModel
+    end subroutine deallocGeminiKernelReferenceModel
 !----------------------------------------------------------------------------
 !> \brief Get index of node closest to given depth in km
 !
-    function getNodeIndexFromDepthGeminiReferenceEarthModel(this,zs) result(jr)
-    type (gemini_reference_earth_model) :: this
+    function getNodeIndexFromDepthGeminiKernelReferenceModel(this,zs) result(jr)
+    type (gemini_kernel_reference_model) :: this
     real :: zs,rs
     integer :: jr
 !
@@ -163,15 +163,15 @@ module geminiKernelReferenceModel
     if (jr < this%nnod) then                         ! take node closest to rs
        if (abs(rs-this%rnod(jr)) > abs(rs-this%rnod(jr+1))) jr = jr+1
     endif
-    end function getNodeIndexFromDepthGeminiReferenceEarthModel
+    end function getNodeIndexFromDepthGeminiKernelReferenceModel
 !------------------------------------------------------------------------
 !> \brief Get model values for some particular parameter of some particular parametrization
 !! \param pmtrz some model parametrization, as defined in module modelParametrization (e.g. "isoVelocity1000")
 !! \param param model parameter, which must be one of parametrization pmtrz
 !! \param model_values pointer to array of model values on wavefield points. Nullified if there is a problem
 !
-    function getModelValuesWPGeminiReferenceEarthModel(this,pmtrz,param) result(model_values)
-    type (gemini_reference_earth_model) :: this
+    function getModelValuesWPGeminiKernelReferenceModel(this,pmtrz,param) result(model_values)
+    type (gemini_kernel_reference_model) :: this
     character(len=*) :: pmtrz,param
     real, dimension(:), pointer :: model_values
 !
@@ -181,36 +181,36 @@ module geminiKernelReferenceModel
     select case(pmtrz)
        case('isoVelocity1000')
           select case(param)
-             case('rho'); model_values => getDensityWPGeminiReferenceEarthModel(this) ! [g/cm^3]
-             case('vp'); model_values => getPVelocityWPGeminiReferenceEarthModel(this) ! [km/s]
-             case('vs'); model_values => getSVelocityWPGeminiReferenceEarthModel(this) ! [km/s]
+             case('rho'); model_values => getDensityWPGeminiKernelReferenceModel(this) ! [g/cm^3]
+             case('vp'); model_values => getPVelocityWPGeminiKernelReferenceModel(this) ! [km/s]
+             case('vs'); model_values => getSVelocityWPGeminiKernelReferenceModel(this) ! [km/s]
           end select
        case('isoVelocitySI')
           select case(param)
-             case('rho'); model_values => getDensityWPGeminiReferenceEarthModel(this) ! [g/cm^3]
-             case('vp'); model_values => getPVelocityWPGeminiReferenceEarthModel(this) ! [km/s] 
-             case('vs'); model_values => getSVelocityWPGeminiReferenceEarthModel(this) ! [km/s]
+             case('rho'); model_values => getDensityWPGeminiKernelReferenceModel(this) ! [g/cm^3]
+             case('vp'); model_values => getPVelocityWPGeminiKernelReferenceModel(this) ! [km/s] 
+             case('vs'); model_values => getSVelocityWPGeminiKernelReferenceModel(this) ! [km/s]
           end select
           model_values = model_values * 1.0e3 ! account for unit factor 1000.0 to get Kg/m^3 and m/s
        case('isoLameSI')
           select case(param)
              case('rho')
-                model_values => getDensityWPGeminiReferenceEarthModel(this)     ! [g/cm^3]
+                model_values => getDensityWPGeminiKernelReferenceModel(this)     ! [g/cm^3]
                 model_values = model_values * 1.0e3                    ! [kg/m^3]                 
              case('lambda')
-                model_values => getLambdaWPGeminiReferenceEarthModel(this)    ! [GPa]
+                model_values => getLambdaWPGeminiKernelReferenceModel(this)    ! [GPa]
                 model_values = model_values * 1.0e9                          ! [Pa]                 
              case('mu')
-                model_values => getMuWPGeminiReferenceEarthModel(this)         ! [GPa]
+                model_values => getMuWPGeminiKernelReferenceModel(this)         ! [GPa]
                 model_values = model_values * 1.0e9                   ! [Pa]                 
           end select
     end select
-    end function getModelValuesWPGeminiReferenceEarthModel
+    end function getModelValuesWPGeminiKernelReferenceModel
 !------------------------------------------------------------------------------
 !> \brief Get density of earth model at wavefield points
 !
-    function getDensityWPGeminiReferenceEarthModel(this) result(rho)
-    type (gemini_reference_earth_model) :: this
+    function getDensityWPGeminiKernelReferenceModel(this) result(rho)
+    type (gemini_kernel_reference_model) :: this
     real, dimension(:), pointer :: rho
     integer :: j
 !
@@ -218,12 +218,12 @@ module geminiKernelReferenceModel
     do j = 1,this%nnod
         rho((j-1)*this%ng+1:j*this%ng) = this%rho(j)
     enddo
-    end function getDensityWPGeminiReferenceEarthModel
+    end function getDensityWPGeminiKernelReferenceModel
 !------------------------------------------------------------------------------
 !> \brief Get P velocity of earth model at wavefield points
 !
-    function getPVelocityWPGeminiReferenceEarthModel(this) result(vp)
-    type (gemini_reference_earth_model) :: this
+    function getPVelocityWPGeminiKernelReferenceModel(this) result(vp)
+    type (gemini_kernel_reference_model) :: this
     real, dimension(:), pointer :: vp
     integer :: j
 !
@@ -231,12 +231,12 @@ module geminiKernelReferenceModel
     do j = 1,this%nnod
         vp((j-1)*this%ng+1:j*this%ng) = sqrt( real(this%zelcon(j,6)+4.d0*this%zelcon(j,7)/3.d0)/this%rho(j) )
     enddo
-    end function getPVelocityWPGeminiReferenceEarthModel
+    end function getPVelocityWPGeminiKernelReferenceModel
 !------------------------------------------------------------------------------
 !> \brief Get S velocity of earth model at wavefield points
 !
-    function getSVelocityWPGeminiReferenceEarthModel(this) result(vs)
-    type (gemini_reference_earth_model) :: this
+    function getSVelocityWPGeminiKernelReferenceModel(this) result(vs)
+    type (gemini_kernel_reference_model) :: this
     real, dimension(:), pointer :: vs
     integer :: j
 !
@@ -244,12 +244,12 @@ module geminiKernelReferenceModel
     do j = 1,this%nnod
         vs((j-1)*this%ng+1:j*this%ng) = sqrt( real(this%zelcon(j,7))/this%rho(j) )
     enddo
-    end function getSVelocityWPGeminiReferenceEarthModel
+    end function getSVelocityWPGeminiKernelReferenceModel
 !------------------------------------------------------------------------------
 !> \brief Get lambda of earth model at wavefield points
 !
-    function getLambdaWPGeminiReferenceEarthModel(this) result(lambda)
-    type (gemini_reference_earth_model) :: this
+    function getLambdaWPGeminiKernelReferenceModel(this) result(lambda)
+    type (gemini_kernel_reference_model) :: this
     real, dimension(:), pointer :: lambda
     integer :: j
 !
@@ -257,12 +257,12 @@ module geminiKernelReferenceModel
     do j = 1,this%nnod
         lambda((j-1)*this%ng+1:j*this%ng) = real(this%zelcon(j,6)-2.d0*this%zelcon(j,7)/3.d0)
      enddo
-     end function getLambdaWPGeminiReferenceEarthModel
+     end function getLambdaWPGeminiKernelReferenceModel
 !------------------------------------------------------------------------------
 !> \brief Get mu of earth model at wavefield points
 !
-    function getMuWPGeminiReferenceEarthModel(this) result(mu)
-    type (gemini_reference_earth_model) :: this
+    function getMuWPGeminiKernelReferenceModel(this) result(mu)
+    type (gemini_kernel_reference_model) :: this
     real, dimension(:), pointer :: mu
     integer :: j
 !
@@ -270,6 +270,6 @@ module geminiKernelReferenceModel
     do j = 1,this%nnod
         mu((j-1)*this%ng+1:j*this%ng) = real(this%zelcon(j,7))
      enddo
-     end function getMuWPGeminiReferenceEarthModel
+     end function getMuWPGeminiKernelReferenceModel
 !-----------------------------------------------------------------------------
  end module
