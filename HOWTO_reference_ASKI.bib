@@ -1,0 +1,28 @@
+@Comment --------------------------------------------------------------
+@Comment   This BibTex file contains BibTex entries (downloaded from 
+@Comment   the journals websites) of all peer-reviewed journal 
+@Comment   publications about ASKI or its inversion method.
+@Comment   If you use ASKI for your own research, please cite one of 
+@Comment   these as appropriate.
+@Comment --------------------------------------------------------------
+
+
+@Comment   Schumacher et al. 2016 (GJI)
+@Comment   http://dx.doi.org/10.1093/gji/ggv505
+@article{Schumacher01022016,
+author = {Schumacher, F. and Friederich, W. and Lamara, S.}, 
+title = {A flexible, extendable, modular and computationally efficient approach to scattering-integral-based seismic full waveform inversion},
+volume = {204}, 
+number = {2}, 
+pages = {1100-1119}, 
+year = {2016}, 
+doi = {10.1093/gji/ggv505}, 
+abstract ={We present a new conceptual approach to scattering-integral-based seismic full waveform inversion (FWI) that allows a flexible, extendable, modular and both computationally and storage-efficient numerical implementation. To achieve maximum modularity and extendability, interactions between the three fundamental steps carried out sequentially in each iteration of the inversion procedure, namely, solving the forward problem, computing waveform sensitivity kernels and deriving a model update, are kept at an absolute minimum and are implemented by dedicated interfaces. To realize storage efficiency and maximum flexibility, the spatial discretization of the inverted earth model is allowed to be completely independent of the spatial discretization employed by the forward solver. For computational efficiency reasons, the inversion is done in the frequency domain. The benefits of our approach are as follows: (1) Each of the three stages of an iteration is realized by a stand-alone software program. In this way, we avoid the monolithic, unflexible and hard-to-modify codes that have often been written for solving inverse problems. (2) The solution of the forward problem, required for kernel computation, can be obtained by any wave propagation modelling code giving users maximum flexibility in choosing the forward modelling method. Both time-domain and frequency-domain approaches can be used. (3) Forward solvers typically demand spatial discretizations that are significantly denser than actually desired for the inverted model. Exploiting this fact by pre-integrating the kernels allows a dramatic reduction of disk space and makes kernel storage feasible. No assumptions are made on the spatial discretization scheme employed by the forward solver. (4) In addition, working in the frequency domain effectively reduces the amount of data, the number of kernels to be computed and the number of equations to be solved. (5) Updating the model by solving a large equation system can be done using different mathematical approaches. Since kernels are stored on disk, it can be repeated many times for different regularization parameters without need to solve the forward problem, making the approach accessible to Occam's method. Changes of choice of misfit functional, weighting of data and selection of data subsets are still possible at this stage. We have coded our approach to FWI into a program package called ASKI (Analysis of Sensitivity and Kernel Inversion) which can be applied to inverse problems at various spatial scales in both Cartesian and spherical geometries. It is written in modern FORTRAN language using object-oriented concepts that reflect the modular structure of the inversion procedure. We validate our FWI method by a small-scale synthetic study and present first results of its application to high-quality seismological data acquired in the southern Aegean.}, 
+URL = {http://gji.oxfordjournals.org/content/204/2/1100.abstract}, 
+eprint = {http://gji.oxfordjournals.org/content/204/2/1100.full.pdf+html}, 
+journal = {Geophysical Journal International} 
+}
+
+
+@Comment   Schumacher et al. 2016 (SoftX)
+@Comment   http://dx.doi.org/10.1016/j.softx.2016.10.005
