@@ -46,7 +46,7 @@ program kgt2vtk
   logical :: use_all_ucomp,use_selected_ucomp,use_all_ifreq,use_selected_ifreq,path_specific,&
        output_on_invgrid,force_average
   integer :: nscomp,nucomp,iscomp,iucomp,nfreq,jfreq
-  real :: df
+  real :: df_mdata,df_kgt
 
   type (kernel_green_tensor) :: kgt
   complex, dimension(:,:,:), pointer :: kgt_ustr,kgt_u
@@ -178,7 +178,7 @@ program kgt2vtk
   call dealloc(errmsg)
 !
   ifreq_iterbasics => .ifreq.iterbasics
-  df = .df.invbasics
+  df_mdata = .df.invbasics
   path_specific = lval(.inpar.iterbasics,'USE_PATH_SPECIFIC_MODELS')
   if(path_specific) then
      if(.not.(ap.optset.'-evid')) then
@@ -288,6 +288,13 @@ program kgt2vtk
   if (.level.errmsg /= 0) call print(errmsg)
   if (.level.errmsg == 2) goto 1
   call dealloc(errmsg)
+  df_kgt = .df.kgt
+  if( abs(df_kgt-df_mdata) > (1.e-4*df_kgt) ) then
+     write(*,*) "ERROR: frequency step df of kernel Green tensor ( = ",df_kgt,") differs from frequency "//&
+          "step df of measured data, as defined in main parfile ( = ",df_mdata,"), by more than 0.01 "//&
+          "percent; this could mean that the kernel Green tensor object was created w.r.t. a different setting."
+     goto 1
+  end if
   write(*,*) ""
 !
   nwp = .ntot.(.wp.iterbasics)
@@ -407,7 +414,7 @@ program kgt2vtk
            if(jfreq==1) then
               ! initiate vtk file
               write(vtk_file_title,*) trim(ucomp(iucomp)),"-component of spectral kernel green tensor, receiver component ",&
-                   trim(scomp(iscomp))," at frequency ",ifreq(jfreq)*df,' Hz on wavefield points'
+                   trim(scomp(iscomp))," at frequency ",ifreq(jfreq)*df_mdata,' Hz on wavefield points'
               call new(errmsg,myname)
               if(output_on_invgrid) then
                  write(vtk_file_base,"(a,'_ON-INVGRID_',a,'_',a)") trim(kgt_file),trim(scomp(iscomp)),trim(ucomp(iucomp))

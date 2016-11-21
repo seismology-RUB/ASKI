@@ -562,7 +562,7 @@ contains
          goto 2
       end if
       df_skernel = .df.skernel
-      if( abs(df_measured-df_skernel)/df_measured > 1.e-4 ) then
+      if( abs(df_measured-df_skernel) > 1.e-4*df_measured ) then
          write(*,*) "ERROR: frequency step of spectral kernel ( = ",df_skernel,&
               ") differs from frequency step of measured data / filters ( = ",df_measured,&
               ") by more than 0.01 percent"
@@ -697,7 +697,7 @@ contains
       goto 2
    end if
    df_skernel = .df.skernel
-   if( abs(df_measured-df_skernel)/df_measured > 1.e-4 ) then
+   if( abs(df_measured-df_skernel) > 1.e-4*df_measured ) then
       write(*,*) "ERROR: frequency step of spectral kernel ( = ",df_skernel,&
            ") differs from frequency step of measured data / filters ( = ",df_measured,&
            ") by more than 0.01 percent"

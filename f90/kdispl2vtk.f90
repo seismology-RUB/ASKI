@@ -45,7 +45,7 @@ program kdispl2vtk
   logical :: use_all_ucomp,use_selected_ucomp,use_all_ifreq,use_selected_ifreq,path_specific,&
        output_on_invgrid,force_average
   integer :: nucomp,iucomp,nfreq,jfreq
-  real :: df
+  real :: df_mdata,df_kd
 
   type (kernel_displacement) :: kd
   complex, dimension(:,:), pointer :: kd_ustr,kd_u
@@ -154,7 +154,7 @@ program kdispl2vtk
   call dealloc(errmsg)
 !
   ifreq_iterbasics => .ifreq.iterbasics
-  df = .df.invbasics
+  df_mdata = .df.invbasics
   path_specific = lval(.inpar.iterbasics,'USE_PATH_SPECIFIC_MODELS')
   if(path_specific) then
      if(.not.(ap.optset.'-staname')) then
@@ -263,6 +263,13 @@ program kdispl2vtk
   if (.level.errmsg /= 0) call print(errmsg)
   if (.level.errmsg == 2) goto 1
   call dealloc(errmsg)
+  df_kd = .df.kd
+  if( abs(df_kd-df_mdata) > (1.e-4*df_kd) ) then
+     write(*,*) "ERROR: frequency step df of kernel displacement ( = ",df_kd,") differs from frequency "//&
+          "step df of measured data, as defined in main parfile ( = ",df_mdata,"), by more than 0.01 "//&
+          "percent; this could mean that the kernel displacement object was created w.r.t. a different setting."
+     goto 1
+  end if
   write(*,*) ""
 !
   nwp = .ntot.(.wp.iterbasics)
@@ -377,7 +384,7 @@ program kdispl2vtk
         if(jfreq==1) then
            ! initiate vtk file
            write(vtk_file_title,*) trim(ucomp(iucomp)),"-component of spectral kernel displacement at frequency ",&
-                ifreq(jfreq)*df,' Hz on wavefield points'
+                ifreq(jfreq)*df_mdata,' Hz on wavefield points'
            call new(errmsg,myname)
            if(output_on_invgrid) then
               write(vtk_file_base,"(a,'_ON-INVGRID_',a)") trim(kd_file),trim(ucomp(iucomp))
