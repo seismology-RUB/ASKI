@@ -54,22 +54,9 @@ program exportKim
 
   ! kernel inverted model
   type (kernel_inverted_model) :: kim
-  character(len=character_length_pmtrz) :: pmtrz
-  character(len=character_length_param) :: param
-  integer :: nparam_pmtrz,nval
-  real, dimension(:), pointer :: model_values
-  integer, dimension(:), pointer :: indx
 
-  ! output file
-  character(len=400) :: second_line
-  integer :: lu,ios
-  integer :: icell,nnb
-  real :: c1,c2,c3,r
-  type (integer_vector_pointer), dimension(:), pointer :: nb_idx
-
-  logical :: outfile_exists,stop_after_command_line,export_txt,export_vtk,terminate_program
-
-  nullify(model_values,indx,nb_idx)
+  integer :: ios
+  logical :: outfile_exists,stop_after_command_line,export_txt,export_vtk
 
 !------------------------------------------------------------------------
 !  preliminary processing
@@ -224,23 +211,22 @@ program exportKim
 !------------------------------------------------------------------------
 !  export inversion grid und kernel inverted model information to text file
 !
-  terminate_program = .false.
-  if(export_txt) call exportKimToTextfile()
-  if(terminate_program) goto 1
-!
+  if(export_txt) then
+     call new(errmsg,myname)
+     call writeTextFileKernelInvertedModel(kim,invgrid,outfile_txt,get(fuh),errmsg)
+     call undo(fuh)
+     if (.level.errmsg /= 0) call print(errmsg)
+     !call print(errmsg)
+     if (.level.errmsg == 2) goto 1
+     call dealloc(errmsg)
+     write(*,*) "successfully written kim to text file, basename '"//trim(outfile_txt)//"'"
+  end if
 !------------------------------------------------------------------------
 !  clean up
 !
   write(*,*) "good bye"
 !
-1 if(associated(nb_idx)) then
-     do nnb=1,size(nb_idx)
-        call dealloc(nb_idx(nnb))
-     end do
-     deallocate(nb_idx)
-  end if
-!
-  call dealloc(errmsg)
+1 call dealloc(errmsg)
   call dealloc(main_inpar); call dealloc(iter_inpar)
   call dealloc(invgrid)
   call dealloc(fuh)
@@ -248,106 +234,6 @@ program exportKim
 !   
   call dealloc(kim)
 !
-
-contains
-
-subroutine exportKimToTextfile()
-
-  pmtrz = .pmtrz.kim
-  if(.not.validModelParametrization(pmtrz)) then
-     write(*,*) "ERROR: kernel inverted model has invalid parametrization '"//trim(pmtrz)//"'"
-     goto 1
-  end if
-  nparam_pmtrz = numberOfParamModelParametrization(pmtrz)
-  write(second_line,*) nparam_pmtrz
-  do while(nextParamModelParametrization(pmtrz,param))
-     second_line = trim(second_line)//'   '//trim(param)
-  end do
-!
-  call getIndicesFaceNeighboursInversionGrid(invgrid,nb_idx)
-  if(.not.associated(nb_idx)) then
-     write(*,*) "ERROR: no neighbour information returned from inversion grid, this means "//&
-          "inversion grid is not yet defined"
-     goto 1
-  end if
-!
-  lu = get(fuh)
-  open(unit=lu,file=outfile_txt,form='formatted',status='new',action='write',iostat=ios)
-  if(ios/=0) then
-     write(*,*) "ERROR: cannot open output file '"//trim(outfile_txt)//"' to write, raised iostat = ",ios
-     close(lu)
-     goto 1
-  end if
-!
-  write(*,*) "export model now:"
-!
-  write(*,*) "   ",trim(pmtrz)
-  write(lu,*) trim(pmtrz)
-!
-  write(*,*) "   ",trim(second_line)
-  write(lu,*) trim(second_line)
-!
-  write(*,*) "   ",.ncell.invgrid," inversion grid cells"
-  write(lu,*) .ncell.invgrid
-!
-  do icell = 1,.ncell.invgrid
-     call new(errmsg,myname)
-     call getCenterCellInversionGrid(invgrid,icell,c1,c2,c3,errmsg)
-     if (.level.errmsg /= 0) call print(errmsg)
-     !call print(errmsg)
-     if (.level.errmsg == 2) then; close(lu); goto 1; endif
-     call dealloc(errmsg)
-!     
-     call new(errmsg,myname)
-     call getRadiusCellInversionGrid(invgrid,icell,r,errmsg)
-     if (.level.errmsg /= 0) call print(errmsg)
-     !call print(errmsg)
-     if (.level.errmsg == 2) then; close(lu); goto 1; endif
-     call dealloc(errmsg)
-!
-     indx => getVectorPointer(nb_idx(icell))
-     if(associated(indx)) then
-        nnb = size(indx)
-        write(lu,*) c1,c2,c3,r,nnb,indx
-     else
-        nnb = 0
-        write(lu,*) c1,c2,c3,r,nnb
-     end if
-  end do ! icell
-!
-  do while(nextParamModelParametrization(pmtrz,param))
-     write(lu,*) param
-     indx => getIndx(kim,param)
-     if(associated(indx)) then
-        nval = size(indx)
-        write(*,*) "   parameter ",trim(param),": there are model values on ",nval," cells"
-        if(nval<.ncell.invgrid) then
-           write(*,*) "     WARNING: number of model values of this parameter is smaller than number ",&
-                "of inversion grid cells; make sure you know what you are doing"
-        end if
-        write(lu,*) nval
-        write(lu,*) indx
-        model_values => getVal(kim,param)
-        write(lu,*) model_values
-     else
-        nval = 0
-        write(*,*) "   parameter ",trim(param),": THERE ARE NO MODEL VALUES"
-        write(lu,*) nval
-     end if
-  end do
-!
-  close(lu)
-  call add(fuh,lu)
-  write(*,*) "successfully wrote output file '"//trim(outfile_txt)//"'"
-
-  ! if subroutine comes here, everything went OK, so return to main program
-  return
-!
-  ! if an error has occurred make the main program terminate after return to main program
-1 terminate_program = .true.
-  return
-end subroutine exportKimToTextfile
-
 end program exportKim
 !
 !-----------------------------------------------------------------------------------------------------------------
