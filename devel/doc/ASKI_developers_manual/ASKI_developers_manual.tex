@@ -193,7 +193,7 @@ Florian Schumacher, \mydate \today
 %-------------------------------
 % SECTION how is the code documented in general
 %#############################################################
-\section{Introduction for new \ASKI{} developers} \label{sec:intro}
+\section{Introduction and guidelines for \ASKI{} developers} \label{sec:intro}
 %#############################################################
 %
 The development of (what became) the software package \ASKI{} started in 2010 and from the beginning, auxilliary
@@ -207,6 +207,28 @@ requires. After moving the \ASKI{} developers repository to \url{gitHub.com} in 
 for used with \ASKI{} (not intended to merge them back into the original ``include'' repository at RUB, except
 for bug-fixes and fundamental enhancement of general functionality). So, if you wonder why you come accross 
 subroutines that are not used in \ASKI{} (so far!!), this might be a reason why.
+
+\subsection*{Guidlines w.r.t.\ the \lcodetitle{git} repository}
+At the moment, there are two branches on \lcodetitle{gitHub.com}: \lcode{master} and \lcode{develop}.
+
+The \lcode{master} branch is intended to contain the latest stable version of the software package
+(as also communicated in publications as well as the \ASKI{} user manual). \emph{No regular commits}
+should be performed to the \lcode{master} branch, changes should only be merged from the \lcode{develop}
+branch!
+
+The \lcode{develop} branch is intended for development of new functionality (as its name says):
+\begin{itemize}
+\item The current state of the \lcode{develop} branch may be unstable or incomplete (e.g.\ in terms of documentation etc.).
+\item \emph{Pull requests} should be issued to the \lcode{develop} branch only (and \emph{not} to the \lcode{master} branch)!
+\item When a new portion of functionality is fully implemented and documented (thus, a ``stable'' state is reached), you may
+  immediately merge the \lcode{develop} branch into the \lcode{master} branch. You don't need to wait until there is a new
+  official ``version'' or something, you sould provide the latest stable version as quickly as possible to the user community.
+\item On the \lcode{develop} branch, \emph{do not} commit \lcode{pdf}s of the \LaTeX{} documents (like the manuals, etc.) 
+  each time you modify the documents! \emph{Only} before merging into the \lcode{master} branch commit a re-compiled \lcode{pdf}
+  for each document (so that in the \lcode{master} branch the \LaTeX{} source corresponds to the repsective \lcode{pdf}).
+\item Locally, you may use yet more branches for development (like ``feature'' branches etc.), but for now the sparsely manned 
+development team does not consider it necessary to have these kinds of branches also available on \lcode{gitHub.com}.
+\end{itemize}
 
 \subsection*{How is the code documented in general?}
 The code files are commented extensively. Furthermore, almost all Fortran modules, derived types, 
