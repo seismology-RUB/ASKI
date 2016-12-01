@@ -714,10 +714,11 @@ On the one hand you may use any (standard) earth model provided by the forward m
 
 If this is not possible, or the models provided do not meet your needs, you may use executable 
 \lcode{createStartmodelKim} along with the inversion grid of your first iteration (which you should 
-have already defined) to produce an inverted model file containing some simple model on this inversion grid. 
+have already defined) to produce an inverted model file containing some given model on this inversion grid. 
 Executing \lcode{createStartmodelKim} (without arguments) will print a short help message how to use the program 
-\myaref{programs_scripts,sec:bin_prog,sec:create_startmod_kim}. Afterwards you may 
-export the produced model file to your forward method as explained in section~\myref{basic_steps,sec:export_kim}.
+\myaref{programs_scripts,sec:bin_prog,sec:create_startmod_kim}. Option \lcode{-otxt} of this executable will
+export the model in a text-based file format (as described in \myref{files,sec:text-kim_files}) 
+that may be used to communicate the model to the forward code in use.
 Template files of starting model descriptions may be found in \lcode{template/}.
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -725,7 +726,8 @@ Template files of starting model descriptions may be found in \lcode{template/}.
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 The executable \lcode{exportKim} exports an inverted model file (``kim'' stands for ``K''ernel 
-``I''nverted ``M''odel) along with the respective inversion grid specifications to a text file, 
+``I''nverted ``M''odel) along with the respective inversion grid specifications to a text file
+(file format as described in \myref{files,sec:text-kim_files}), 
 which may be used to communicate such a model to a forward method or postprocess the model values in any way. 
 Executing \lcode{exportKim} (without argument) will print a short help message how to use it 
 \myaref{programs_scripts,sec:bin_prog,sec:exp_Kim}.

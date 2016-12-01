@@ -36,6 +36,7 @@ program createStartmodelKim
   character(len=19) :: myname = 'createStartmodelKim'
 
   type (inversion_grid) :: invgrid
+  logical :: export_as_txt,export_as_vtk
   character(len=6) :: vtk_format
 
   type (kernel_inverted_model) :: kim
@@ -60,7 +61,10 @@ program createStartmodelKim
         "Supported types: 1D_linear, 3D_structured","sval","")
    call addOption(ap,"-mfile",.true.,"(mandatory) model input file of type defined by -mtype","sval","")
    call addOption(ap,"-o",.true.,"(optional) output base name","sval","start_model")
-   call addOption(ap,"-bin",.false.,"if set, the output vtk files will be binary, otherwise they will be ascii")
+   call addOption(ap,"-otxt",.false.,"(optional) if set, the model will be exported as a text file (as in exportKim -otxt)")
+   call addOption(ap,"-ovtk",.false.,"(optional) if set, the model will be exported as vtk files (as in exportKim -ovtk)")
+   call addOption(ap,"-binvtk",.false.,"(optional) if set, the output vtk files will be binary, "//&
+        "otherwise they will be ASCII (default)")
 !
    call parse(ap)
    if (.level.(.errmsg.ap) == 2) then
@@ -136,7 +140,16 @@ program createStartmodelKim
   ! outbase
   outbase = ap.sval.'-o'
 !
-  if(ap.optset.'-bin') then
+  ! export the model?
+  export_as_txt = ap.optset.'-otxt'
+  export_as_vtk = ap.optset.'-ovtk'
+!
+  ! vtk file format
+  if(ap.optset.'-binvtk') then
+     if(.not.export_as_vtk) then
+        stop_after_command_line = .true.
+        write(*,*) "ERROR: -binvtk can only be set in connection with -ovtk (but -ovtk is not set here)"
+     end if
      vtk_format = 'BINARY'
   else
      vtk_format = 'ASCII'
@@ -144,6 +157,7 @@ program createStartmodelKim
 !
   if (.level.(.errmsg.ap) == 2) then
      call print(.errmsg.ap)
+     write(*,*) ""
      call usage(ap)
      goto 1
   end if
@@ -185,7 +199,9 @@ program createStartmodelKim
   call dealloc(errmsg)
 !
 !------------------------------------------------------------------------
-!  write kim and vtk files
+!  write kim file, export-txt file and vtk files
+!
+  write(*,*) "writing output files with base name '"//trim(outbase)//"'"
 !
   call new(errmsg,myname)
   call writeFileKernelInvertedModel(kim,trim(outbase)//'.kim',lu,errmsg)
@@ -193,18 +209,34 @@ program createStartmodelKim
   !call print(errmsg)
   if (.level.errmsg == 2) goto 1
   call dealloc(errmsg)
-
-  call new(errmsg,myname)
-  call writeVtkKernelInvertedModel(kim,invgrid,vtk_format,outbase,lu,errmsg,overwrite=.true.)
-  if (.level.errmsg /= 0) call print(errmsg)
-  !call print(errmsg)
-  if (.level.errmsg == 2) goto 1
-  call dealloc(errmsg)
-  write(*,*) "successfully written all output files with base name '"//trim(outbase)//"'"
+  write(*,*) "successfully written .kim file"
+!
+  if(export_as_txt) then
+     call new(errmsg,myname)
+     call writeTextFileKernelInvertedModel(kim,invgrid,trim(outbase)//'.txt',lu,errmsg)
+     if (.level.errmsg /= 0) call print(errmsg)
+     !call print(errmsg)
+     if (.level.errmsg == 2) goto 1
+     call dealloc(errmsg)
+     write(*,*) "successfully written .txt file"
+  end if
+!
+  if(export_as_vtk) then
+     call new(errmsg,myname)
+     call writeVtkKernelInvertedModel(kim,invgrid,vtk_format,outbase,lu,errmsg,overwrite=.true.)
+     if (.level.errmsg /= 0) call print(errmsg)
+     !call print(errmsg)
+     if (.level.errmsg == 2) goto 1
+     call dealloc(errmsg)
+     write(*,*) "successfully written .vtk files"
+  end if
 !
 !------------------------------------------------------------------------
 !  clean up
 !
+  write(*,*) ""
+  write(*,*) "Good Bye"
+
 1 call dealloc(errmsg)
   call dealloc(invgrid)
   call dealloc(kim)
