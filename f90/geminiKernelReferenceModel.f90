@@ -81,6 +81,7 @@ module geminiKernelReferenceModel
     logical :: closeflag
     character (len=20) :: myname = 'readGeminiKernelReferenceModel'
     integer :: i,j,ierr,nnod
+    real, dimension(14) :: zelcon_tmp
 !
     call addTrace(errmsg,myname)
     open(lu,file = filename, status = 'old', iostat = ierr)
@@ -101,7 +102,10 @@ module geminiKernelReferenceModel
     allocate(this%zelcon(nnod,7))
     do i = 1,nnod
        read(lu,*) this%rnod(i),this%rho(i),this%qkinv(i),this%qminv(i)
-       read(lu,*) (this%zelcon(i,j),j = 1,7)
+       read(lu,*) zelcon_tmp(:)
+       do j = 1,7
+          this%zelcon(i,j) = cmplx(zelcon_tmp(2*j-1),zelcon_tmp(2*j))
+       end do
     enddo
     if (closeflag) close(lu)
     end subroutine readWithoutNgGeminiKernelReferenceModel

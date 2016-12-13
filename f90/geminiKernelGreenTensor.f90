@@ -63,7 +63,7 @@ module geminiKernelGreenTensor
     type (file_unit_handler) :: fuh
     character (len=*) :: filename
     type (error_message) :: errmsg
-    integer :: ierr,j,lu,ntot
+    integer :: ierr,lu,ntot
     character (len=34) :: myname = 'initialReadGeminiKernelGreenTensor'
 !
     call addTrace(errmsg,myname)
@@ -72,13 +72,13 @@ module geminiKernelGreenTensor
 ! and obtain a file unit from handler for later reading of single-frequency
 ! kernel Green tensor files  
 !
-    this%kgtbase = getAheadLastSeparatorString(filename,'.',errmsg,.false.)
+    this%kgtbase = filename
     this%luf = get(fuh)
 !
 !  open kernel wavefield meta file
 !
     lu = get(fuh)
-    open(lu,file = filename,status = 'old',iostat = ierr)
+    open(lu,file = this%kgtbase+'.meta',status = 'old',iostat = ierr)
     if (ierr /= 0) then
         call add(errmsg,2,filename+' can not be opened',myname)
         call add(fuh,lu)

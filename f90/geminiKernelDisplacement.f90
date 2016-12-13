@@ -73,13 +73,13 @@
 ! and obtain file unit form handler for later reading of single-frequency
 ! kernel displacement files  
 !
-    this%kdbase = getAheadLastSeparatorString(filename,'.',errmsg,.false.)
+    this%kdbase = filename
     this%luf = get(fuh)
 !
 !  open kernel wavefield meta file
 !
     lu = get(fuh)
-    open(lu,file = filename,status = 'old',iostat = ierr)
+    open(lu,file = this%kdbase+'.meta',status = 'old',iostat = ierr)
     if (ierr /= 0) then
         call add(errmsg,2,filename+' can not be opened',myname)
         call add(fuh,lu)
