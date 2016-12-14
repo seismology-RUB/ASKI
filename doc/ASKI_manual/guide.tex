@@ -147,7 +147,7 @@ smoothing (next step) in the course of inverting for different models \myaref{ba
 \newpage
 \section{Toy Example Using \lcodetitle{SPECFEM3D\_Cartesian} as a forward solver} \label{guide,sec:example_SPEC_C}
 %\phantomsection  % so hyperref creates bookmarks
-%\addcontentsline{toc}{section}{Cross Borehole Example}
+%\addcontentsline{toc}{section}{Toy Example Using \lcodetitle{SPECFEM3D\_Cartesian} as a forward solver}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 %
@@ -158,7 +158,7 @@ Please refer to section~\myref{guide,sec:example_C_borehole}.
 \newpage
 \section{Toy Example Using \lcodetitle{SPECFEM3D\_GLOBE} as a forward solver} \label{guide,sec:example_SPEC_GLOB}
 %\phantomsection  % so hyperref creates bookmarks
-%\addcontentsline{toc}{section}{Cross Borehole Example}
+%\addcontentsline{toc}{section}{Toy Example Using \lcodetitle{SPECFEM3D\_GLOBE} as a forward solver}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %
 %
@@ -229,6 +229,10 @@ Then download the example
 package \lcode{ASKI_inversion_cross_borehole.tar.gz} which is attached to release \lcode{v1.0} 
 of gitHub repository \url{https://github.com/seismology-RUB/ASKI} (566 MB, probably go to 
 \url{https://github.com/seismology-RUB/ASKI/releases/tag/v1.0}).
+In order to get started with this example package, you may use the commands in script
+\lcode{ASKI_inversion_cross_borehole_run.sh}, provided for download at the very same location
+(\emph{please adjust variable} \lcode{ASKI} \emph{at the beginning of the script!}).
+
 In this package, all files of the first 2 iterations (plus illustrating extras) are provided. 
 In order to keep the download small, wavefield output is not provided  for
 iterations 3 to 12. You should be able to reproduce the wavefields immendiately for any iteration step
@@ -246,7 +250,7 @@ in file\\
 If you do not want to overwrite the existing output, alternatively you 
 should create a separate inversion directory from scratch~\myaref{basic_steps,sec:create_dir}
  and leave \lcode{ASKI_inversion_cross_borehole/}
-as a reference only. 
+as a reference only (this strategy is followed by script \lcode{ASKI_inversion_cross_borehole_run.sh}. 
 
 This example was generated using \lcode{SPECFEM3D_Cartesian 3.0} for \ASKI{} version 1.0.
 (\url{https://github.com/seismology-RUB/SPECFEM3D_Cartesian_for_ASKI/releases/tag/v1.0}).
