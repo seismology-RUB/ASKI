@@ -1,6 +1,6 @@
 computeKernelCoverage.o: iterationStepBasics.o vectorPointer.o errorMessage.o inversionBasics.o argumentParser.o invgridVtkFile.o dataModelSpaceInfo.o kernelLinearSystem.o fileUnitHandler.o string.o modelParametrization.o
 streamAccess.o: flexibleType.o kindDefinitions.o
-seismicStation.o: mathConstants.o errorMessage.o flexibleType.o dateTime.o
+seismicStation.o: mathConstants.o errorMessage.o dateTime.o
 chunksInvgrid2vtk.o: string.o errorMessage.o inversionGrid.o argumentParser.o invgridVtkFile.o chunksInversionGrid.o
 wavefieldPoints.o: geminiWavefieldPoints.o realloc.o nexdWavefieldPoints.o errorMessage.o inversionGrid.o specfem3dWavefieldPoints.o fileUnitHandler.o
 transformMeasuredData.o: errorMessage.o dataSu.o seismicNetwork.o string.o fileUnitHandler.o seismicStation.o asciiDataIO.o seismicEventList.o inversionBasics.o argumentParser.o discreteFourierTransform.o dataModelSpaceInfo.o inputParameter.o complexKernelFrequency.o seismicEvent.o
@@ -18,8 +18,8 @@ invgridVtkFile.o: inversionGrid.o errorMessage.o
 specfem3dKernelDisplacement.o: specfem3dForASKIFiles.o errorMessage.o fileUnitHandler.o
 kernel2vtk.o: iterationStepBasics.o spectralWaveformKernel.o componentTransformation.o errorMessage.o inversionBasics.o argumentParser.o kernelDisplacement.o invgridVtkFile.o wpVtkFile.o kernelGreenTensor.o kernelReferenceModel.o fileUnitHandler.o string.o modelParametrization.o
 chunksInversionGrid.o: mathConstants.o vectorPointer.o errorMessage.o realloc.o inputParameter.o
-chunkCubedSphere.o: mathConstants.o errorMessage.o flexibleType.o
-geminiWavefieldPoints.o: scart2dGrid.o externalRadialNodes.o chunkCubedSphere.o fileUnitHandler.o inputParameter.o
+chunkCubedSphere.o: mathConstants.o errorMessage.o
+geminiWavefieldPoints.o: externalRadialNodes.o chunkCubedSphere.o fileUnitHandler.o inputParameter.o
 inversionGrid.o: errorMessage.o schunkInversionGrid.o specfem3dInversionGrid.o ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o
 computeCorrectionSyntheticData.o: parameterCorrelation.o iterationStepBasics.o spectralWaveformKernel.o kernelReferenceModel.o asciiDataIO.o errorMessage.o inversionBasics.o argumentParser.o kernelInvertedModel.o dataModelSpaceInfo.o inputParameter.o realloc.o fileUnitHandler.o string.o modelParametrization.o
 nexdKernelGreenTensor.o: componentTransformation.o errorMessage.o fileUnitHandler.o
@@ -47,9 +47,9 @@ scart2dGrid.o: mathConstants.o errorMessage.o flexibleType.o
 parallelLinearSystem.o: errorMessage.o
 paths2vtk.o: eventStationVtkFile.o iterationStepBasics.o errorMessage.o inversionBasics.o argumentParser.o dataModelSpaceInfo.o fileUnitHandler.o
 complexKernelFrequency.o: mathConstants.o
-geminiKernelGreenTensor.o: seismicStation.o streamAccess.o errorMessage.o fileUnitHandler.o vectorPointer.o
+geminiKernelGreenTensor.o: errorMessage.o fileUnitHandler.o string.o
 componentTransformation.o: mathConstants.o seismicStation.o
-kernelReferenceModel.o: geminiEarthModel.o errorMessage.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o fileUnitHandler.o modelParametrization.o
+kernelReferenceModel.o: geminiKernelReferenceModel.o errorMessage.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o fileUnitHandler.o modelParametrization.o
 computeFocussedMisfit.o: iterationStepBasics.o kernelLinearSystem.o asciiDataIO.o errorMessage.o inversionBasics.o argumentParser.o dataModelSpaceInfo.o fileUnitHandler.o string.o
 eventStationVtkFile.o: errorMessage.o seismicNetwork.o fileUnitHandler.o seismicStation.o seismicEventList.o inversionGrid.o seismicEvent.o
 kernelInvertedModel.o: kernelReferenceModel.o errorMessage.o invgridVtkFile.o wavefieldPoints.o inversionGrid.o dataModelSpaceInfo.o vectorPointer.o integrationWeights.o modelParametrization.o
@@ -63,12 +63,12 @@ specfem3dKernelReferenceModel.o: specfem3dForASKIFiles.o errorMessage.o modelPar
 dateTime.o: realloc.o timeUtils.o
 dataModelSpaceInfo.o: errorMessage.o seismicNetwork.o seismicStation.o seismicEventList.o integrationWeights.o componentTransformation.o seismicEvent.o realloc.o modelParametrization.o
 computeDataFromKernelSystem.o: iterationStepBasics.o kernelLinearSystem.o asciiDataIO.o errorMessage.o inversionBasics.o argumentParser.o kernelInvertedModel.o dataModelSpaceInfo.o fileUnitHandler.o
-seismicEvent.o: mathConstants.o errorMessage.o flexibleType.o dateTime.o
+seismicEvent.o: mathConstants.o errorMessage.o dateTime.o
 errorMessage.o: realloc.o
-geminiKernelDisplacement.o: vectorPointer.o streamAccess.o errorMessage.o fileUnitHandler.o
+geminiKernelDisplacement.o: errorMessage.o fileUnitHandler.o string.o
 seismicEventList.o: errorMessage.o seismicEvent.o
 kgt2vtk.o: fileUnitHandler.o iterationStepBasics.o componentTransformation.o errorMessage.o inversionBasics.o argumentParser.o wpVtkFile.o invgridVtkFile.o kernelGreenTensor.o seismicNetwork.o seismicEventList.o string.o
-geminiEarthModel.o: errorMessage.o flexibleType.o locatePoint.o streamAccess.o fileUnitHandler.o modelParametrization.o
+geminiKernelReferenceModel.o: errorMessage.o locatePoint.o fileUnitHandler.o modelParametrization.o string.o
 spec2timeKernels.o: errorMessage.o seismicNetwork.o iterationStepBasics.o fileUnitHandler.o timeWaveformKernel.o spectralWaveformKernel.o seismicStation.o asciiDataIO.o seismicEventList.o inversionBasics.o argumentParser.o dataModelSpaceInfo.o componentTransformation.o seismicEvent.o string.o
 linearModelRegularization.o: vectorPointer.o errorMessage.o inversionGrid.o dataModelSpaceInfo.o kernelLinearSystem.o modelParametrization.o
 createStartmodelKim.o: string.o errorMessage.o argumentParser.o inversionGrid.o kernelInvertedModel.o modelParametrization.o

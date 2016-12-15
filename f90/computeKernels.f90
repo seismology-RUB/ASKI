@@ -68,6 +68,7 @@ program computeKernels
 
   logical :: kernels_on_wp,use_dmspace,compute_one_path,path_specific,next,terminate_program
   integer :: jf,lu
+  real :: df_mdata,df_kd,df_kgt
   character(len=character_length_pmtrz) :: parametrization
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -191,6 +192,7 @@ program computeKernels
   !call print(errmsg)
   if (.level.errmsg == 2) goto 1
   call dealloc(errmsg)
+  df_mdata = .df.invbasics
 !
   ! setup iteration step basics
   call new(errmsg,myname)
@@ -455,6 +457,13 @@ contains
           if (.level.errmsg == 2) goto 2
           call dealloc(errmsg)
           evid_opened = evid
+          df_kd = .df.kd
+          if( abs(df_kd-df_mdata) > (1.e-4*df_kd) ) then
+             write(*,*) "ERROR: frequency step df of kernel displacement ( = ",df_kd,") differs from frequency "//&
+                  "step df of measured data, as defined in main parfile ( = ",df_mdata,"), by more than 0.01 "//&
+                  "percent; this could mean that the kernel displacement object was created w.r.t. a different setting."
+             goto 2
+          end if
        end if ! path_specific .or. evid_opened /= evid
        ! kgt object still valid?
        if(path_specific .or. staname_opened /= staname) then    ! always do initiate if path_specific !
@@ -474,6 +483,13 @@ contains
           if (.level.errmsg == 2) goto 2
           call dealloc(errmsg)
           staname_opened = staname
+          df_kgt = .df.kgt
+          if( abs(df_kgt-df_mdata) > (1.e-4*df_kgt) ) then
+             write(*,*) "ERROR: frequency step df of kernel Green tensor ( = ",df_kgt,") differs from frequency "//&
+                  "step df of measured data, as defined in main parfile ( = ",df_mdata,"), by more than 0.01 "//&
+                  "percent; this could mean that the kernel Green tensor object was created w.r.t. a different setting."
+             goto 2
+          end if
        end if ! path_specific .or. staname_opened /= staname
 !
        ! initiate and inital write spectral waveform kernel
@@ -617,6 +633,13 @@ contains
     if (.level.errmsg /= 0) then; call print(errmsg); endif
     if (.level.errmsg == 2) goto 2
     call dealloc(errmsg)
+    df_kd = .df.kd
+    if( abs(df_kd-df_mdata) > (1.e-4*df_kd) ) then
+       write(*,*) "ERROR: frequency step df of kernel displacement ( = ",df_kd,") differs from frequency "//&
+            "step df of measured data, as defined in main parfile ( = ",df_mdata,"), by more than 0.01 "//&
+            "percent; this could mean that the kernel displacement object was created w.r.t. a different setting."
+       goto 2
+    end if
 !
     ! initiate kernel Green tensor
     call new(errmsg,myname)
@@ -631,6 +654,13 @@ contains
     if (.level.errmsg /= 0) then; call print(errmsg); endif
     if (.level.errmsg == 2) goto 2
     call dealloc(errmsg)
+    df_kgt = .df.kgt
+    if( abs(df_kgt-df_mdata) > (1.e-4*df_kgt) ) then
+       write(*,*) "ERROR: frequency step df of kernel Green tensor ( = ",df_kgt,") differs from frequency "//&
+            "step df of measured data, as defined in main parfile ( = ",df_mdata,"), by more than 0.01 "//&
+            "percent; this could mean that the kernel Green tensor object was created w.r.t. a different setting."
+       goto 2
+    end if
 !
     ! initiate and inital write spectral waveform kernel
     call new(errmsg,myname)

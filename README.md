@@ -35,6 +35,9 @@ Please refer to documents in [doc/](doc/) :
   concept on which ASKI is based
 * the accepted version of our [GJI 2016 paper](doc/ASKI_paper_gji_2016.pdf), re-typeset in 
   a standard layout
+* our [SoftwareX 2016 paper](doc/ASKI_paper_softx_2016.pdf),  
+  [published as Open Access](http://dx.doi.org/10.1016/j.softx.2016.10.005) under the
+  [CC BY license](http://creativecommons.org/licenses/by/4.0/)
 
 
 ## Toy examples

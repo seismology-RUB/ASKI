@@ -15,6 +15,9 @@ devel/doc/ASKI_developers_manual/ASKI_developers_manual.pdf
 devel/doc/ASKI_developers_manual/ASKI_developers_manual.toc
 devel/doc/doxygen_output
 
+# devel tools and stuff:
+devel/Goertzel/xgoertzel
+
 # Compiled Python files
 *.pyc
 

@@ -102,7 +102,7 @@ combineInvertedModels: %: %.o string.o errorMessage.o inversionBasics.o argument
 	componentTransformation.o parameterCorrelation.o readEventStationFile.o inputParameter.o \
 	seismicNetwork.o modelParametrization.o kernelReferenceModel.o invgridVtkFile.o wavefieldPoints.o \
 	inversionGrid.o dataModelSpaceInfo.o vectorPointer.o integrationWeights.o eventStationVtkFile.o \
-	wpVtkFile.o seismicEvent.o mathConstants.o seismicStation.o dateTime.o geminiEarthModel.o \
+	wpVtkFile.o seismicEvent.o mathConstants.o seismicStation.o dateTime.o geminiKernelReferenceModel.o \
 	specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o geminiWavefieldPoints.o \
 	nexdWavefieldPoints.o specfem3dWavefieldPoints.o schunkInversionGrid.o specfem3dInversionGrid.o \
 	ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o flexibleType.o timeUtils.o \
@@ -116,7 +116,7 @@ computeCorrectionSyntheticData: %: %.o parameterCorrelation.o iterationStepBasic
 	fileUnitHandler.o string.o modelParametrization.o invgridVtkFile.o eventStationVtkFile.o \
 	seismicNetwork.o seismicEventList.o wavefieldPoints.o inversionGrid.o wpVtkFile.o \
 	integrationWeights.o seismicEvent.o kernelDisplacement.o flexibleType.o kernelGreenTensor.o \
-	componentTransformation.o mathConstants.o streamAccess.o geminiEarthModel.o \
+	componentTransformation.o mathConstants.o streamAccess.o geminiKernelReferenceModel.o \
 	specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o readEventStationFile.o vectorPointer.o \
 	seismicStation.o geminiWavefieldPoints.o nexdWavefieldPoints.o specfem3dWavefieldPoints.o \
 	schunkInversionGrid.o specfem3dInversionGrid.o ecartInversionGrid.o chunksInversionGrid.o \
@@ -133,7 +133,7 @@ computeDataFromKernelSystem: %: %.o iterationStepBasics.o kernelLinearSystem.o a
 	seismicEventList.o wavefieldPoints.o inversionGrid.o wpVtkFile.o integrationWeights.o \
 	inputParameter.o seismicEvent.o spectralWaveformKernel.o realloc.o parameterCorrelation.o \
 	serialLinearSystem.o seismicStation.o vectorPointer.o modelParametrization.o \
-	componentTransformation.o readEventStationFile.o string.o geminiEarthModel.o \
+	componentTransformation.o readEventStationFile.o string.o geminiKernelReferenceModel.o \
 	specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o geminiWavefieldPoints.o \
 	nexdWavefieldPoints.o specfem3dWavefieldPoints.o schunkInversionGrid.o specfem3dInversionGrid.o \
 	ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o mathConstants.o flexibleType.o \
@@ -150,7 +150,7 @@ computeFocussedMisfit: %: %.o iterationStepBasics.o kernelLinearSystem.o asciiDa
 	wavefieldPoints.o inversionGrid.o kernelInvertedModel.o wpVtkFile.o integrationWeights.o \
 	inputParameter.o seismicEvent.o spectralWaveformKernel.o realloc.o parameterCorrelation.o \
 	serialLinearSystem.o seismicStation.o vectorPointer.o modelParametrization.o \
-	componentTransformation.o readEventStationFile.o geminiEarthModel.o \
+	componentTransformation.o readEventStationFile.o geminiKernelReferenceModel.o \
 	specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o geminiWavefieldPoints.o \
 	nexdWavefieldPoints.o specfem3dWavefieldPoints.o schunkInversionGrid.o specfem3dInversionGrid.o \
 	ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o mathConstants.o flexibleType.o \
@@ -167,7 +167,7 @@ computeKernelCoverage: %: %.o iterationStepBasics.o vectorPointer.o errorMessage
 	kernelReferenceModel.o seismicEventList.o wavefieldPoints.o inversionGrid.o kernelInvertedModel.o \
 	wpVtkFile.o integrationWeights.o inputParameter.o seismicEvent.o realloc.o \
 	componentTransformation.o parameterCorrelation.o readEventStationFile.o seismicStation.o \
-	spectralWaveformKernel.o asciiDataIO.o serialLinearSystem.o geminiEarthModel.o \
+	spectralWaveformKernel.o asciiDataIO.o serialLinearSystem.o geminiKernelReferenceModel.o \
 	specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o geminiWavefieldPoints.o \
 	nexdWavefieldPoints.o specfem3dWavefieldPoints.o schunkInversionGrid.o specfem3dInversionGrid.o \
 	ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o mathConstants.o flexibleType.o \
@@ -186,7 +186,7 @@ computeKernels: %: %.o errorMessage.o seismicNetwork.o iterationStepBasics.o fil
 	integrationWeights.o inputParameter.o flexibleType.o mathConstants.o streamAccess.o dateTime.o \
 	parameterCorrelation.o readEventStationFile.o nexdKernelDisplacement.o \
 	specfem3dKernelDisplacement.o complexKernelFrequency.o geminiKernelDisplacement.o \
-	nexdKernelGreenTensor.o geminiKernelGreenTensor.o specfem3dKernelGreenTensor.o geminiEarthModel.o \
+	nexdKernelGreenTensor.o geminiKernelGreenTensor.o specfem3dKernelGreenTensor.o geminiKernelReferenceModel.o \
 	specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o geminiWavefieldPoints.o \
 	nexdWavefieldPoints.o specfem3dWavefieldPoints.o schunkInversionGrid.o specfem3dInversionGrid.o \
 	ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o vectorPointer.o \
@@ -201,7 +201,7 @@ computeMisfit: %: %.o string.o kernelLinearSystem.o errorMessage.o inversionBasi
 	componentTransformation.o readEventStationFile.o inputParameter.o seismicNetwork.o \
 	integrationWeights.o invgridVtkFile.o eventStationVtkFile.o kernelReferenceModel.o \
 	wavefieldPoints.o inversionGrid.o kernelInvertedModel.o wpVtkFile.o kernelDisplacement.o \
-	flexibleType.o kernelGreenTensor.o mathConstants.o streamAccess.o dateTime.o geminiEarthModel.o \
+	flexibleType.o kernelGreenTensor.o mathConstants.o streamAccess.o dateTime.o geminiKernelReferenceModel.o \
 	specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o geminiWavefieldPoints.o \
 	nexdWavefieldPoints.o specfem3dWavefieldPoints.o schunkInversionGrid.o specfem3dInversionGrid.o \
 	ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o nexdKernelDisplacement.o \
@@ -247,7 +247,7 @@ createStartmodelKim: %: %.o string.o errorMessage.o argumentParser.o inversionGr
 	kernelInvertedModel.o modelParametrization.o realloc.o schunkInversionGrid.o \
 	specfem3dInversionGrid.o ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o \
 	kernelReferenceModel.o invgridVtkFile.o wavefieldPoints.o dataModelSpaceInfo.o vectorPointer.o \
-	integrationWeights.o mathConstants.o inputParameter.o specfem3dForASKIFiles.o geminiEarthModel.o \
+	integrationWeights.o mathConstants.o inputParameter.o specfem3dForASKIFiles.o geminiKernelReferenceModel.o \
 	specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o fileUnitHandler.o \
 	geminiWavefieldPoints.o nexdWavefieldPoints.o specfem3dWavefieldPoints.o seismicNetwork.o \
 	seismicStation.o seismicEventList.o componentTransformation.o seismicEvent.o flexibleType.o \
@@ -260,7 +260,7 @@ exportKim: %: %.o string.o vectorPointer.o errorMessage.o argumentParser.o inver
 	schunkInversionGrid.o specfem3dInversionGrid.o ecartInversionGrid.o chunksInversionGrid.o \
 	scartInversionGrid.o kernelReferenceModel.o invgridVtkFile.o wavefieldPoints.o \
 	dataModelSpaceInfo.o integrationWeights.o mathConstants.o specfem3dForASKIFiles.o \
-	geminiEarthModel.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o \
+	geminiKernelReferenceModel.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o \
 	geminiWavefieldPoints.o nexdWavefieldPoints.o specfem3dWavefieldPoints.o seismicNetwork.o \
 	seismicStation.o seismicEventList.o componentTransformation.o seismicEvent.o flexibleType.o \
 	locatePoint.o streamAccess.o scart2dGrid.o externalRadialNodes.o chunkCubedSphere.o dateTime.o \
@@ -273,7 +273,7 @@ focusSpectralKernels: %: %.o iterationStepBasics.o asciiDataIO.o errorMessage.o 
 	inversionGrid.o kernelInvertedModel.o wpVtkFile.o integrationWeights.o inputParameter.o \
 	seismicEvent.o realloc.o componentTransformation.o parameterCorrelation.o readEventStationFile.o \
 	modelParametrization.o seismicStation.o kernelLinearSystem.o serialLinearSystem.o \
-	geminiEarthModel.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o \
+	geminiKernelReferenceModel.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o \
 	geminiWavefieldPoints.o nexdWavefieldPoints.o specfem3dWavefieldPoints.o schunkInversionGrid.o \
 	specfem3dInversionGrid.o ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o \
 	vectorPointer.o mathConstants.o flexibleType.o dateTime.o spectralWaveformKernel.o locatePoint.o \
@@ -289,7 +289,7 @@ initBasics: %: %.o string.o errorMessage.o inversionBasics.o argumentParser.o fi
 	parameterCorrelation.o readEventStationFile.o inputParameter.o seismicNetwork.o \
 	modelParametrization.o invgridVtkFile.o eventStationVtkFile.o kernelReferenceModel.o \
 	wavefieldPoints.o inversionGrid.o kernelInvertedModel.o wpVtkFile.o integrationWeights.o \
-	seismicEvent.o mathConstants.o seismicStation.o dateTime.o geminiEarthModel.o \
+	seismicEvent.o mathConstants.o seismicStation.o dateTime.o geminiKernelReferenceModel.o \
 	specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o geminiWavefieldPoints.o \
 	nexdWavefieldPoints.o specfem3dWavefieldPoints.o schunkInversionGrid.o specfem3dInversionGrid.o \
 	ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o dataModelSpaceInfo.o \
@@ -306,7 +306,7 @@ investigateDataResiduals: %: %.o eventStationVtkFile.o iterationStepBasics.o ker
 	parameterCorrelation.o serialLinearSystem.o vectorPointer.o modelParametrization.o \
 	componentTransformation.o readEventStationFile.o mathConstants.o flexibleType.o dateTime.o \
 	schunkInversionGrid.o specfem3dInversionGrid.o ecartInversionGrid.o chunksInversionGrid.o \
-	scartInversionGrid.o geminiEarthModel.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o \
+	scartInversionGrid.o geminiKernelReferenceModel.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o \
 	geminiWavefieldPoints.o nexdWavefieldPoints.o specfem3dWavefieldPoints.o kernelDisplacement.o \
 	kernelGreenTensor.o streamAccess.o primitiveTypeEncoding.o simpleString.o kindDefinitions.o \
 	timeUtils.o specfem3dForASKIFiles.o locatePoint.o scart2dGrid.o externalRadialNodes.o \
@@ -327,7 +327,7 @@ kdispl2vtk: %: %.o errorMessage.o iterationStepBasics.o seismicEventList.o inver
 	inversionGrid.o kernelInvertedModel.o integrationWeights.o inputParameter.o seismicEvent.o \
 	componentTransformation.o parameterCorrelation.o readEventStationFile.o modelParametrization.o \
 	nexdKernelDisplacement.o specfem3dKernelDisplacement.o complexKernelFrequency.o \
-	geminiKernelDisplacement.o seismicStation.o geminiEarthModel.o specfem3dKernelReferenceModel.o \
+	geminiKernelDisplacement.o seismicStation.o geminiKernelReferenceModel.o specfem3dKernelReferenceModel.o \
 	nexdKernelReferenceModel.o geminiWavefieldPoints.o nexdWavefieldPoints.o \
 	specfem3dWavefieldPoints.o schunkInversionGrid.o specfem3dInversionGrid.o ecartInversionGrid.o \
 	chunksInversionGrid.o scartInversionGrid.o dataModelSpaceInfo.o vectorPointer.o mathConstants.o \
@@ -344,7 +344,7 @@ kernel2vtk: %: %.o iterationStepBasics.o spectralWaveformKernel.o componentTrans
 	flexibleType.o mathConstants.o streamAccess.o realloc.o seismicStation.o parameterCorrelation.o \
 	readEventStationFile.o nexdKernelDisplacement.o specfem3dKernelDisplacement.o \
 	complexKernelFrequency.o geminiKernelDisplacement.o nexdKernelGreenTensor.o \
-	geminiKernelGreenTensor.o specfem3dKernelGreenTensor.o geminiEarthModel.o \
+	geminiKernelGreenTensor.o specfem3dKernelGreenTensor.o geminiKernelReferenceModel.o \
 	specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o geminiWavefieldPoints.o \
 	nexdWavefieldPoints.o specfem3dWavefieldPoints.o schunkInversionGrid.o specfem3dInversionGrid.o \
 	ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o dataModelSpaceInfo.o \
@@ -359,7 +359,7 @@ kgt2vtk: %: %.o fileUnitHandler.o iterationStepBasics.o componentTransformation.
 	wavefieldPoints.o inversionGrid.o kernelInvertedModel.o integrationWeights.o inputParameter.o \
 	seismicEvent.o mathConstants.o seismicStation.o parameterCorrelation.o readEventStationFile.o \
 	modelParametrization.o nexdKernelGreenTensor.o geminiKernelGreenTensor.o complexKernelFrequency.o \
-	specfem3dKernelGreenTensor.o geminiEarthModel.o specfem3dKernelReferenceModel.o \
+	specfem3dKernelGreenTensor.o geminiKernelReferenceModel.o specfem3dKernelReferenceModel.o \
 	nexdKernelReferenceModel.o geminiWavefieldPoints.o nexdWavefieldPoints.o \
 	specfem3dWavefieldPoints.o schunkInversionGrid.o specfem3dInversionGrid.o ecartInversionGrid.o \
 	chunksInversionGrid.o scartInversionGrid.o dataModelSpaceInfo.o vectorPointer.o flexibleType.o \
@@ -369,7 +369,7 @@ kgt2vtk: %: %.o fileUnitHandler.o iterationStepBasics.o componentTransformation.
 	$(COMPILER) -o $(bindir)/$@ $(obstring) $(BLAS) $(LAPACK)
 #
 krm2kim: %: %.o string.o kernelReferenceModel.o errorMessage.o inversionBasics.o argumentParser.o \
-	kernelInvertedModel.o fileUnitHandler.o iterationStepBasics.o geminiEarthModel.o \
+	kernelInvertedModel.o fileUnitHandler.o iterationStepBasics.o geminiKernelReferenceModel.o \
 	specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o modelParametrization.o realloc.o \
 	seismicEventList.o componentTransformation.o parameterCorrelation.o readEventStationFile.o \
 	inputParameter.o seismicNetwork.o invgridVtkFile.o wavefieldPoints.o inversionGrid.o \
@@ -388,7 +388,7 @@ paths2vtk: %: %.o eventStationVtkFile.o iterationStepBasics.o errorMessage.o inv
 	realloc.o componentTransformation.o parameterCorrelation.o readEventStationFile.o \
 	modelParametrization.o string.o mathConstants.o flexibleType.o dateTime.o schunkInversionGrid.o \
 	specfem3dInversionGrid.o ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o \
-	geminiEarthModel.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o \
+	geminiKernelReferenceModel.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o \
 	geminiWavefieldPoints.o nexdWavefieldPoints.o specfem3dWavefieldPoints.o vectorPointer.o \
 	primitiveTypeEncoding.o simpleString.o kindDefinitions.o timeUtils.o specfem3dForASKIFiles.o \
 	locatePoint.o streamAccess.o scart2dGrid.o externalRadialNodes.o chunkCubedSphere.o
@@ -407,7 +407,7 @@ solveCglsKernelSystem: %: %.o errorMessage.o fileUnitHandler.o iterationStepBasi
 	kernelReferenceModel.o seismicEventList.o wavefieldPoints.o inversionGrid.o wpVtkFile.o \
 	integrationWeights.o seismicEvent.o spectralWaveformKernel.o asciiDataIO.o parameterCorrelation.o \
 	serialLinearSystem.o seismicStation.o componentTransformation.o readEventStationFile.o \
-	geminiEarthModel.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o \
+	geminiKernelReferenceModel.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o \
 	geminiWavefieldPoints.o nexdWavefieldPoints.o specfem3dWavefieldPoints.o schunkInversionGrid.o \
 	specfem3dInversionGrid.o ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o \
 	mathConstants.o flexibleType.o dateTime.o kernelDisplacement.o kernelGreenTensor.o streamAccess.o \
@@ -424,7 +424,7 @@ solveKernelSystem: %: %.o fileUnitHandler.o iterationStepBasics.o kernelLinearSy
 	inversionGrid.o wpVtkFile.o integrationWeights.o inputParameter.o seismicEvent.o \
 	spectralWaveformKernel.o asciiDataIO.o parameterCorrelation.o serialLinearSystem.o \
 	seismicStation.o vectorPointer.o componentTransformation.o readEventStationFile.o \
-	geminiEarthModel.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o \
+	geminiKernelReferenceModel.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o \
 	geminiWavefieldPoints.o nexdWavefieldPoints.o specfem3dWavefieldPoints.o schunkInversionGrid.o \
 	specfem3dInversionGrid.o ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o \
 	mathConstants.o flexibleType.o dateTime.o kernelDisplacement.o kernelGreenTensor.o streamAccess.o \
@@ -440,7 +440,7 @@ solveParKernelSystem: %: %.o fileUnitHandler.o iterationStepBasics.o errorMessag
 	realloc.o invgridVtkFile.o eventStationVtkFile.o seismicNetwork.o kernelReferenceModel.o \
 	seismicEventList.o wavefieldPoints.o inversionGrid.o wpVtkFile.o integrationWeights.o \
 	seismicEvent.o componentTransformation.o parameterCorrelation.o readEventStationFile.o \
-	vectorPointer.o seismicStation.o kernelLinearSystem.o parallelLinearSystem.o geminiEarthModel.o \
+	vectorPointer.o seismicStation.o kernelLinearSystem.o parallelLinearSystem.o geminiKernelReferenceModel.o \
 	specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o geminiWavefieldPoints.o \
 	nexdWavefieldPoints.o specfem3dWavefieldPoints.o schunkInversionGrid.o specfem3dInversionGrid.o \
 	ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o mathConstants.o flexibleType.o \
@@ -459,7 +459,7 @@ spec2timeKernels: %: %.o errorMessage.o seismicNetwork.o iterationStepBasics.o f
 	inversionGrid.o kernelInvertedModel.o wpVtkFile.o integrationWeights.o inputParameter.o \
 	kernelDisplacement.o discreteFourierTransform.o flexibleType.o kernelGreenTensor.o streamAccess.o \
 	modelParametrization.o mathConstants.o dateTime.o parameterCorrelation.o readEventStationFile.o \
-	geminiEarthModel.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o \
+	geminiKernelReferenceModel.o specfem3dKernelReferenceModel.o nexdKernelReferenceModel.o \
 	geminiWavefieldPoints.o nexdWavefieldPoints.o specfem3dWavefieldPoints.o schunkInversionGrid.o \
 	specfem3dInversionGrid.o ecartInversionGrid.o chunksInversionGrid.o scartInversionGrid.o \
 	vectorPointer.o nexdKernelDisplacement.o specfem3dKernelDisplacement.o complexKernelFrequency.o \
@@ -474,7 +474,7 @@ timeKernel2vtk: %: %.o iterationStepBasics.o timeWaveformKernel.o errorMessage.o
 	inversionGrid.o kernelInvertedModel.o integrationWeights.o inputParameter.o seismicEvent.o \
 	spectralWaveformKernel.o realloc.o kernelDisplacement.o discreteFourierTransform.o flexibleType.o \
 	kernelGreenTensor.o streamAccess.o componentTransformation.o parameterCorrelation.o \
-	readEventStationFile.o seismicStation.o geminiEarthModel.o specfem3dKernelReferenceModel.o \
+	readEventStationFile.o seismicStation.o geminiKernelReferenceModel.o specfem3dKernelReferenceModel.o \
 	nexdKernelReferenceModel.o geminiWavefieldPoints.o nexdWavefieldPoints.o \
 	specfem3dWavefieldPoints.o schunkInversionGrid.o specfem3dInversionGrid.o ecartInversionGrid.o \
 	chunksInversionGrid.o scartInversionGrid.o dataModelSpaceInfo.o vectorPointer.o mathConstants.o \
@@ -513,7 +513,7 @@ addSpikeCheckerToKim: %: %.o inversionGrid.o errorMessage.o kernelInvertedModel.
 	schunkInversionGrid.o specfem3dInversionGrid.o ecartInversionGrid.o chunksInversionGrid.o \
 	scartInversionGrid.o realloc.o kernelReferenceModel.o invgridVtkFile.o wavefieldPoints.o \
 	dataModelSpaceInfo.o vectorPointer.o integrationWeights.o modelParametrization.o mathConstants.o \
-	inputParameter.o specfem3dForASKIFiles.o geminiEarthModel.o specfem3dKernelReferenceModel.o \
+	inputParameter.o specfem3dForASKIFiles.o geminiKernelReferenceModel.o specfem3dKernelReferenceModel.o \
 	nexdKernelReferenceModel.o fileUnitHandler.o geminiWavefieldPoints.o nexdWavefieldPoints.o \
 	specfem3dWavefieldPoints.o seismicNetwork.o seismicStation.o seismicEventList.o \
 	componentTransformation.o seismicEvent.o flexibleType.o locatePoint.o streamAccess.o scart2dGrid.o \

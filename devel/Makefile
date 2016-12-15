@@ -97,7 +97,7 @@ computeIterationMisfits: %: %.o kernelLinearSystem.o argumentParser.o string.o e
 	componentTransformation.o seismicEvent.o vectorPointer.o modelParametrization.o realloc.o seismicEventList.o \
 	readEventStationFile.o inputParameter.o seismicNetwork.o integrationWeights.o kernelReferenceModel.o \
 	kernelDisplacement.o flexibleType.o kernelGreenTensor.o mathConstants.o streamAccess.o dateTime.o \
-	serialLinearSystem.o inversionGrid.o wavefieldPoints.o geminiEarthModel.o \
+	serialLinearSystem.o inversionGrid.o wavefieldPoints.o geminiKernelReferenceModel.o \
 	specfem3dKernelReferenceModel.o specfem3dKernelDisplacement.o geminiKernelDisplacement.o primitiveTypeEncoding.o \
 	simpleString.o kindDefinitions.o specfem3dKernelGreenTensor.o geminiKernelGreenTensor.o timeUtils.o \
 	ecartInversionGrid.o specfem3dInversionGrid.o scartInversionGrid.o schunkInversionGrid.o chunksInversionGrid.o \

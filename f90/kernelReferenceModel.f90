@@ -26,7 +26,7 @@
 !
 module kernelReferenceModel
   use modelParametrization
-  use geminiEarthModel
+  use geminiKernelReferenceModel
   use specfem3dKernelReferenceModel
   use nexdKernelReferenceModel
   use errorMessage
@@ -34,7 +34,7 @@ module kernelReferenceModel
   implicit none
   interface dealloc; module procedure deallocateKernelReferenceModel; end interface
   type kernel_reference_model
-     type (gemini_earth_model), pointer :: gemini_krm => null()
+     type (gemini_kernel_reference_model), pointer :: gemini_krm => null()
      type (specfem3d_kernel_reference_model), pointer :: specfem3d_krm => null()
      type (nexd_kernel_reference_model), pointer :: nexd_krm => null()
   end type kernel_reference_model
@@ -55,7 +55,7 @@ contains
     select case (method)
     case('GEMINI')
        allocate(this%gemini_krm)
-       call readSAGeminiEarthModel(this%gemini_krm,fuh,filename,errmsg)
+       call readGeminiKernelReferenceModel(this%gemini_krm,get(fuh),filename,errmsg)
        if (.level.errmsg == 2) return
     case('SPECFEM3D')
        allocate(this%specfem3d_krm)
@@ -99,7 +99,7 @@ contains
     if(.not.validModelParametrization(pmtrz)) return
     if(.not.validParamModelParametrization(pmtrz,param)) return
     if (associated(this%gemini_krm)) then
-       model_values => getModelValuesWPGeminiEarthModel(this%gemini_krm,pmtrz,param)
+       model_values => getModelValuesWPGeminiKernelReferenceModel(this%gemini_krm,pmtrz,param)
     else if (associated(this%specfem3d_krm)) then
        model_values => getModelValuesSpecfem3dKernelReferenceModel(this%specfem3d_krm,pmtrz,param)
     else if (associated(this%nexd_krm)) then

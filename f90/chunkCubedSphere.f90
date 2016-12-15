@@ -1,20 +1,25 @@
-!----------------------------------------------------------------------------
-!	Copyright 2016 Wolfgang Friederich
+!==========================================================================
+!   Chunk Cubed Sphere Implementation
+!=========================================================================
+!--------------------------------------------------------------------------
+!   Copyright 2016 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
 !
-!	This file is part of Gemini II.
+!   This file is part of ASKI version 1.2.
 !
-!	Gemini II is free software: you can redistribute it and/or modify
-!	it under the terms of the GNU General Public License as published by
-!	the Free Software Foundation, either version 2 of the License, or
-!	any later version.
+!   ASKI version 1.2 is free software: you can
+!   redistribute it and/or modify it under the terms of the GNU
+!   General Public License as published by the Free Software
+!   Foundation, either version 2 of the License, or (at your option) 
+!   any later version.
 !
-!	Gemini II is distributed in the hope that it will be useful,
-!	but WITHOUT ANY WARRANTY; without even the implied warranty of
-!	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!	GNU General Public License for more details.
+!   ASKI version 1.2 is distributed in the hope that it
+!   will be useful, but WITHOUT ANY WARRANTY; without even the implied
+!   warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+!   See the GNU General Public License for more details.
 !
-!	You should have received a copy of the GNU General Public License
-!	along with Gemini II.  If not, see <http://www.gnu.org/licenses/>.
+!   You should have received a copy of the GNU General Public License
+!   along with ASKI version 1.2.
+!   If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
 !  Module to implement a discretization on the surface of the unit sphere
@@ -22,7 +27,6 @@
 !--------------------------------------------------------------------------------
  module chunkCubedSphere
     use mathConstants
-    use flexibleType
     use errorMessage
     implicit none
 !    interface new
@@ -143,16 +147,6 @@
     if (associated(this%ph)) deallocate(this%ph)
     if (associated(this%tm)) deallocate(this%tm)
     end subroutine deallocChunkCubedSphere
-!---------------------------------------------------------------------------------
-!> \brief Get essential data of chunkCubedSphere in a flexible array
-!
-    subroutine getEssentialDataChunkCubedSphere(this,ft)
-    type (chunk_cubed_sphere), intent(in) :: this
-    type (flexible), dimension(:) :: ft
-    ft(1) = 'S'; ft(2) = this%nlon; ft(3) = this%nlat
-    ft(4) = this%clon; ft(5) = 90.-this%ctheta; ft(6) = this%gam
-    ft(7) = this%wlat; ft(8) = this%wlon
-    end subroutine getEssentialDataChunkCubedSphere
 !-----------------------------------------------------------------------------------
 !> \brief Get total number of grid points
 !

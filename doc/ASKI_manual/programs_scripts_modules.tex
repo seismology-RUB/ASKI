@@ -589,45 +589,27 @@ END DO
 \paragraph{\lcode{-o outbase}}
 \lcode{outbase} is output base name (default is \lcode{start_model}).
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{\lcode{-bin}}
-If set, the output vtk files will be binary, otherwise they will be ascii.
+\paragraph{\lcode{-otxt}}
+If set, the model will be exported as a text file (as referred to in \myref{basic_steps,sec:export_kim},
+fileformat given in \myref{files,sec:text-kim_files})
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-ovtk}}
+If set, the model will be exported as \lcode{vtk} files. 
+Indicate by \lcode{-binvtk} whether the \lcode{vtk} files should be binary or not.
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{\lcode{-binvtk}}
+If set, the output vtk files will be binary, otherwise they will be ASCII. This option 
+can be used in connection with \lcode{-ovtk} only.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
 \subsection{\lcodetitle{exportKim}} \label{programs_scripts,sec:bin_prog,sec:exp_Kim}
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Program exportKim produces a text file (option \lcode{-otxt}) containing information of cell centers and radii 
-(radius $\simeq$ some approximate average spatial expansion of the cell from the cell center) 
-of all inversion grid cells and all cell neighbours, as well as model values and 
-respective invgrid cell indices for each model parameter, as contained in a given kernelInvertedModel file. 
-This text file may be used by any forward method to define the simulation model for the next iteration step, 
-or by any tool handling final models.\\
-The format of the produced text file is as follows:\\
-The first 3 lines contain:
-\begin{itemize}
-\item[]\lcode{model_parametrization}
-\item[]\lcode{number_of_parameters}  \lcode{name_param_1} ... \lcode{name_param_n}
-\item[]\lcode{number_of_invgrid_cells}
-\end{itemize}
-The next \lcode{number_of_invgrid_cells} lines contain for each inversion grid cell:
-\begin{itemize}
-\item[]\lcode{c1 c2 c3 r nnb inb1} ... \lcode{inbn}
-\end{itemize} 
-where \lcode{c1,c2,c3} are the 3 coordinates of the cell center (in wavefield point coords), \lcode{r} 
-is the cell radius (i.e. rough expansion of cell), \lcode{nnb} is the number of cell neighbours and 
-\lcode{inb1},...,\lcode{inbn} are their nnb cell indices (if \lcode{nnb}\(>\)\lcode{0}, otherwise line 
-ends on \lcode{nnb=0}). Then \lcode{number_of_parameters} blocks are following in the file, each having 
-the following format:
-\begin{itemize}
-\item[]\lcode{name_param}
-\item[]\lcode{nval}
-\item[]\lcode{cell_indx}
-\item[]\lcode{model_values}
-\end{itemize}
-where \lcode{name_param} is the name of the parameter to which the following model values belong, 
-\lcode{nval} is the number of model values following, \lcode{cell_indx} is a vector of \lcode{nval} 
-cell indices to which the model values belong (space separated on one line) and \lcode{model_values} 
-is an vector of the actual \lcode{nval} model values (space separated on one line).\\
+Executable \lcode{exportKim} produces a text file (option \lcode{-otxt}) of format as described in
+\myref{files,sec:text-kim_files}, containing information of the inversion grid (cells and
+their neighbours) along with model values on these cells.
+This text file may be used in a portable way by any forward method to define the simulation 
+model for the next iteration step, or by any tool handling final models.\\
 \\
 Additionally (or alternatively) the program converts the .kim file to vtk files (option \lcode{-ovtk}).\\
 The two options \lcode{-otxt} , \lcode{-ovtk} can be used independently of each other.

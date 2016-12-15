@@ -1,29 +1,32 @@
+! ===============================================================================
+!  GEMINI specific module for generic module kernelDisplacement.f90
+! ===============================================================================
 !----------------------------------------------------------------------------
-!	Copyright 2016 Wolfgang Friederich
+!   Copyright 2016 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
 !
-!	This file is part of Gemini II.
+!   This file is part of ASKI version 1.2.
 !
-!	Gemini II is free software: you can redistribute it and/or modify
-!	it under the terms of the GNU General Public License as published by
-!	the Free Software Foundation, either version 2 of the License, or
-!	any later version.
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
+!   it under the terms of the GNU General Public License as published by
+!   the Free Software Foundation, either version 2 of the License, or
+!   (at your option) any later version.
 !
-!	Gemini II is distributed in the hope that it will be useful,
-!	but WITHOUT ANY WARRANTY; without even the implied warranty of
-!	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!	GNU General Public License for more details.
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
+!   but WITHOUT ANY WARRANTY; without even the implied warranty of
+!   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!   GNU General Public License for more details.
 !
-!	You should have received a copy of the GNU General Public License
-!	along with Gemini II.  If not, see <http://www.gnu.org/licenses/>.
-!----------------------------------------------------------------------------
-!------------------------------------------------------------------------------
-!> \brief Module dealing with Gemini kernel displacements
-!------------------------------------------------------------------------------
+!   You should have received a copy of the GNU General Public License
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
+!-----------------------------------------------------------------------------
+!   Provides GEMINI specific interface to routines required by the
+!   kernelDisplacement module to read kernel wavefields, store them, and later
+!   access them when computing waveform kernels.
+!-----------------------------------------------------------------------------
  module geminiKernelDisplacement
-    use streamAccess
     use errorMessage
-    use vectorPointer
     use fileUnitHandler
+    use string
     implicit none
     interface dealloc; module procedure deallocGeminiKernelDisplacement; end interface
     interface operator (.id.); module procedure getIdGeminiKernelDisplacement; end interface
@@ -32,168 +35,116 @@
     interface operator (.jfcur.); module procedure getJfcurGeminiKernelDisplacement; end interface
     interface operator (.disp.); module procedure getGeminiKernelDisplacement; end interface
     interface operator (.strain.); module procedure getStrainsGeminiKernelDisplacement; end interface
-    interface operator (.ng.); module procedure getNgGeminiKernelDisplacement; end interface
+    integer, parameter :: length_evid_gkd = 13 !< change this number CONSISTENTLY with respective numbers in submodules (specfem3d,gemini,etc) 
     type gemini_kernel_displacement
-        private
-        character (len=80) :: id                                ! id for kernel displacement
-        integer :: nf1,nf2                                      ! frequency index range
-        real :: df                                              ! frequency stepping
-        real :: kfcur                                           ! current frequency index: f = kf*df
-        integer :: ng                                           ! total number of surface wavefield points
-        integer :: nnod                                         ! nuber of depth nodes
-        complex, dimension(:,:), pointer :: u => null()         ! array of 3 vector pointers for displacement
-        complex, dimension(:,:), pointer :: ustr => null()      ! array of 6 vector pointers for strain components on grid
-        integer :: numtasks                                     ! number of parallel tasks that wrote kernel displacements
-        type (file_stream_access), dimension(:), pointer :: fda => null()    ! file pointers to all files
-        type (group_stream_access), dimension(:), pointer :: root => null()  ! root groups of all files
-    end type
-    integer, parameter :: length_ID_gemini_kernel_displacement = 13 !< change this number CONSISTENTLY with respective numbers in submodules (specfem3d,gemini,etc) 
+       private
+       character (len=length_evid_gkd) :: id                   ! event id for kernel displacement
+       integer :: luf                                          ! file unit for frequency kd file
+       real :: df                                              ! frequency stepping
+       real :: kfcur                                           ! current frequency index: f = kf*df
+       integer :: nf1                                          ! first freqeuncy index
+       integer :: nf                                           ! total number of frequencies
+       real :: sigma                                           ! negative imaginary part of angular frequency
+       integer :: ng                                           ! total number of surface wavefield points
+       integer :: nnod                                         ! nuber of depth nodes
+       character (len=max_length_string) :: kdbase             ! basename for single-frequency kd files
+       complex, dimension(:,:), pointer :: u => null()         ! 2D array for displacement on grid
+       complex, dimension(:,:), pointer :: ustr => null()      ! 2D array for strain components on grid
+    end type gemini_kernel_displacement
 !
  contains
 !-----------------------------------------------------------------------------------
-!> \brief Read in basic information needed for all frequencies and open parallel files
+!  Read basic information needed for all frequencies
+!  fuh:          file unit handler
+!  filename:     kernel wavefield meta file
+!  errmsg:       error message
 !
-    subroutine initialReadGeminiKernelDisplacement(this,fuh,basename,errmsg)
+    subroutine initialReadGeminiKernelDisplacement(this,fuh,filename,errmsg)
     type (gemini_kernel_displacement) :: this
     type (file_unit_handler) :: fuh
-    character (len=*) :: basename
+    character (len=*) :: filename
     type (error_message) :: errmsg
-    type (file_stream_access) :: fdaini
-    type (group_stream_access) :: rootini
-    type (data_stream_access), pointer :: dset
-    type (group_stream_access), pointer :: group
-    type (flexible), dimension(:), pointer :: ft
-    integer :: j,ierr,lu,ntot
-    character (len=400) :: filename
-    character (len=3) :: crank
+    integer :: ierr,lu,ntot
     character (len=35) :: myname = 'initialReadGeminiKernelDisplacement'
 !
-    nullify(dset,group,ft)
-!
     call addTrace(errmsg,myname)
+!
+! construct kernel displacement file base name from name of meta file
+! and obtain file unit form handler for later reading of single-frequency
+! kernel displacement files  
+!
+    this%kdbase = filename
+    this%luf = get(fuh)
+!
+!  open kernel wavefield meta file
+!
     lu = get(fuh)
-    filename = trim(basename)//'_'//'000'
-    ierr = openFileStreamAccess(fdaini,lu,trim(filename))
+    open(lu,file = this%kdbase+'.meta',status = 'old',iostat = ierr)
     if (ierr /= 0) then
-        call add(errmsg,2,trim(filename)//' can not be opened',myname)
+        call add(errmsg,2,filename+' can not be opened',myname)
         call add(fuh,lu)
         return
     endif
 !
-!  read in group tree
+!  read two header lines and close file
 !
-    call readGroupStreamAccess(rootini,fdaini)
-!    print *,'group tree read in from file: ',trim(filename)
+    read(lu,'(a)') this%id
+    read(lu,*) this%df,this%nf1,this%nf,this%ng,this%nnod,this%sigma
+    close(lu); call add(fuh,lu)
 !
-!  read out header info: nf1,nf2,df,istyp,ntot,numtasks,nnod
-!
-    call traversePathStreamAccess(rootini,0,(/ 1,0 /),group,dset)
-    call readDatasetVectorStreamAccess(dset,fdaini,ft)
-    this%nf1 = ft(1); this%nf2 = ft(2); this%df = ft(3); this%id = ft(4)
-    this%ng = ft(5); this%numtasks = ft(6); this%nnod = ft(7)
-    deallocate(ft)
-    this%kfcur = 0
-!
-!  open all other files needed and read in group tree
-!
-    allocate(this%root(this%numtasks),this%fda(this%numtasks))
-    this%root(1) = rootini; this%fda(1) = fdaini
-    call dealloc(rootini)
-    do j = 2,this%numtasks
-        write(crank,'(i3.3)') j-1
-        filename = trim(basename)//'_'//crank
-        lu = get(fuh)
-        ierr = openFileStreamAccess(this%fda(j),lu,trim(filename))
-        if (ierr /= 0) then
-            call add(errmsg,2,trim(filename)//' can not be opened',myname)
-            call add(fuh,lu)
-            return
-        endif
-        call readGroupStreamAccess(this%root(j),this%fda(j))
-    enddo
-!
-!  allocate space for displacements and strains
-!  makes clearFrequency obsolete
+!  allocate space for displacement and strain
 !
     ntot = this%ng*this%nnod
     allocate(this%u(ntot,3))
     allocate(this%ustr(ntot,6))
     end subroutine initialReadGeminiKernelDisplacement
 !----------------------------------------------------------------------------------------------------
-!> \brief Deallocate object
+!  Deallocate object
 !
     subroutine deallocGeminiKernelDisplacement(this,fuh)
     type (gemini_kernel_displacement) :: this
     type (file_unit_handler) :: fuh
-    integer :: j
-    if (associated(this%root)) then
-        do j = 1, this%numtasks
-            call clearGroupTree(this%root(j))
-        enddo
-        deallocate(this%root)
-    endif
-    if (associated(this%fda)) then
-        do j = 1, this%numtasks
-            call add(fuh,getFileUnitStreamAccess(this%fda(j)))
-            call dealloc(this%fda(j))
-        enddo
-        deallocate(this%fda)
-    endif
     if (associated(this%u)) deallocate(this%u)
     if (associated(this%ustr)) deallocate(this%ustr)
     end subroutine deallocGeminiKernelDisplacement
 !-----------------------------------------------------------------------------------------------------
-!> \brief Repeated read of displacement spectra file for different frequencies
-!! modified to new convention that f = kf*df instead of (jf-1)*df before
-!! therefore kf = jf-1
+!  Read displacement spectra file for different frequencies
+!  modified to new convention that f = kf*df
 !
     subroutine readFrequencyGeminiKernelDisplacement(this,kf,errmsg)
     type (gemini_kernel_displacement) :: this
-    integer :: jf,kf
+    integer :: kf
     type (error_message) :: errmsg
-    integer :: j,ic,jr,nnod
-    complex, dimension(:), pointer :: d
-    type (data_stream_access), pointer :: dset
-    type (group_stream_access), pointer :: group
+    integer :: ic,jr,ios
+    character (len=3) :: ckf
     character (len=37) :: myname = 'readFrequencyGeminiKernelDisplacement'
-!
-    nullify(d,dset,group)
 !
     call addTrace(errmsg,myname)
 !
-! check validity of frequency index
-!
-    jf = kf+1
-    if (jf < this%nf1 .or. jf > this%nf2) then
-        call add(errmsg,2,'Frequency index out of range ',myname)
-        return
+    write(ckf,'(i3.3)') kf        ! ASKI uses f = kf*df
+    open(this%luf,file = this%kdbase+'.'+ckf, iostat = ios, form = 'unformatted')
+    if (ios /= 0) then
+       call add(errmsg,2,'Could not open output file: '+this%kdbase+'.'+ckf,myname)
+       return
     endif
-    this%kfcur = kf
-    nnod = this%nnod
 !
-    do j = 1,this%numtasks
-        do jr = j,nnod,this%numtasks
-            do ic = 1,9
-                call traversePathStreamAccess(this%root(j),1,(/ jf-this%nf1+1,ic+(jr-j)/this%numtasks*9 /),group,dset)
-                if (ic <= 3 ) then
-                    call readDatasetVectorStreamAccess(dset,this%fda(j),d)
-                    this%u((jr-1)*this%ng+1:jr*this%ng,ic) = d
-                    deallocate(d)
-                else
-                    call readDatasetVectorStreamAccess(dset,this%fda(j),d)
-                    this%ustr((jr-1)*this%ng+1:jr*this%ng,ic-3) = d
-                    deallocate(d)
-                endif
-            enddo
-        enddo
+    this%kfcur = kf
+    do jr = 1,this%nnod
+       do ic = 1,3
+          read(this%luf) this%u((jr-1)*this%ng+1:jr*this%ng,ic)
+       enddo
+       do ic = 1,6
+          read(this%luf) this%ustr((jr-1)*this%ng+1:jr*this%ng,ic)
+       enddo
     enddo
+    close(this%luf)
     end subroutine readFrequencyGeminiKernelDisplacement
 !-------------------------------------------------------------------------
 !> \brief Get ID
 !
     function getIdGeminiKernelDisplacement(this) result(res)
     type (gemini_kernel_displacement), intent(in) :: this
-    character(len=80) :: res
+    character(len=length_evid_gkd) :: res
     res = this%id
     end function getIdGeminiKernelDisplacement
 !-------------------------------------------------------------------------
@@ -210,7 +161,7 @@
     function getNfGeminiKernelDisplacement(this) result(res)
     type (gemini_kernel_displacement), intent(in) :: this
     integer :: res
-    res = this%nf2-this%nf1+1
+    res = this%nf
     end function getNfGeminiKernelDisplacement
 !-------------------------------------------------------------------------
 !> \brief Get current frequency index kfcur
@@ -270,7 +221,7 @@
     integer :: call_count = 0
     save call_count
 !
-    if (call_count == (this%nf2-this%nf1+1)) then
+    if (call_count == this%nf) then
         next = .false.
         call_count = 0
         return
@@ -280,65 +231,5 @@
     kf = jf-1
     next = .true.
     end function nextFrequencyGeminiKernelDisplacement
-!-------------------------------------------------------------------------
-!  Old stuff, needed anymore ??
-!-------------------------------------------------------------------------
-!> \brief Get displacements on a horizontal slice at depth index jr and component ic
-!
-    function getHsliceDispGeminiKernelDisplacement(this,jr,ic) result(res)
-    type (gemini_kernel_displacement) :: this
-    integer :: jr,ic
-    complex, dimension(:), pointer :: res
-    if (jr < 1 .or. jr > this%nnod) then
-        print *,'<getHsliceDispGeminiKernelDisplacement>: Invalid depth index: ',jr 
-        res => null(); return
-    endif
-    if (ic < 1 .or. ic > 3) then
-        print *,'<getHsliceDispGeminiKernelDisplacement>: Invalid component: ',ic 
-        res => null(); return
-    endif
-    res => this%u((jr-1)*this%ng+1:jr*this%ng,ic)
-    end function getHsliceDispGeminiKernelDisplacement
-!-------------------------------------------------------------------------
-!> \brief Get strains on a horizontal slice at depth index jr and component ic
-!
-    function getHsliceStrainsGeminiKernelDisplacement(this,jr,ic) result(res)
-    type (gemini_kernel_displacement) :: this
-    integer :: jr,ic
-    complex, dimension(:), pointer :: res
-    if (jr < 1 .or. jr > this%nnod) then
-        print *,'<getHsliceStrainsGeminiKernelDisplacement>: Invalid depth index: ',jr 
-        res => null(); return
-    endif
-    if (ic < 1 .or. ic > 6) then
-        print *,'<getHsliceStrainsGeminiKernelDisplacement>: Invalid component: ',ic 
-        res => null(); return
-    endif
-    res => this%ustr((jr-1)*this%ng+1:jr*this%ng,ic)
-    end function getHsliceStrainsGeminiKernelDisplacement
-!-------------------------------------------------------------------------
-!> \brief Get number of grid points per layer (this%ng)
-!
-    function getNgGeminiKernelDisplacement(this) result(res)
-    type (gemini_kernel_displacement), intent(in) :: this
-    integer :: res
-    res = this%ng
-    end function getNgGeminiKernelDisplacement
-!-------------------------------------------------------------------------
-!> \brief Get first frequency nf1
-!
-    function getNf1GeminiKernelDisplacement(this) result(res)
-    type (gemini_kernel_displacement), intent(in) :: this
-    integer :: res
-    res = this%nf1
-    end function getNf1GeminiKernelDisplacement
-!-------------------------------------------------------------------------
-!> \brief Get last frequency nf2
-!
-    function getNf2GeminiKernelDisplacement(this) result(res)
-    type (gemini_kernel_displacement), intent(in) :: this
-    integer :: res
-    res = this%nf2
-    end function getNf2GeminiKernelDisplacement
 !
  end module

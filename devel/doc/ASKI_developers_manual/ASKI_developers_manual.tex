@@ -139,7 +139,8 @@ Free Documentation License''.
 
 \vspace{1cm}
 
-If you use \ASKI{} for your own research, please cite our paper \cite{Schumacher16}:
+If you use \ASKI{} for your own research, please cite one of our papers \cite{Schumacher16}, 
+or \cite{Schumacher16b}, as appropriate:
 
 F.\ Schumacher, W.\ Friederich and S.\ Lamara, \\
 "A flexible, extendable, modular and 
@@ -148,13 +149,20 @@ inversion", \\
 \emph{Geophysical Journal International}, (February, 2016) 204 (2): 1100-1119\\
 \url{http://dx.doi.org/10.1093/gji/ggv505}
 
+Schumacher F, Friederich W.\\
+"ASKI: A modular toolbox for scattering-integral-based seismic full waveform 
+inversion and sensitivity analysis utilizing external forward codes".\\
+\emph{SoftwareX} 5 (2016) 252--259,\\
+\url{http://dx.doi.org/10.1016/j.softx.2016.10.005}
+
 \vspace{1em}
 
 This documentation was written in the hope that it will be useful to the user,
 but it \emph{cannot be assured} that it is accurate in every respect or complete in any sense.
 In fact, at some places \emph{this manual is work in progress}.\\
-Please do not hesitate to report any inconsistencies via \url{http://www.rub.de/aski} or
-to improve this documentation by incorporating your experiences with \ASKI{} 
+Please do not hesitate to report any inconsistencies by
+opening (or adding to) an "issues" topic on \url{https://github.com/seismology-RUB/ASKI}
+or to improve this documentation by incorporating your experiences with \ASKI{} 
 and your personal experience of getting used to it (at best by modifying the source and issuing a pull request
 on gitHub, in any case let us know about it! Thanks).
 When you have developed new \ASKI{} components or 
@@ -193,7 +201,7 @@ Florian Schumacher, \mydate \today
 %-------------------------------
 % SECTION how is the code documented in general
 %#############################################################
-\section{Introduction for new \ASKI{} developers} \label{sec:intro}
+\section{Introduction and guidelines for \ASKI{} developers} \label{sec:intro}
 %#############################################################
 %
 The development of (what became) the software package \ASKI{} started in 2010 and from the beginning, auxilliary
@@ -207,6 +215,28 @@ requires. After moving the \ASKI{} developers repository to \url{gitHub.com} in 
 for used with \ASKI{} (not intended to merge them back into the original ``include'' repository at RUB, except
 for bug-fixes and fundamental enhancement of general functionality). So, if you wonder why you come accross 
 subroutines that are not used in \ASKI{} (so far!!), this might be a reason why.
+
+\subsection*{Guidlines w.r.t.\ the \lcodetitle{git} repository}
+At the moment, there are two branches on \lcodetitle{gitHub.com}: \lcode{master} and \lcode{develop}.
+
+The \lcode{master} branch is intended to contain the latest stable version of the software package
+(as also communicated in publications as well as the \ASKI{} user manual). \emph{No regular commits}
+should be performed to the \lcode{master} branch, changes should only be merged from the \lcode{develop}
+branch!
+
+The \lcode{develop} branch is intended for development of new functionality (as its name says):
+\begin{itemize}
+\item The current state of the \lcode{develop} branch may be unstable or incomplete (e.g.\ in terms of documentation etc.).
+\item \emph{Pull requests} should be issued to the \lcode{develop} branch only (and \emph{not} to the \lcode{master} branch)!
+\item When a new portion of functionality is fully implemented and documented (thus, a ``stable'' state is reached), you may
+  immediately merge the \lcode{develop} branch into the \lcode{master} branch. You don't need to wait until there is a new
+  official ``version'' or something, you sould provide the latest stable version as quickly as possible to the user community.
+\item On the \lcode{develop} branch, \emph{do not} commit \lcode{pdf}s of the \LaTeX{} documents (like the manuals, etc.) 
+  each time you modify the documents! \emph{Only} before merging into the \lcode{master} branch commit a re-compiled \lcode{pdf}
+  for each document (so that in the \lcode{master} branch the \LaTeX{} source corresponds to the repsective \lcode{pdf}).
+\item Locally, you may use yet more branches for development (like ``feature'' branches etc.), but for now the sparsely manned 
+development team does not consider it necessary to have these kinds of branches also available on \lcode{gitHub.com}.
+\end{itemize}
 
 \subsection*{How is the code documented in general?}
 The code files are commented extensively. Furthermore, almost all Fortran modules, derived types, 
@@ -579,6 +609,7 @@ contains coordinates of inversion grid cell centers as well as the model values 
 The cell centers act as some kind of unstructured grid of control nodes on which the model values are given.
 Furthermore, information about neighbouring cells (i.e.\ neighbouring control nodes) as well as approximate average
 spatial extend of the inversion grid cells (i.e.\ the influence radius of the control nodes) are given in the file.
+The \ASKI{} user manual dedicates a section in chapter ``Files'' to the exact format of this text file.
 
 Since in \ASKI{} the forward and inversion grid are in general independent of each other (and forward codes do not
 even need to be grid-based), you will require an individual transference of \ASKI{} inverted models to the model 

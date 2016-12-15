@@ -1146,7 +1146,7 @@ contains
        end do
        write(errstr,*) count(param_indx_in_file == -1)," out of ",this%nparam,&
             " model parameters for which this object was initiated were not found in the file"
-       write(*,*) "ERROR in initialReadSpectralWaveformKernel: model parameters for which this object was initiated = ",&
+       write(*,*) "ERROR in initialReadTimeWaveformKernel: model parameters for which this object was initiated = ",&
             this%param,"; model parameters contained in kernel file = ",param_in_file
        call add(errmsg,2,errstr,myname)
        goto 1
@@ -1176,7 +1176,7 @@ contains
        end do
        write(errstr,*) count(comp_indx_in_file == -1)," out of ",this%ncomp,&
             " receiver components for which this object was initiated were not found in the file"
-       write(*,*) "ERROR in initialReadSpectralWaveformKernel: receiver components for which this object was initiated = ",&
+       write(*,*) "ERROR in initialReadTimeWaveformKernel: receiver components for which this object was initiated = ",&
             this%comp,"; receiver components contained in kernel file = ",comp_in_file
        call add(errmsg,2,errstr,myname)
        goto 1

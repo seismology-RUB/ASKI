@@ -63,7 +63,7 @@ program correctionSyntheticData
     type (spectral_waveform_kernel) :: kernel
     integer :: lu,j,jf,jfreq,nfreq,ic,nc,iparam,nparam_dms,nparam_kernel
     integer, dimension(:), pointer :: ifreq
-    real :: df
+    real :: df_mdata
     real, dimension(:), pointer :: model_values
     complex, dimension(:,:), pointer :: kernel_values
     complex, dimension(:,:), allocatable :: corr
@@ -226,10 +226,10 @@ program correctionSyntheticData
 !
 !  check content of kernel file
 !
-       df = (.inpar.invbasics).rval.'MEASURED_DATA_FREQUENCY_STEP'
-       if ( (df-.df.kernel)/df > 1.e-4) then
+       df_mdata = (.inpar.invbasics).rval.'MEASURED_DATA_FREQUENCY_STEP'
+       if ( abs(df_mdata-.df.kernel) > 1.e-4*df_mdata) then
           write(*,*) "ERROR: the frequency step of the frequencies in the kernel file (",.df.kernel,&
-               ") differs significantly from the frequency step of the measured data (",df,&
+               ") differs by more than 0.01 percent from the frequency step of the measured data (",df_mdata,&
                "), which suggests that the kernels were computed w.r.t. a different frequency discretization"
           goto 2
        endif

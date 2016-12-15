@@ -389,6 +389,49 @@ General information on the file format may be found under \url{www.vtk.org/VTK/i
 inversion grids or event-station path lines (or event, station coordinates). 
 %
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\section{Text-based \lcodetitle{kim} File Format for Use with External Forward Codes} \label{files,sec:text-kim_files}
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+%
+Some executables (such as e.g.\ \lcode{exportKim}, \myref{programs_scripts,sec:bin_prog,sec:exp_Kim}
+or \lcode{createStartmodelKim}, \myref{programs_scripts,sec:bin_prog,sec:create_startmod_kim})
+export model descriptions on an inversion grid (e.g.\ given by a \lcode{.kim} file) to a text file
+containing information of both, inversion grid and model values. In particular the text file contains
+cell centers and radii (radius $\simeq$ some approximate average spatial expansion of the cell from the cell center) 
+of all inversion grid cells and all cell neighbour information, as well as model values and 
+corresponding invgrid cell indices for each model parameter for which the model is given. 
+These kind of model files may be used in a portable way by any forward method to import the currently inverted model
+for the simulations of the next FWI iteration step, or by any external post-processing tools e.g.\ for plotting. 
+
+The format of the text file is as follows:
+
+The first 3 lines contain:
+\begin{itemize}
+\item[]\lcode{model_parametrization}
+\item[]\lcode{number_of_parameters}  \lcode{name_param_1} ... \lcode{name_param_n}
+\item[]\lcode{number_of_invgrid_cells}
+\end{itemize}
+The next \lcode{number_of_invgrid_cells} lines contain for each inversion grid cell:
+\begin{itemize}
+\item[]\lcode{c1 c2 c3 r nnb inb1} ... \lcode{inbn}
+\end{itemize} 
+where \lcode{c1,c2,c3} are the 3 coordinates of the cell center (in wavefield point coords, i.e.\ global 
+Cartesian coordinates), \lcode{r} 
+is the cell radius (i.e. rough expansion of cell), \lcode{nnb} is the number of cell neighbours and 
+\lcode{inb1},...,\lcode{inbn} are their nnb cell indices (if \lcode{nnb}\(>\)\lcode{0}, otherwise line 
+ends on \lcode{nnb}). Thereafter, \lcode{number_of_parameters} blocks follow, each having 
+the following format:
+\begin{itemize}
+\item[]\lcode{name_param}
+\item[]\lcode{nval}
+\item[]\lcode{cell_indx}
+\item[]\lcode{model_values}
+\end{itemize}
+where \lcode{name_param} is the name of the parameter to which the following model values belong, 
+\lcode{nval} is the number of model values following, \lcode{cell_indx} is a vector of \lcode{nval} 
+cell indices to which the model values belong (space separated on one line) and \lcode{model_values} 
+is a vector of the actual \lcode{nval} model values (space separated on one line).
+%
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 \section{Data and Model Space File} \label{files,sec:dmspace}
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %

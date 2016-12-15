@@ -1,20 +1,21 @@
 !----------------------------------------------------------------------------
-!	Copyright 2016 Wolfgang Friederich
+!   Copyright 2016 Wolfgang Friederich (Ruhr-Universitaet Bochum, Germany)
 !
-!	This file is part of Gemini II.
+!   This file is part of ASKI version 1.2.
 !
-!	Gemini II is free software: you can redistribute it and/or modify
-!	it under the terms of the GNU General Public License as published by
-!	the Free Software Foundation, either version 2 of the License, or
-!	any later version.
+!   ASKI version 1.2 is free software: you can
+!   redistribute it and/or modify it under the terms of the GNU
+!   General Public License as published by the Free Software
+!   Foundation, either version 2 of the License, or (at your option) 
+!   any later version.
 !
-!	Gemini II is distributed in the hope that it will be useful,
-!	but WITHOUT ANY WARRANTY; without even the implied warranty of
-!	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!	GNU General Public License for more details.
+!   ASKI version 1.2 is distributed in the hope that it
+!   will be useful, but WITHOUT ANY WARRANTY; without even the implied
+!   warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+!   See the GNU General Public License for more details.
 !
-!	You should have received a copy of the GNU General Public License
-!	along with Gemini II.  If not, see <http://www.gnu.org/licenses/>.
+!   You should have received a copy of the GNU General Public License
+!   along with ASKI version 1.2.
 !----------------------------------------------------------------------------
 !--------------------------------------------------------------
 !  module with locate functions
@@ -27,120 +28,120 @@
 !  x(i) descending  x(j) >= xx > x(j+1)
 !-------------------------------------------------------
  module locatePoint
-	implicit none
-	interface locate
-		module procedure locate_real
-		module procedure locate_double_precision
-		module procedure locate_int
-	end interface locate
+    implicit none
+    interface locate
+        module procedure locate_real
+        module procedure locate_double_precision
+        module procedure locate_int
+    end interface locate
  contains
 !--------------------------------------------------------------
 !  real array
 !
-	integer function locate_real(xx,n,x)
-	integer :: n
-	real :: xx,x(n)
-	integer :: lidx,ridx,midx
+    integer function locate_real(xx,n,x)
+    integer :: n
+    real :: xx,x(n)
+    integer :: lidx,ridx,midx
 !
 !  start with lower and upper index bounds 0 and n+1
 !
-	lidx = 0
-	ridx = n+1
-	do while (ridx-lidx .gt. 1)
-		midx = (lidx+ridx)/2
+    lidx = 0
+    ridx = n+1
+    do while (ridx-lidx .gt. 1)
+        midx = (lidx+ridx)/2
 !
 !  x(i) is an ascending sequence
 !
-		if (x(n) .gt. x(1)) then
-			if (xx .gt. x(midx)) then
-				lidx = midx
-			else
-				ridx = midx
-			endif
+        if (x(n) .gt. x(1)) then
+            if (xx .gt. x(midx)) then
+                lidx = midx
+            else
+                ridx = midx
+            endif
 !
 !  x(i) is a descending sequence
 !
-		else
-			if (xx .gt. x(midx)) then
-				ridx = midx
-			else
-				lidx = midx
-			endif
-		endif
-	enddo
-	locate_real = lidx
-	end function locate_real
+        else
+            if (xx .gt. x(midx)) then
+                ridx = midx
+            else
+                lidx = midx
+            endif
+        endif
+    enddo
+    locate_real = lidx
+    end function locate_real
 !----------------------------------------------------------------
 !  double precision array
 !
-	integer function locate_double_precision(xx,n,x)
-	integer :: n
-	double precision :: xx,x(n)
-	integer :: lidx,ridx,midx
+    integer function locate_double_precision(xx,n,x)
+    integer :: n
+    double precision :: xx,x(n)
+    integer :: lidx,ridx,midx
 !
 !  start with lower and upper index bounds 0 and n+1
 !
-	lidx = 0
-	ridx = n+1
-	do while (ridx-lidx .gt. 1)
-		midx = (lidx+ridx)/2
+    lidx = 0
+    ridx = n+1
+    do while (ridx-lidx .gt. 1)
+        midx = (lidx+ridx)/2
 !
 !  x(i) is an ascending sequence
 !
-		if (x(n) .gt. x(1)) then
-			if (xx .gt. x(midx)) then
-				lidx = midx
-			else
-				ridx = midx
-			endif
+        if (x(n) .gt. x(1)) then
+            if (xx .gt. x(midx)) then
+                lidx = midx
+            else
+                ridx = midx
+            endif
 !
 !  x(i) is a descending sequence
 !
-		else
-			if (xx .gt. x(midx)) then
-				ridx = midx
-			else
-				lidx = midx
-			endif
-		endif
-	enddo
-	locate_double_precision = lidx
-	end function locate_double_precision
+        else
+            if (xx .gt. x(midx)) then
+                ridx = midx
+            else
+                lidx = midx
+            endif
+        endif
+    enddo
+    locate_double_precision = lidx
+    end function locate_double_precision
 !--------------------------------------------------------------
 !  integer array
 !
-	integer function locate_int(xx,n,x)
-	integer :: n
-	integer :: xx,x(n)
-	integer :: lidx,ridx,midx
+    integer function locate_int(xx,n,x)
+    integer :: n
+    integer :: xx,x(n)
+    integer :: lidx,ridx,midx
 !
 !  start with lower and upper index bounds 0 and n+1
 !
-	lidx = 0
-	ridx = n+1
-	do while (ridx-lidx .gt. 1)
-		midx = (lidx+ridx)/2
+    lidx = 0
+    ridx = n+1
+    do while (ridx-lidx .gt. 1)
+        midx = (lidx+ridx)/2
 !
 !  x(i) is an ascending sequence
 !
-		if (x(n) .gt. x(1)) then
-			if (xx .gt. x(midx)) then
-				lidx = midx
-			else
-				ridx = midx
-			endif
+        if (x(n) .gt. x(1)) then
+            if (xx .gt. x(midx)) then
+                lidx = midx
+            else
+                ridx = midx
+            endif
 !
 !  x(i) is a descending sequence
 !
-		else
-			if (xx .gt. x(midx)) then
-				ridx = midx
-			else
-				lidx = midx
-			endif
-		endif
-	enddo
-	locate_int = lidx
-	end function locate_int
+        else
+            if (xx .gt. x(midx)) then
+                ridx = midx
+            else
+                lidx = midx
+            endif
+        endif
+    enddo
+    locate_int = lidx
+    end function locate_int
 !
  end module locatePoint

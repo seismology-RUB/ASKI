@@ -521,9 +521,9 @@ contains
        call add(errmsg2,0,"successfully openend kernel file '"//trim(file_kernel)//"' to read",myname)
 !
        ! check df of kernel
-       if( (df_measured_data-.df.kernel)/df_measured_data > 1.e-4) then
+       if( abs(df_measured_data-.df.kernel) > 1.e-4*df_measured_data) then
           write(errstr,*) "the frequency step of the frequencies in the kernel file (",.df.kernel,&
-               ") differs significantly from the frequency step of the measured data (",df_measured_data,&
+               ") differs by more than 0.01 percent from the frequency step of the measured data (",df_measured_data,&
                "), which suggests that the kernels were computed w.r.t. a different frequency discretization"
           call add(errmsg2,2,errstr,myname)
           call print(errmsg2)

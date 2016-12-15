@@ -735,6 +735,160 @@ contains
     close(lu)
   end subroutine writeFileKernelInvertedModel
 !------------------------------------------------------------------------
+!> \brief write kernel inverted model to text file, readable by external forward codes
+!! \param this kernel inverted model object
+!! \param invgrid inversion grid on which the model values live (indices stored in this are assumed to relate to invgrid)
+!! \param lu file unit
+!! \param filename filename of model file
+!! \param errmsg error message
+!! \return error message
+!
+  subroutine writeTextFileKernelInvertedModel(this,invgrid,filename,lu,errmsg)
+    type (kernel_inverted_model) :: this
+    type (inversion_grid) :: invgrid
+    integer :: lu
+    character(len=*) :: filename
+    type (error_message) :: errmsg
+    character(len=300) :: errstr,second_line
+    type (error_message) :: errmsg2
+    character(len=32) :: myname = 'writeTextFileKernelInvertedModel'
+    character(len=character_length_param) :: param_name
+    integer :: nparam_pmtrz,iparam,ios,icell,nnb,nval
+    real :: c1,c2,c3,r
+    type (integer_vector_pointer), dimension(:), pointer :: nb_idx
+    real, dimension(:), pointer :: model_values
+    integer, dimension(:), pointer :: indx
+    logical :: file_exists,already_added_a_warning_center,already_added_a_warning_radius
+    character(len=7) :: open_status
+!
+    call addTrace(errmsg,myname)
+!
+    if(trim(this%parametrization) == '') then
+       call add(errmsg,2,"object not initiated yet. please call initiateKernelInvertedModel first",myname)
+       return
+    endif
+!
+    nparam_pmtrz = numberOfParamModelParametrization(this%parametrization)
+    write(second_line,*) nparam_pmtrz
+    do while(nextParamModelParametrization(this%parametrization,param_name))
+       second_line = trim(second_line)//'   '//trim(param_name)
+    end do
+!
+    call getIndicesFaceNeighboursInversionGrid(invgrid,nb_idx)
+    if(.not.associated(nb_idx)) then
+       call add(errmsg,2,"no neighbour information returned from inversion grid, this means "//&
+            "inversion grid is not yet defined",myname)
+       return
+    end if
+!
+    ! open file to write
+    inquire(file=trim(filename),exist=file_exists)
+    if(file_exists) then
+       open_status = 'replace'
+       write(errstr,*) "file '"//trim(filename)//"' already exists, replacing it now!"
+       call add(errmsg,1,trim(errstr),myname)
+    else
+       open_status = 'new'
+    endif
+    open(unit=lu,file=trim(filename),form='formatted',status=trim(open_status),action='write',iostat=ios)
+    if(ios/=0) then
+       write(errstr,*) "opening formatted file '"//trim(filename)//"' to write raised iostat = ",ios
+       call add(errmsg,2,trim(errstr),myname)
+       close(lu)
+       return
+    end if
+    call add(errmsg,0,"successfully opened formatted file '"//trim(filename)//"' to write",myname)
+!
+    write(lu,*) trim(this%parametrization)
+    write(lu,*) trim(second_line)
+    write(lu,*) .ncell.invgrid
+!
+    already_added_a_warning_center = .false.
+    already_added_a_warning_radius = .false.
+    do icell = 1,.ncell.invgrid
+       call new(errmsg2,myname)
+       call getCenterCellInversionGrid(invgrid,icell,c1,c2,c3,errmsg2)
+       if (.level.errmsg2 == 1 .and. .not.already_added_a_warning_center) then
+          call add(errmsg,errmsg2)
+          already_added_a_warning_center = .true.
+       end if
+       if (.level.errmsg2 == 2) then
+          call add(errmsg,errmsg2)
+          close(lu)
+          return
+       endif
+       call dealloc(errmsg2)
+!     
+       call new(errmsg2,myname)
+       call getRadiusCellInversionGrid(invgrid,icell,r,errmsg2)
+       if (.level.errmsg2 == 1 .and. .not.already_added_a_warning_radius) then
+          call add(errmsg,errmsg2)
+          already_added_a_warning_radius = .true.
+       end if
+       if (.level.errmsg2 == 2) then
+          call add(errmsg,errmsg2)
+          close(lu)
+          return
+       endif
+       call dealloc(errmsg2)
+!
+       indx => getVectorPointer(nb_idx(icell))
+       if(associated(indx)) then
+          nnb = size(indx)
+          write(lu,*) c1,c2,c3,r,nnb,indx
+       else
+          nnb = 0
+          write(lu,*) c1,c2,c3,r,nnb
+       end if
+    end do ! icell
+!
+    do while(nextParamModelParametrization(this%parametrization,param_name))
+       write(lu,*) param_name
+       iparam = indexOfParamModelParametrization(this%parametrization,param_name)
+       indx => getVectorPointer(this%indx(iparam))
+       model_values => getVectorPointer(this%model_values(iparam))
+       if(associated(indx) .and. associated(model_values)) then
+          nval = size(getVectorPointer(this%indx(iparam)))
+!
+          ! do some consistency checks!
+          if(nval>.ncell.invgrid) then
+             write(errstr,*) "number of model values of parameter '",trim(param_name),"' = ",nval,&
+                  " , but number of inversion grid cells only = ",.ncell.invgrid,&
+                  " ==> this kim was created w.r.t. a different inversion grid!"
+             call add(errmsg,2,errstr,myname)
+             close(lu)
+             return
+          end if
+          if(any(indx > .ncell.invgrid)) then
+             write(errstr,*) "for this kim object (at parameter '",trim(param_name),&
+                  "') there are invgrid cell indices which exceed the maximum cell number of the incoming invgrid = ",&
+                  .ncell.invgrid," ==> this kim was created w.r.t. a different inversion grid!"
+             call add(errmsg,2,errstr,myname)
+             close(lu)
+             return
+          end if
+          if(nval<.ncell.invgrid) then
+             write(errstr,*) "number of model values of parameter '",trim(param_name),"' = ",nval,&
+                  " is smaller than number of inversion grid cells = ",.ncell.invgrid,&
+                  " ; make sure you know what you're doing"
+             call add(errmsg,1,errstr,myname)
+          end if
+!
+          write(lu,*) nval
+          write(lu,*) indx
+          write(lu,*) model_values
+!
+       else ! if(associated(indx) .and. associated(model_values))
+!
+          nval = 0
+          write(lu,*) nval
+       end if ! if(associated(indx) .and. associated(model_values))
+!
+    end do ! while (nextParam)
+!
+    close(lu)
+  end subroutine writeTextFileKernelInvertedModel
+!------------------------------------------------------------------------
 !> \brief write model object as vtk files
 !! \details for each model parameter, write an own file using values and invgrid indices for that parameter
 !! \param this kernel inverted model object

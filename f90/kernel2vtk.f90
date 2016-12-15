@@ -401,7 +401,7 @@ contains
     call dealloc(errmsg)
 
     df = .df.kernel
-    if( df<0. .or. abs(((.inpar.invbasics).rval.'MEASURED_DATA_FREQUENCY_STEP') -df)/df > 1.e-4 ) then
+    if( df<0. .or. abs(((.inpar.invbasics).rval.'MEASURED_DATA_FREQUENCY_STEP') -df) > 1.e-4*df ) then
        write(*,*) "frequency step of kernel ",df," differs from frequency step of measured data ",&
             (.inpar.invbasics).rval.'MEASURED_DATA_FREQUENCY_STEP'," by more than 0.01 percent"
        terminate_program = .true.
@@ -520,14 +520,14 @@ contains
     call dealloc(errmsg)
 
     df = .df.kd
-    if( df<0. .or. abs(((.inpar.invbasics).rval.'MEASURED_DATA_FREQUENCY_STEP') -df)/df > 1.e-4 ) then
+    if( df<0. .or. abs(((.inpar.invbasics).rval.'MEASURED_DATA_FREQUENCY_STEP') -df) > 1.e-4*df ) then
        write(*,*) "frequency step of kernel displacement ",df," differs from frequency step of measured data ",&
             (.inpar.invbasics).rval.'MEASURED_DATA_FREQUENCY_STEP'," by more than 0.01 percent"
        terminate_program = .true.
        goto 1
     end if
     df = .df.kgt
-    if( df<0. .or. abs(((.inpar.invbasics).rval.'MEASURED_DATA_FREQUENCY_STEP') -df)/df > 1.e-4 ) then
+    if( df<0. .or. abs(((.inpar.invbasics).rval.'MEASURED_DATA_FREQUENCY_STEP') -df) > 1.e-4*df ) then
        write(*,*) "frequency step of kernel green tensor ",df," differs from frequency step of measured data ",&
             (.inpar.invbasics).rval.'MEASURED_DATA_FREQUENCY_STEP'," by more than 0.01 percent"
        terminate_program = .true.
@@ -649,7 +649,7 @@ contains
     call dealloc(errmsg)
 
     df = .df.kernel
-    if( df<0. .or. abs(((.inpar.invbasics).rval.'MEASURED_DATA_FREQUENCY_STEP') -df)/df > 1.e-4 ) then
+    if( df<0. .or. abs(((.inpar.invbasics).rval.'MEASURED_DATA_FREQUENCY_STEP') -df) > 1.e-4*df ) then
        write(*,*) "frequency step of kernel ",df," differs from frequency step of measured data ",&
             (.inpar.invbasics).rval.'MEASURED_DATA_FREQUENCY_STEP'," by more than 0.01 percent"
        terminate_program = .true.
